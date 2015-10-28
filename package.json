@@ -1,0 +1,35 @@
+{
+  "name": "airs",
+  "version": "0.1.0",
+  "description": "serve static files in the air",
+  "main": "index.js",
+  "dependencies" : {
+    "express": ">=4.13.3",
+    "compression": ">=1.6.0",
+    "uglify-js": ">=2.4.24",
+    "less": ">=2.5.3",
+    "less-plugin-autoprefix": ">=1.5.1",
+    "watch": ">=0.16.0",
+    "jshint": ">=2.8.0"
+  },
+  "engines": {
+    "node": ">=0.10"
+  },
+  "scripts": {
+    "test": "node app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/suconghou/air.git"
+  },
+  "keywords": [
+    "fed",
+    "development"
+  ],
+  "author": "suconghou",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/suconghou/air/issues"
+  },
+  "homepage": "https://github.com/suconghou/air#readme"
+}
