@@ -28,7 +28,8 @@ app.use(compression());
 app.use(express.static(config.staticPath,{maxAge:'1y'}));
 var server=app.listen(app.get('port'),function()
 {
-	app.log('Server listening on port '+server.address().port);
+	config.port=server.address().port;
+	app.log('Server listening on port '+config.port);
 	if(args.length>0)
 	{
 		switch(args[0])
@@ -60,7 +61,7 @@ app.use(/\/webhook\/\w+/,function(req,res,next)
 });
 app.use(function(req,res,next)
 {
-	return res.send('welcome');
+	return res.status(404).send(config.error404);
 });
 
 
@@ -220,6 +221,10 @@ var service=
 			watch=require('watch');
 			tools.watch();
 		}
+		if(args.indexOf('-k')>=0)
+		{
+			config.key=args[args.indexOf('-k')+1];
+		}
 	},
 	timer:function()
 	{
@@ -269,11 +274,11 @@ var service=
 	webhook:function(req,res,next)
 	{
 		var hook=req.baseUrl.split('/')[2];
-		if(typeof service.hooks[hook] == 'function')
+		if(typeof service.hooks[hook] == 'function' && req.query.key==config.key)
 		{
 			return service.hooks[hook](req,res,next);
 		}
-		return res.send('hook');
+		return res.status(404).send(config.error404);
 	},
 	hooks:
 	{
