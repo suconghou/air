@@ -73,6 +73,7 @@ var compile=
 		var pathInfo=req.baseUrl.replace('.css','').split('/css/');
 		var staticPath=path.join(config.staticPath,pathInfo[0]);
 		var configFile=path.join(staticPath,'static.json');
+		var ver=req.query.ver?req.query.ver.substr(0,32):null;
 		var cfg={};
 		var hotPath=[];
 		var lessPathArray;
@@ -112,12 +113,12 @@ var compile=
 		}
 		var updateTime=Math.max.apply(this,mtimes);
 		var lastParsed=app.getLast(filename);
-		if(lastParsed.updateTime>=updateTime)
+		if((lastParsed.updateTime>=updateTime)&&(lastParsed.ver==ver))
 		{
 			return res.type('css').send(lastParsed.content);
 		}
 		var lessInput=lessPathArray.map(function(item){return '@import "'+item+'";';}).join("\r\n");
-		var option={plugins:[autoprefixPlugin],urlArgs:req.query.ver?'ver='+req.query.ver:null};
+		var option={plugins:[autoprefixPlugin],urlArgs:ver?'ver='+ver:ver};
 		if(!config.debug)
 		{
 			option.compress=true;
@@ -126,7 +127,7 @@ var compile=
 		}
 		less.render(lessInput,option).then(function(output)
 		{
-			lastParsed={content:output.css,updateTime:updateTime};
+			lastParsed={content:output.css,updateTime:updateTime,ver:ver};
 			app.setLast(filename,lastParsed);
 			return res.type('css').send(lastParsed.content);
 		},function(error)
@@ -250,11 +251,11 @@ var service=
 				}
 			});
 			service.delay=setTimeout(function(){ service.delay=null;},5000);
-			return res&&res.send('starting git pull');
+			return res&&res.send(JSON.stringify({code:0,msg:'starting git pull'}));
 		}
 		else
 		{
-			return res&&res.send('git pulled just now');
+			return res&&res.send(JSON.stringify({code:0,msg:'git pulled just now'}));
 		}
 	},
 	phpserver:function()
@@ -289,6 +290,10 @@ var service=
 		viewlog:function(req,res,next)
 		{
 			return res.send(app.getLog());
+		},
+		clear:function(req,res,next)
+		{
+			return res.send(tools.gc(true,true));
 		}
 
 	}
@@ -369,6 +374,23 @@ var tools=
 				}
 			});
 		}
+	},
+	gc:function(clearLog,clearCache)
+	{
+		var msg;
+		if(clearLog)
+		{
+			msg=app.errorlog.length+' log items was cleared';
+			app.errorlog=[];
+			app.log(msg);
+		}
+		if(clearCache)
+		{
+			msg=app.lastList.length+' cache items was cleared';
+			app.lastList=[];
+			app.log(msg);
+		}
+		return JSON.stringify({log:clearLog,cache:clearCache});
 	}
 };
 
@@ -417,7 +439,7 @@ var tools=
 	{
 		if(app.errorlog.length>1000)
 		{
-			app.errorlog=[];
+			tools.gc(true,false);
 		}
 		msg=new Date().Format('yyyy-MM-dd hh:mm:ss')+"\r\n"+msg;
 		app.errorlog.push(msg);
@@ -433,12 +455,16 @@ var tools=
 		var list=app.lastList[key];
 		if(!list)
 		{
-			list={content:'',updateTime:0};
+			list={content:'',updateTime:0,ver:null};
 		}
 		return list;
 	};
 	app.setLast=function(key,content)
 	{
+		if(app.lastList.length>2000)
+		{
+			tools.gc(false,true);
+		}
 		app.lastList[key]=content;
 		return app.lastList;
 	};
