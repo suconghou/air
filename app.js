@@ -117,7 +117,7 @@ var compile=
 			return res.type('css').send(lastParsed.content);
 		}
 		var lessInput=lessPathArray.map(function(item){return '@import "'+item+'";';}).join("\r\n");
-		var option={plugins:[autoprefixPlugin]};
+		var option={plugins:[autoprefixPlugin],urlArgs:req.query.ver?'ver='+req.query.ver:null};
 		if(!config.debug)
 		{
 			option.compress=true;
