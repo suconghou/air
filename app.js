@@ -104,8 +104,7 @@ var compile=
 			var item=lessPathArray[i];
 			if(!fs.existsSync(item))
 			{
-				var errMsg=item+' not found';
-				app.log(errMsg);
+				app.log(item+' not found');
 				return res.status(404).send(config.error404);
 			}
 			var stat=fs.statSync(item);
@@ -118,7 +117,7 @@ var compile=
 			return res.type('css').send(lastParsed.content);
 		}
 		var lessInput=lessPathArray.map(function(item){return '@import "'+item+'";';}).join("\r\n");
-		var option={plugins:[autoprefixPlugin],urlArgs:ver?'ver='+ver:ver};
+		var option={plugins:[autoprefixPlugin],paths:config.lessLibPath,urlArgs:ver?'ver='+ver:ver};
 		if(!config.debug)
 		{
 			option.compress=true;
@@ -173,8 +172,7 @@ var compile=
 			var item=jsPathArray[i];
 			if(!fs.existsSync(item))
 			{
-				var errMsg=item+' not found';
-				app.log(errMsg);
+				app.log(item+' not found');
 				return res.status(404).send(config.error404);
 			}
 			var stat=fs.statSync(item);
@@ -194,7 +192,7 @@ var compile=
 		}
 		try
 		{
-			result=UglifyJS.minify(jsPathArray,option).code;
+			var result=UglifyJS.minify(jsPathArray,option).code;
 			return res.type('js').send(result);
 		}
 		catch(e)
@@ -251,11 +249,11 @@ var service=
 				}
 			});
 			service.delay=setTimeout(function(){ service.delay=null;},5000);
-			return res&&res.send(JSON.stringify({code:0,msg:'starting git pull'}));
+			return res&&res.type('json').send(JSON.stringify({code:0,msg:'starting git pull'}));
 		}
 		else
 		{
-			return res&&res.send(JSON.stringify({code:0,msg:'git pulled just now'}));
+			return res&&res.type('json').send(JSON.stringify({code:0,msg:'git pulled just now'}));
 		}
 	},
 	phpserver:function()
