@@ -15,8 +15,8 @@ var args=process.argv.splice(2);
 var app=express();
 var config=
 {
-	port:8088,
 	debug:true,
+	port:args.indexOf('-p')>=0?(parseInt(args[args.indexOf('-p')+1])?parseInt(args[args.indexOf('-p')+1]):8088):8088,
 	staticPath:process.cwd(),
 	lessLibPath:path.join(process.cwd(),'less'),
 	gitexec:'git pull origin master',
