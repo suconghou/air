@@ -248,7 +248,7 @@ var service=
 					app.log(stderr+stdout);
 				}
 			});
-			service.delay=setTimeout(function(){ service.delay=null;},5000);
+			service.delay=setTimeout(function(){ service.delay=null;},15000);
 			return res&&res.type('json').send(JSON.stringify({code:0,msg:'starting git pull'}));
 		}
 		else

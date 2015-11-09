@@ -23,7 +23,7 @@ Http访问 `/项目名/static/css/style.css` 即可得出style.less编译后的c
 此外,如果文件过多,使用连字符麻烦,工具还支持配置文件模式
 在static目录内建立static.json文件,配置Less和Javascript映射
 
-#Webhook
+# Webhook
 * `/webhook/gitpull` 执行 `git pull origin master` 立刻拉取代码更新.
 * `/webhook/viewlog` 查看运行日志
 * `/webhook/clear` 执行清理内存操作,立即清除所有日志和编译缓存
