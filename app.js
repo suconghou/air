@@ -1,14 +1,12 @@
 var path=require('path');
-var url=require('url');
 var fs=require('fs');
-var zlib=require('zlib');
-var http=require('http');
-var https=require('https');
 var exec=require('child_process').exec;
 var less=require('less');
 var UglifyJS=require('uglify-js');
 var express=require('express');
 var compression=require('compression');
+var jshint=require('jshint');
+var watch=require('watch');
 var LessPluginAutoPrefix=require('less-plugin-autoprefix');
 var autoprefixPlugin=new LessPluginAutoPrefix();
 var args=process.argv.splice(2);
@@ -216,8 +214,6 @@ var service=
 		}
 		if(args.indexOf('-w')>=0)
 		{
-			jshint=require('jshint');
-			watch=require('watch');
 			tools.watch();
 		}
 		if(args.indexOf('-k')>=0)
@@ -347,7 +343,7 @@ var tools=
 		{
 			fs.readFile(filePath,'utf-8',function(err,data)
 			{
-				if(data)
+				if(!err)
 				{
 					jshint.JSHINT(data);
 					var error=jshint.JSHINT.errors;
@@ -445,7 +441,7 @@ var tools=
 	};
 	app.getLog=function(split)
 	{
-		return (app.errorlog.join("\r\n"));
+		return (app.errorlog.join(split?split:"\r\n"));
 	};
 	app.lastList=[];
 	app.getLast=function(key)
@@ -469,14 +465,3 @@ var tools=
 })();
 
 
-/**	
-命名空间
-编译缓存(内存缓存)
-项目名称+资源类型+资源路径+后缀
-优先级 :配置文件>文件
-/static/css/style.css
-自动拉取,钩子拉取
-
-
-
-*/
