@@ -140,6 +140,7 @@ var compile=
 		var pathInfo=req.baseUrl.replace('.js','').split('/js/');
 		var staticPath=path.join(config.staticPath,pathInfo[0]);
 		var configFile=path.join(staticPath,'static.json');
+		var ver=req.query.ver?req.query.ver.substr(0,32):null;
 		var cfg={};
 		var hotPath=[];
 		var jsPathArray;
@@ -191,6 +192,8 @@ var compile=
 		try
 		{
 			var result=UglifyJS.minify(jsPathArray,option).code;
+			lastParsed={content:result,updateTime:updateTime,ver:ver};
+			app.setLast(filename,lastParsed);
 			return res.type('js').send(result);
 		}
 		catch(e)

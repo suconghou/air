@@ -12,6 +12,7 @@
 * PHP项目,项目根目录执行`air develop`
 
 > 会开启静态服务器,同时开启一个PHP Server
+
 > PHP Server 端口号为静态服务器端口号+1
 
 * 服务器模式 `air server`
@@ -21,9 +22,13 @@
 **参数**
 
 > 参数-w,使用Jslint,文件修改实时触发,本地开发建议加上
+
 > 参数-g,每分钟定时拉取git更新,可用于测试服务器上
+
 > 参数-k,设定webhook的密码,服务器模式建议加上
+
 > 参数-p,指定服务监听的端口,PHP Server 端口号也会依此变化.
+
 
 # 目录结构
 目录结构采用类似 `项目名/static/css/style.less`
@@ -40,6 +45,7 @@ Http访问 `/项目名/static/css/style.css` 即可得出style.less编译后的c
 * `/webhook/clear` 执行清理内存操作,立即清除所有日志和编译缓存
 
 > 添加-k参数后,webhook需要密码才能查看.
+
 > 在网址后面添加?key=密码即可
 
 
@@ -66,5 +72,6 @@ Http访问 `/项目名/static/css/style.css` 即可得出style.less编译后的c
 # 示例
 
 > 本地开发 `air develop -w`
+
 > 服务器模式 `air server -k 123456`
 
