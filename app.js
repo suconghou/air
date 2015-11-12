@@ -124,9 +124,9 @@ var compile=
 		}
 		less.render(lessInput,option).then(function(output)
 		{
+			res.type('css').send(output.css);
 			lastParsed={content:output.css,updateTime:updateTime,ver:ver};
-			app.setLast(filename,lastParsed);
-			return res.type('css').send(lastParsed.content);
+			return app.setLast(filename,lastParsed);
 		},function(error)
 		{
 			var errMsg=error.type+' Error : '+error.message+' in file '+error.filename+' on line '+error.line+':'+error.index+' '+error.extract.join('');
@@ -183,26 +183,35 @@ var compile=
 		{
 			return res.type('js').send(lastParsed.content);
 		}
-		var option={};
-		if(!config.debug)
+		if(config.debug)
 		{
-			option.mangle=true;
-			option.compress={sequences:true,dead_code:true,unused:true,booleans:true,join_vars:true};
+			var content=[];
+			for(i=0;i<jsPathArray.length;i++)
+			{
+				content.push(fs.readFileSync(jsPathArray[i],'utf-8'));
+			}
+			content=content.join('\r\n');
+			res.type('js').send(content);
+			lastParsed={content:content,updateTime:updateTime,ver:ver};
+			return app.setLast(filename,lastParsed);
 		}
-		try
+		else
 		{
-			var result=UglifyJS.minify(jsPathArray,option).code;
-			lastParsed={content:result,updateTime:updateTime,ver:ver};
-			app.setLast(filename,lastParsed);
-			return res.type('js').send(result);
+			try
+			{
+				var option={mangle:true,compress:{sequences:true,dead_code:true,unused:true,booleans:true,join_vars:true}};
+				var result=UglifyJS.minify(jsPathArray,option).code;
+				res.type('js').send(result);
+				lastParsed={content:result,updateTime:updateTime,ver:ver};
+				return app.setLast(filename,lastParsed);
+			}
+			catch(e)
+			{
+				var errMsg=e.message+' in file '+e.filename+' on line '+e.line+':'+e.col;
+				app.log(errMsg);
+				return res.status(500).send(errMsg);
+			}
 		}
-		catch(e)
-		{
-			var errMsg=e.message+' in file '+e.filename+' on line '+e.line+':'+e.col;
-			app.log(errMsg);
-			return res.status(500).send(errMsg);
-		}
-
 	}
 };
 
@@ -358,15 +367,15 @@ var tools=
 							var item=error[i];
 							if(item)
 							{
-								var str=item.reason+" on line "+item.line+':'+item.character+"\r\n"+item.evidence;
+								var str=item.reason+' on line '+item.line+':'+item.character+"\r\n"+item.evidence;
 								errMsg.push(str);
 							}
 						}
-						console.log("\r\n"+filePath+":\r\n"+errMsg.join("\r\n"));
+						console.log('\r\n'+filePath+':\r\n'+errMsg.join('\r\n'));
 					}
 					else
 					{
-						console.log("\r\n"+filePath+":\r\nLint Ok");
+						console.log('\r\n'+filePath+':\r\nLint Ok');
 					}
 				}
 			});
@@ -438,13 +447,13 @@ var tools=
 		{
 			tools.gc(true,false);
 		}
-		msg=new Date().Format('yyyy-MM-dd hh:mm:ss')+"\r\n"+msg;
+		msg=new Date().Format('yyyy-MM-dd hh:mm:ss')+'\r\n'+msg;
 		app.errorlog.push(msg);
 		console.log(msg);
 	};
 	app.getLog=function(split)
 	{
-		return (app.errorlog.join(split?split:"\r\n"));
+		return app.errorlog.join(split?split:'\r\n');
 	};
 	app.lastList=[];
 	app.getLast=function(key)
