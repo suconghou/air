@@ -9,12 +9,13 @@ var jshint=require('jshint');
 var watch=require('watch');
 var LessPluginAutoPrefix=require('less-plugin-autoprefix');
 var autoprefixPlugin=new LessPluginAutoPrefix();
-var args=process.argv.splice(2);
+var processArgv=[].concat(process.argv);
+var args=processArgv.splice(2);
 var app=express();
 var config=
 {
 	debug:true,
-	version:'2.0',
+	version:'0.2.1',
 	port:args.indexOf('-p')>=0?(parseInt(args[args.indexOf('-p')+1])?parseInt(args[args.indexOf('-p')+1]):8088):8088,
 	staticPath:process.cwd(),
 	lessLibPath:path.join(process.cwd(),'less'),
