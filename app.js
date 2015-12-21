@@ -15,7 +15,7 @@ var app=express();
 var config=
 {
 	debug:true,
-	version:'0.2.1',
+	version:'0.2.2',
 	port:args.indexOf('-p')>=0?(parseInt(args[args.indexOf('-p')+1])?parseInt(args[args.indexOf('-p')+1]):8088):8088,
 	staticPath:process.cwd(),
 	lessLibPath:path.join(process.cwd(),'less'),
@@ -45,8 +45,14 @@ if(args.indexOf('-d')>=0)
 		process.exit();
 	}
 }
-app.set('port', process.env.PORT || config.port);
+app.use(function(req,res,next)
+{
+	res.header('Access-Control-Allow-Origin','*');
+	res.header('Access-Control-Allow-Headers','X-Requested-With');
+	next();
+});
 app.disable('x-powered-by');
+app.set('port', process.env.PORT || config.port);
 app.use(compression());
 app.use(express.static(config.staticPath,{maxAge:'1y'}));
 var server=app.listen(app.get('port'),function()
