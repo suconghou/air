@@ -1,6 +1,6 @@
 var path=require('path');
 var fs=require('fs');
-var exec=require('child_process').exec;
+var child_process=require('child_process');
 var less=require('less');
 var UglifyJS=require('uglify-js');
 var express=require('express');
@@ -14,12 +14,36 @@ var app=express();
 var config=
 {
 	debug:true,
+	version:'2.0',
 	port:args.indexOf('-p')>=0?(parseInt(args[args.indexOf('-p')+1])?parseInt(args[args.indexOf('-p')+1]):8088):8088,
 	staticPath:process.cwd(),
 	lessLibPath:path.join(process.cwd(),'less'),
 	gitexec:'git pull origin master',
 	error404:"<title>Error..</title><center><span style='font-size:300px;color:gray;font-family:黑体'>404...</span></center>"
 };
+if(args.indexOf('-v')>=0)
+{
+	console.log('air version: air/'+config.version);
+	process.exit();
+}
+if(args.indexOf('-d')>=0)
+{
+	var env=process.env;
+	if(!env.daemon)
+	{
+		env.daemon=true;
+		var opt=
+		{
+			stdio:['ignore','ignore','ignore'],
+			env:env,
+			cwd:process.cwd,
+			detached:true
+		};
+		var child=child_process.spawn(process.execPath,process.argv.splice(1),opt);
+		child.unref();
+		process.exit();
+	}
+}
 app.set('port', process.env.PORT || config.port);
 app.disable('x-powered-by');
 app.use(compression());
@@ -44,7 +68,6 @@ var server=app.listen(app.get('port'),function()
 		service.init();
 	}
 });
-
 app.use(/\/([\w\-]+\/)?static\/css\/[\w\-]+\.css/,function(req,res,next)
 {
 	return compile.less(req,res,next);
@@ -245,7 +268,7 @@ var service=
 	{
 		if(!service.delay)
 		{
-			exec(config.gitexec,function(error,stdout,stderr)
+			child_process.exec(config.gitexec,function(error,stdout,stderr)
 			{
 				if(error)
 				{
@@ -266,7 +289,7 @@ var service=
 	},
 	phpserver:function()
 	{
-		var server=exec("php -S 0.0.0.0:"+(config.port+1),function(error)
+		var server=child_process.exec("php -S 0.0.0.0:"+(config.port+1),function(error)
 		{
 			if(error)
 			{

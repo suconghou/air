@@ -29,6 +29,9 @@
 
 > 参数-p,指定服务监听的端口,PHP Server 端口号也会依此变化.
 
+> 参数-v,打印出版本并退出
+
+> 参数-d,以daemon模式运行
 
 # 目录结构
 目录结构采用类似 `项目名/static/css/style.less`
@@ -73,5 +76,5 @@ Http访问 `/项目名/static/css/style.css` 即可得出style.less编译后的c
 
 > 本地开发 `air develop -w`
 
-> 服务器模式 `air server -k 123456`
+> 服务器模式 `air server -k 123456 -d`
 
