@@ -15,66 +15,23 @@ var app=express();
 var config=
 {
 	debug:true,
-	version:'0.2.2',
+	version:'0.2.3',
 	port:args.indexOf('-p')>=0?(parseInt(args[args.indexOf('-p')+1])?parseInt(args[args.indexOf('-p')+1]):8088):8088,
 	staticPath:process.cwd(),
 	lessLibPath:path.join(process.cwd(),'less'),
 	gitexec:'git pull origin master',
 	error404:"<title>Error..</title><center><span style='font-size:300px;color:gray;font-family:黑体'>404...</span></center>"
 };
-if(args.indexOf('-v')>=0)
-{
-	console.log('air version: air/'+config.version);
-	process.exit();
-}
-if(args.indexOf('-d')>=0)
-{
-	var env=process.env;
-	if(!env.daemon)
-	{
-		env.daemon=true;
-		var opt=
-		{
-			stdio:['ignore','ignore','ignore'],
-			env:env,
-			cwd:process.cwd,
-			detached:true
-		};
-		var child=child_process.spawn(process.execPath,process.argv.splice(1),opt);
-		child.unref();
-		process.exit();
-	}
-}
+app.disable('x-powered-by');
+app.set('port', process.env.PORT||config.port);
 app.use(function(req,res,next)
 {
 	res.header('Access-Control-Allow-Origin','*');
 	res.header('Access-Control-Allow-Headers','X-Requested-With');
 	next();
 });
-app.disable('x-powered-by');
-app.set('port', process.env.PORT || config.port);
 app.use(compression());
 app.use(express.static(config.staticPath,{maxAge:'1y'}));
-var server=app.listen(app.get('port'),function()
-{
-	config.port=server.address().port;
-	app.log('Server listening on port '+config.port);
-	if(args.length>0)
-	{
-		switch(args[0])
-		{
-			case "server":
-				config.debug=false;
-			break;
-			case "develop":
-				service.phpserver();
-			break;
-			default:
-			break;
-		}
-		service.init();
-	}
-});
 app.use(/\/([\w\-]+\/)?static\/css\/[\w\-]+\.css/,function(req,res,next)
 {
 	return compile.less(req,res,next);
@@ -336,8 +293,6 @@ var service=
 
 };
 
-
-
 var tools=
 {
 	watch:function()
@@ -359,7 +314,7 @@ var tools=
 		{
 			if(typeof f == "object" && prev === null && curr === null)
 			{
-				app.log('watcher start');
+				app.log('lint watcher start');
 			}
 			else if(prev === null)
 			{
@@ -376,7 +331,6 @@ var tools=
 				tools.hint(f);
 			}
 		});
-			
 
 	},
 	hint:function(filePath)
@@ -408,6 +362,10 @@ var tools=
 						console.log('\r\n'+filePath+':\r\nLint Ok');
 					}
 				}
+				else
+				{
+					console.log(err.toString());
+				}
 			});
 		}
 	},
@@ -427,9 +385,184 @@ var tools=
 			app.log(msg);
 		}
 		return JSON.stringify({log:clearLog,cache:clearCache});
+	},
+	compress:function(args)
+	{
+		var cwd=config.staticPath;
+		args.forEach(function(item,index)
+		{
+			var arr=item.split('--less=');
+			if(arr.length==2)
+			{
+				delete args[index];
+				config.lessLibPath=arr[1].substr(0,1)==path.sep?arr[1]:path.join(cwd,arr[1]);
+			}
+		});
+		args=args.filter(function(item){return item;});
+		if(args.length<=1)
+		{
+			var configFile=path.join(cwd,'static.json');
+			var hotPathJs=[],hotPathLess=[];
+			if(fs.existsSync(configFile))
+			{
+				try
+				{
+					var cfg=require(configFile);
+					if(cfg.static)
+					{
+						if(cfg.static.js)
+						{
+							hotPathJs=Object.keys(cfg.static.js).unique();
+						}
+						if(cfg.static.css)
+						{
+							hotPathLess=Object.keys(cfg.static.css).unique();
+						}
+					}
+					var hotjsLen=hotPathJs.length;
+					var hotlessLen=hotPathLess.length;
+					var getRealPath=function(item)
+					{
+						return item.substr(0,1)==path.sep?item:path.join(cwd,'js',item);
+					};
+					for(var m=0;m<hotjsLen;m++)
+					{
+						var itemName=hotPathJs[m];
+						var itemPath=path.join(cwd,'js',itemName)+'.min.js';
+						var itemList=cfg.static.js[itemName].unique().map(getRealPath);
+						this.compressJs(itemList,itemPath);
+					}
+					for(var n=0;n<hotlessLen;n++)
+					{
+						var nitemName=hotPathLess[m];
+						var nitemPath=path.join(cwd,'css',nitemName)+'.min.css';
+						var nitemList=cfg.static.css[nitemName].unique().map(getRealPath);
+						this.compressLess(nitemList,nitemPath);
+					}
+				}
+				catch(e)
+				{
+					return console.log(e.toString());
+				}
+			}
+			else
+			{
+				return console.log('static.json not found');
+			}
+		}
+		else
+		{
+			var jsfiles=args.unique().filter(function(item){return item.substr(-3)=='.js';}).map(function(item){return item.substr(0,1)==path.sep?item:path.join(cwd,item);});
+			var lessfiles=args.unique().filter(function(item){return item.substr(-5)=='.less';}).map(function(item){return item.substr(0,1)==path.sep?item:path.join(cwd,item);});
+			var jsLen=jsfiles.length;
+			var lessLen=lessfiles.length;
+			if(jsLen>0)
+			{
+				return this.compressJs(jsfiles);
+			}
+			if(lessLen>0)
+			{
+				return this.compressLess(lessfiles);
+			}
+		}
+	},
+	compressJs:function(jsfiles,savename)
+	{
+		var jsLen=jsfiles.length;
+		var jsList=['compress js file:'];
+		for(var j=0;j<jsLen;j++)
+		{
+			var jfile=jsfiles[j];
+			if(!fs.existsSync(jfile))
+			{
+				return console.log(jfile+' not found');
+			}
+			jsList.push('\t'+jfile);
+		}
+		try
+		{
+			var joption={mangle:true,compress:{sequences:true,dead_code:true,unused:true,booleans:true,join_vars:true}};
+			var result=UglifyJS.minify(jsfiles,joption).code;
+			if(!savename)
+			{
+				savename=path.join(config.staticPath,jsfiles.map(function(item){return path.basename(item.replace('.js',''));}).join('-'))+'.min.js';
+			}
+			fs.writeFile(savename,result,function(err)
+			{
+				if(err)
+				{
+					console.log(err.toString());
+				}
+				else
+				{
+					console.log(jsList.join('\r\n')+'\r\nstore into\r\n\t'+savename);
+				}
+			});
+		}
+		catch(e)
+		{
+			console.log(e.toString());
+		}
+	},
+	compressLess:function(lessfiles,savename)
+	{
+		var lessLen=lessfiles.length;
+		var lessList=['compress less file:'];
+		for(var i=0;i<lessLen;i++)
+		{
+			var file=lessfiles[i];
+			if(!fs.existsSync(file))
+			{
+				return console.log(file+' not found');
+			}
+			lessList.push('\t'+file);
+		}
+		var lessInput=lessfiles.map(function(item){return '@import "'+item+'";';}).join("\r\n");
+		var option={plugins:[autoprefixPlugin],paths:config.lessLibPath,compress:true,yuicompress:true,optimization:1};
+		less.render(lessInput,option).then(function(output)
+		{
+			if(!savename)
+			{
+				savename=path.join(config.staticPath,lessfiles.map(function(item){return path.basename(item.replace('.less',''));}).join('-'))+'.min.css';
+			}
+			fs.writeFile(savename,output.css,function(err)
+			{
+				if(err)
+				{
+					console.log(err.toString());
+				}
+				else
+				{
+					console.log(lessList.join('\r\n')+'\r\nstore into\r\n\t'+savename);
+				}
+			});
+		},function(error)
+		{
+			console.log(error.toString());
+		});
+	},
+	lint:function(args)
+	{
+		var cwd=config.staticPath;
+		if(args.length<=1)
+		{
+			return this.watch();
+		}
+		var files=args.unique().filter(function(item){return item.substr(-3)=='.js';}).map(function(item){return item.substr(0,1)=='/'?item:path.join(cwd,item);});
+		var len=files.length;
+		if(len>0)
+		{
+			for(var i=0;i<len;i++)
+			{
+				this.hint(files[i]);
+			}
+		}
+		else
+		{
+			return console.log('no js file input');
+		}
 	}
 };
-
 
 (function(){
 	Date.prototype.Format=function(fmt)
@@ -505,5 +638,59 @@ var tools=
 		return app.lastList;
 	};
 })();
+
+
+
+
+if(args.indexOf('-v')>=0)
+{
+	return console.log('air version: air/'+config.version);
+}
+if(args[0]=='compress')
+{
+	return tools.compress(args);
+}
+if(args[0]=='lint')
+{
+	return tools.lint(args);
+}
+if(args.indexOf('-d')>=0)
+{
+	var env=process.env;
+	if(!env.daemon)
+	{
+		env.daemon=true;
+		var opt=
+		{
+			stdio:['ignore','ignore','ignore'],
+			env:env,
+			cwd:process.cwd,
+			detached:true
+		};
+		var child=child_process.spawn(process.execPath,process.argv.splice(1),opt);
+		return child.unref();
+	}
+}
+
+var server=app.listen(app.get('port'),function()
+{
+	config.port=server.address().port;
+	app.log('Server listening on port '+config.port);
+	if(args.length>0)
+	{
+		switch(args[0])
+		{
+			case "server":
+				config.debug=false;
+			break;
+			case "develop":
+				service.phpserver();
+			break;
+			default:
+			break;
+		}
+		service.init();
+	}
+});
 
 

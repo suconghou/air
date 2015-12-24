@@ -19,6 +19,20 @@
 
 > 编译将做优化和代码压缩
 
+**指令**
+
+> 使用`air lint ` 执行Jslint,而不开启http服务,文件修改实时触发
+
+> 使用`air lint jsfile1.js jsfile2.js jsfile3.js` 可对指定文件进行Jslint,可对一个或多个文件
+
+> 使用`air compress` 在static目录下执行,将会根据static.json文件描述,压缩合并输出到指定文件
+
+> 使用`air compress lessfile1.less lessfile2.less` 将对less文件解析压缩,多个less文件将会压缩合并为一个css文件
+> 同时可添加参数 `--less=/data/pathto/lesslib` 指定lessLib路径
+
+> 使用`air compress jsfile1.js jsfile2.js` 将对js文件压缩,多个js文件将合并为一个js文件
+
+
 **参数**
 
 > 参数-w,使用Jslint,文件修改实时触发,本地开发建议加上
