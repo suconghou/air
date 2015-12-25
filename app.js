@@ -15,7 +15,7 @@ var app=express();
 var config=
 {
 	debug:true,
-	version:'0.2.3',
+	version:'0.2.4',
 	port:args.indexOf('-p')>=0?(parseInt(args[args.indexOf('-p')+1])?parseInt(args[args.indexOf('-p')+1]):8088):8088,
 	staticPath:process.cwd(),
 	lessLibPath:path.join(process.cwd(),'less'),
@@ -253,16 +253,14 @@ var service=
 	},
 	phpserver:function()
 	{
+		var time=(new Date).getTime();
 		var server=child_process.exec("php -S 0.0.0.0:"+(config.port+1),function(error)
 		{
 			if(error)
 			{
-				app.log('php server start failed');
+				var msg=((new Date).getTime()-time)>800?'php server is stoped':'php server start failed';
+				return app.log(msg);
 			}
-		});
-		server.on('exit',function(code)
-		{
-			app.log('php server is stoped ');
 		});
 	},
 	webhook:function(req,res,next)
