@@ -95,7 +95,7 @@ static.json
 	}
 }
 ```
-此时,在static目录下执行`air compress` 将会将上述js文件压缩为all.min.js"
+此时,在static目录下执行`air compress` 将会将上述js文件压缩为all.min.js
 
 less文件解析合并压缩为style.min.css
 

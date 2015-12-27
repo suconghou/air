@@ -15,7 +15,7 @@ var app=express();
 var config=
 {
 	debug:true,
-	version:'0.2.5',
+	version:'0.2.6',
 	port:args.indexOf('-p')>=0?(parseInt(args[args.indexOf('-p')+1])?parseInt(args[args.indexOf('-p')+1]):8088):8088,
 	staticPath:process.cwd(),
 	lessLibPath:path.join(process.cwd(),'less'),
@@ -67,7 +67,10 @@ var compile=
 			try
 			{
 				cfg=require(configFile);
-				hotPath=Object.keys(cfg.static.css).unique();
+				if(cfg.static&&cfg.static.css)
+				{
+					hotPath=Object.keys(cfg.static.css).unique();
+				}
 			}
 			catch(e)
 			{
@@ -136,7 +139,10 @@ var compile=
 			try
 			{
 				cfg=require(configFile);
-				hotPath=Object.keys(cfg.static.js).unique();
+				if(cfg.static&&cfg.static.js)
+				{
+					hotPath=Object.keys(cfg.static.js).unique();
+				}
 			}
 			catch(e)
 			{
