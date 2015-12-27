@@ -15,7 +15,7 @@ var app=express();
 var config=
 {
 	debug:true,
-	version:'0.2.4',
+	version:'0.2.5',
 	port:args.indexOf('-p')>=0?(parseInt(args[args.indexOf('-p')+1])?parseInt(args[args.indexOf('-p')+1]):8088):8088,
 	staticPath:process.cwd(),
 	lessLibPath:path.join(process.cwd(),'less'),
@@ -253,12 +253,12 @@ var service=
 	},
 	phpserver:function()
 	{
-		var time=(new Date).getTime();
+		var time=(new Date()).getTime();
 		var server=child_process.exec("php -S 0.0.0.0:"+(config.port+1),function(error)
 		{
 			if(error)
 			{
-				var msg=((new Date).getTime()-time)>800?'php server is stoped':'php server start failed';
+				var msg=((new Date()).getTime()-time)>800?'php server is stoped':'php server start failed';
 				return app.log(msg);
 			}
 		});
@@ -387,16 +387,6 @@ var tools=
 	compress:function(args)
 	{
 		var cwd=config.staticPath;
-		args.forEach(function(item,index)
-		{
-			var arr=item.split('--less=');
-			if(arr.length==2)
-			{
-				delete args[index];
-				config.lessLibPath=arr[1].substr(0,1)==path.sep?arr[1]:path.join(cwd,arr[1]);
-			}
-		});
-		args=args.filter(function(item){return item;});
 		if(args.length<=1)
 		{
 			var configFile=path.join(cwd,'static.json');
@@ -644,6 +634,17 @@ if(args.indexOf('-v')>=0)
 {
 	return console.log('air version: air/'+config.version);
 }
+args.forEach(function(item,index)
+{
+	var arr=item.split('--less=');
+	if(arr.length==2)
+	{
+		delete args[index];
+		config.lessLibPath=arr[1].substr(0,1)==path.sep?arr[1]:path.join(config.staticPath,arr[1]);
+		app.log('set less lib path: '+config.lessLibPath);
+	}
+});
+args=args.filter(function(item){return item;});
 if(args[0]=='compress')
 {
 	return tools.compress(args);
