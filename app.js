@@ -58,7 +58,7 @@ var compile=
 		var pathInfo=req.baseUrl.replace('.css','').split('/css/');
 		var staticPath=path.join(config.staticPath,pathInfo[0]);
 		var configFile=path.join(staticPath,'static.json');
-		var ver=req.query.ver?req.query.ver.substr(0,32):null;
+		var ver=req.query.ver?req.query.ver.substr(0,9):null;
 		var cfg={};
 		var hotPath=[];
 		var lessPathArray;
@@ -512,7 +512,13 @@ var tools=
 			lessList.push('\t'+file);
 		}
 		var lessInput=lessfiles.map(function(item){return '@import "'+item+'";';}).join("\r\n");
-		var option={plugins:[autoprefixPlugin],paths:config.lessLibPath,compress:true,yuicompress:true,optimization:1};
+		var option={plugins:[autoprefixPlugin],paths:config.lessLibPath,urlArgs:config.ver?'ver='+config.ver:null};
+		if(config.debug!='debug')
+		{
+			option.compress=true;
+			option.yuicompress=true;
+			option.optimization=1;
+		}
 		less.render(lessInput,option).then(function(output)
 		{
 			if(!savename)
@@ -563,13 +569,13 @@ var tools=
 	{
 		var o=
 		{
-			"M+": this.getMonth() + 1, //月份 
-			"d+": this.getDate(), //日 
-			"h+": this.getHours(), //小时 
-			"m+": this.getMinutes(), //分 
-			"s+": this.getSeconds(), //秒 
-			"q+": Math.floor((this.getMonth() + 3) / 3), //季度 
-			"S": this.getMilliseconds() //毫秒 
+			"M+": this.getMonth() + 1, //月份
+			"d+": this.getDate(), //日
+			"h+": this.getHours(), //小时
+			"m+": this.getMinutes(), //分
+			"s+": this.getSeconds(), //秒
+			"q+": Math.floor((this.getMonth() + 3) / 3), //季度
+			"S": this.getMilliseconds() //毫秒
 		};
 		if(/(y+)/.test(fmt))
 		{
@@ -642,12 +648,23 @@ if(args.indexOf('-v')>=0)
 }
 args.forEach(function(item,index)
 {
-	var arr=item.split('--less=');
-	if(arr.length==2)
+	var les=item.split('--less=');
+	var vers=item.split('--ver=');
+	if(les.length==2)
 	{
 		delete args[index];
-		config.lessLibPath=arr[1].substr(0,1)==path.sep?arr[1]:path.join(config.staticPath,arr[1]);
+		config.lessLibPath=les[1].substr(0,1)==path.sep?les[1]:path.join(config.staticPath,les[1]);
 		app.log('set less lib path: '+config.lessLibPath);
+	}
+	else if(vers.length==2)
+	{
+		delete args[index];
+		config.ver=vers[1].substr(0,9);
+	}
+	else if(item=='--debug')
+	{
+		delete args[index];
+		config.debug='debug';
 	}
 });
 args=args.filter(function(item){return item;});
