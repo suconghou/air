@@ -38,6 +38,10 @@
 > 可以参数中同时存在less文件和js文件,`air compress less1.less file1.js file2.less file3.js`
 > 工具自动按类型分组,less文件和js文件,各自压缩合并,其他文件类型忽略.
 
+> `air compress` 除了`--less`参数,可接受`--debug`参数,生成未压缩的代码方便调试,
+> `air compress --watch` 还可以监视文件变化,自动执行压缩合并
+
+
 **参数**
 
 > 参数-w,使用Jslint,文件修改实时触发,本地开发建议加上
@@ -64,11 +68,11 @@ Http访问 `/项目名/static/css/style.css` 即可得出style.less编译后的c
 
 注意:如果文件夹内确实存在此文件,则此文件则会如实输出
 
-因此Http直接访问 `/项目名/static/js/main.js` 则会如实输出main.js文件	
+因此Http直接访问 `/项目名/static/js/main.js` 则会如实输出main.js文件
 
-工具支持`-连接符`配置,因此可以Http访问 `/项目名/static/js/main-page.js`	
+工具支持`-连接符`配置,因此可以Http访问 `/项目名/static/js/main-page.js`
 
-则会按顺序合并main.js和page.js两个文件	
+则会按顺序合并main.js和page.js两个文件
 
 less文件同样可以按照此种模式,此外less文件还可以使用索引模式
 
@@ -146,4 +150,11 @@ less文件解析合并压缩为style.min.css
 > 本地开发 `air develop -w`
 
 > 服务器模式 `air server -k 123456 -d`
+
+
+# TODO
+
+* 监听文件变化,自动执行合并
+* 压缩PNG,JPG图片
+
 

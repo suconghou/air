@@ -15,7 +15,7 @@ var app=express();
 var config=
 {
 	debug:true,
-	version:'0.2.6',
+	version:'0.2.7',
 	port:args.indexOf('-p')>=0?(parseInt(args[args.indexOf('-p')+1])?parseInt(args[args.indexOf('-p')+1]):8088):8088,
 	staticPath:process.cwd(),
 	lessLibPath:path.join(process.cwd(),'less'),
@@ -415,23 +415,66 @@ var tools=
 					}
 					var hotjsLen=hotPathJs.length;
 					var hotlessLen=hotPathLess.length;
-					var getRealPath=function(item)
+					var getRealPathJs=function(item)
 					{
 						return item.substr(0,1)==path.sep?item:path.join(cwd,'js',item);
+					};
+					var getRealPathLess=function(item)
+					{
+						return item.substr(0,1)==path.sep?item:path.join(cwd,'css',item);
 					};
 					for(var m=0;m<hotjsLen;m++)
 					{
 						var itemName=hotPathJs[m];
 						var itemPath=path.join(cwd,'js',itemName)+'.min.js';
-						var itemList=cfg.static.js[itemName].unique().map(getRealPath);
+						var itemList=cfg.static.js[itemName].unique().map(getRealPathJs);
 						this.compressJs(itemList,itemPath);
 					}
 					for(var n=0;n<hotlessLen;n++)
 					{
-						var nitemName=hotPathLess[m];
+						var nitemName=hotPathLess[n];
 						var nitemPath=path.join(cwd,'css',nitemName)+'.min.css';
-						var nitemList=cfg.static.css[nitemName].unique().map(getRealPath);
+						var nitemList=cfg.static.css[nitemName].unique().map(getRealPathLess);
 						this.compressLess(nitemList,nitemPath);
+					}
+					var env=process.env;
+					if(config.watch && !env.watched)
+					{
+						console.log(process.pid);
+						env.watched=true;
+						var options={ignoreDotFiles:true,ignoreUnreadableDir:true,ignoreNotPermitted:true};
+						options.filter=function(f,stats)
+						{
+							if(stats.isDirectory())
+							{
+								return true;
+							}
+							else if(stats.isFile())
+							{
+								return ['js','less','json'].indexOf(f.split('.').pop())>=0;
+							}
+							return false;
+						};
+						watch.watchTree(config.staticPath,options,function(f,curr,prev)
+						{
+							if(!(typeof f == "object" && prev === null && curr === null))
+							{
+								var filepart=f.split('.');
+								if((['js','css'].indexOf(filepart.pop())>=0)&&(filepart.pop()=='min'))
+								{
+									return false;
+								}
+								var childArgv=[].concat(process.argv);
+								childArgv=childArgv.filter(function(item){return (item!='--watch')&&item;});
+								var opt=
+								{
+									stdio:'inherit',
+									env:env,
+									cwd:process.cwd
+								};
+								return child_process.spawn(process.execPath,childArgv.splice(1),opt);
+							}
+						});
 					}
 				}
 				catch(e)
@@ -489,7 +532,7 @@ var tools=
 				}
 				else
 				{
-					console.log(jsList.join('\r\n')+'\r\nstore into\r\n\t'+savename);
+					console.log(jsList.join('\r\n')+'\r\nstore into:\r\n\t'+savename);
 				}
 			});
 		}
@@ -533,7 +576,7 @@ var tools=
 				}
 				else
 				{
-					console.log(lessList.join('\r\n')+'\r\nstore into\r\n\t'+savename);
+					console.log(lessList.join('\r\n')+'\r\nstore into:\r\n\t'+savename);
 				}
 			});
 		},function(error)
@@ -666,6 +709,11 @@ args.forEach(function(item,index)
 		delete args[index];
 		config.debug='debug';
 	}
+	else if(item=='--watch')
+	{
+		delete args[index];
+		config.watch=true;
+	}
 });
 args=args.filter(function(item){return item;});
 if(args[0]=='compress')
@@ -684,7 +732,7 @@ if(args.indexOf('-d')>=0)
 		env.daemon=true;
 		var opt=
 		{
-			stdio:['ignore','ignore','ignore'],
+			stdio:'ignore',
 			env:env,
 			cwd:process.cwd,
 			detached:true

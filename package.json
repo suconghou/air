@@ -1,6 +1,6 @@
 {
   "name": "airs",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "serve static files in the air",
   "main": "index.js",
   "dependencies" : {
