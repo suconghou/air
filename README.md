@@ -40,7 +40,8 @@
 
 > `air compress` 除了`--less`参数,可接受`--debug`参数,生成未压缩的代码方便调试,
 > `air compress --watch` 还可以监视文件变化,自动执行压缩合并
-
+> `air compress --debug` 以debug模式压缩,less文件只解析合并,并不压缩代码,JS文件压缩合并,并不混淆优化
+> `air compress --o` 开启极限优化压缩,去除console,debugger,优化常量表达式,循环,条件表达式优化等,同样适用于server模式`air server --o`
 
 **参数**
 

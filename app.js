@@ -15,7 +15,7 @@ var app=express();
 var config=
 {
 	debug:true,
-	version:'0.2.7',
+	version:'0.2.8',
 	port:args.indexOf('-p')>=0?(parseInt(args[args.indexOf('-p')+1])?parseInt(args[args.indexOf('-p')+1]):8088):8088,
 	staticPath:process.cwd(),
 	lessLibPath:path.join(process.cwd(),'less'),
@@ -176,34 +176,34 @@ var compile=
 		{
 			return res.type('js').send(lastParsed.content);
 		}
+		var option;
 		if(config.debug)
 		{
-			var content=[];
-			for(i=0;i<jsPathArray.length;i++)
-			{
-				content.push(fs.readFileSync(jsPathArray[i],'utf-8'));
-			}
-			content=content.join('\r\n');
-			res.type('js').send(content);
-			lastParsed={content:content,updateTime:updateTime,ver:ver};
-			return app.setLast(filename,lastParsed);
+			option={mangle:false,compress:{sequences:false,properties:false,dead_code:false,unused:false,booleans:false,join_vars:false,if_return:false,conditionals:false,hoist_funs:false,drop_debugger:false,evaluate:false,loops:false}};
 		}
 		else
 		{
-			try
+			option={mangle:true,compress:{sequences:true,properties:true,dead_code:true,unused:true,booleans:true,join_vars:true,if_return:true,conditionals:true}};
+			if(config.optimization)
 			{
-				var option={mangle:true,compress:{sequences:true,dead_code:true,unused:true,booleans:true,join_vars:true}};
-				var result=UglifyJS.minify(jsPathArray,option).code;
-				res.type('js').send(result);
-				lastParsed={content:result,updateTime:updateTime,ver:ver};
-				return app.setLast(filename,lastParsed);
+				option.compress.drop_console=true;
+				option.compress.drop_debugger=true;
+				option.compress.evaluate=true;
+				option.compress.loops=true;
 			}
-			catch(e)
-			{
-				var errMsg=e.message+' in file '+e.filename+' on line '+e.line+':'+e.col;
-				app.log(errMsg);
-				return res.status(500).send(errMsg);
-			}
+		}
+		try
+		{
+			var result=UglifyJS.minify(jsPathArray,option).code;
+			res.type('js').send(result);
+			lastParsed={content:result,updateTime:updateTime,ver:ver};
+			return app.setLast(filename,lastParsed);
+		}
+		catch(e)
+		{
+			var errMsg=e.message+' in file '+e.filename+' on line '+e.line+':'+e.col;
+			app.log(errMsg);
+			return res.status(500).send(errMsg);
 		}
 	}
 };
@@ -514,11 +514,26 @@ var tools=
 			{
 				return console.log(jfile+' not found');
 			}
-			jsList.push('\t'+jfile);
+			jsList.push(jfile);
 		}
 		try
 		{
-			var joption={mangle:true,compress:{sequences:true,dead_code:true,unused:true,booleans:true,join_vars:true}};
+			var joption;
+			if(config.debug=='debug')
+			{
+				joption={mangle:false,compress:{sequences:false,properties:false,dead_code:false,unused:false,booleans:false,join_vars:false,if_return:false,conditionals:false,hoist_funs:false,drop_debugger:false,evaluate:false,loops:false}};
+			}
+			else
+			{
+				joption={mangle:true,compress:{sequences:true,properties:true,dead_code:true,unused:true,booleans:true,join_vars:true,if_return:true,conditionals:true}};
+				if(config.optimization)
+				{
+					joption.compress.drop_console=true;
+					joption.compress.drop_debugger=true;
+					joption.compress.evaluate=true;
+					joption.compress.loops=true;
+				}
+			}
 			var result=UglifyJS.minify(jsfiles,joption).code;
 			if(!savename)
 			{
@@ -532,7 +547,7 @@ var tools=
 				}
 				else
 				{
-					console.log(jsList.join('\r\n')+'\r\nstore into:\r\n\t'+savename);
+					console.log(jsList.join('\r\n')+'\r\nsave as:'+savename);
 				}
 			});
 		}
@@ -552,7 +567,7 @@ var tools=
 			{
 				return console.log(file+' not found');
 			}
-			lessList.push('\t'+file);
+			lessList.push(file);
 		}
 		var lessInput=lessfiles.map(function(item){return '@import "'+item+'";';}).join("\r\n");
 		var option={plugins:[autoprefixPlugin],paths:config.lessLibPath,urlArgs:config.ver?'ver='+config.ver:null};
@@ -576,7 +591,7 @@ var tools=
 				}
 				else
 				{
-					console.log(lessList.join('\r\n')+'\r\nstore into:\r\n\t'+savename);
+					console.log(lessList.join('\r\n')+'\r\nsave as:'+savename);
 				}
 			});
 		},function(error)
@@ -713,6 +728,11 @@ args.forEach(function(item,index)
 	{
 		delete args[index];
 		config.watch=true;
+	}
+	else if(item=='--o')
+	{
+		delete args[index];
+		config.optimization=true;
 	}
 });
 args=args.filter(function(item){return item;});
