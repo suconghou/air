@@ -16,7 +16,7 @@ var app=express();
 var config=
 {
 	debug:true,
-	version:'0.2.9',
+	version:'0.2.10',
 	port:args.indexOf('-p')>=0?(parseInt(args[args.indexOf('-p')+1])?parseInt(args[args.indexOf('-p')+1]):8088):8088,
 	staticPath:process.cwd(),
 	lessLibPath:path.join(process.cwd(),'less'),
@@ -645,9 +645,13 @@ var tools=
 								{
 									console.log('ConnectionError:'+err.message+' -- '+file);
 								}
-								else
+								else if(err)
 								{
 									console.log(err.toString()+' -- '+file);
+								}
+								else
+								{
+									console.log('compressed:'+file);
 								}
 							});
 						}
