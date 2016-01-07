@@ -7,6 +7,7 @@
     "express": ">=4.13.3",
     "compression": ">=1.6.0",
     "uglify-js": ">=2.4.24",
+    "tinify": ">=1.1.1",
     "less": ">=2.5.3",
     "less-plugin-autoprefix": ">=1.5.1",
     "watch": ">=0.16.0",

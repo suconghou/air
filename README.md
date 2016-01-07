@@ -38,9 +38,15 @@
 > 可以参数中同时存在less文件和js文件,`air compress less1.less file1.js file2.less file3.js`
 > 工具自动按类型分组,less文件和js文件,各自压缩合并,其他文件类型忽略.
 
-> `air compress` 除了`--less`参数,可接受`--debug`参数,生成未压缩的代码方便调试,
-> `air compress --watch` 还可以监视文件变化,自动执行压缩合并
+> 支持jpg,png图片压缩`air compress file1.jpg file2.png` 采用`tinypng`API接口压缩,效果出众
+> 使用参数`--key=your-tinypng-api-key`设定apikey,例如`air compress file1.png file2.png --key=abcedf`
+
+> `air compress` 除了`--less`参数,可接受`--debug`参数,生成未压缩的代码方便调试
+
 > `air compress --debug` 以debug模式压缩,less文件只解析合并,并不压缩代码,JS文件压缩合并,并不混淆优化
+
+> `air compress --watch` 还可以监视文件变化,自动执行压缩合并
+
 > `air compress --o` 开启极限优化压缩,去除console,debugger,优化常量表达式,循环,条件表达式优化等,同样适用于server模式`air server --o`
 
 **参数**
@@ -155,7 +161,6 @@ less文件解析合并压缩为style.min.css
 
 # TODO
 
-* 监听文件变化,自动执行合并
 * 压缩PNG,JPG图片
 
 

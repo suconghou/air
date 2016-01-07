@@ -3,6 +3,7 @@ var fs=require('fs');
 var child_process=require('child_process');
 var less=require('less');
 var UglifyJS=require('uglify-js');
+var tinify=require("tinify");
 var express=require('express');
 var compression=require('compression');
 var jshint=require('jshint');
@@ -15,11 +16,12 @@ var app=express();
 var config=
 {
 	debug:true,
-	version:'0.2.8',
+	version:'0.2.9',
 	port:args.indexOf('-p')>=0?(parseInt(args[args.indexOf('-p')+1])?parseInt(args[args.indexOf('-p')+1]):8088):8088,
 	staticPath:process.cwd(),
 	lessLibPath:path.join(process.cwd(),'less'),
 	gitexec:'git pull origin master',
+	key:'uyX0XAGKE89TIXTxPv81WqFgj4if6AUa',
 	error404:"<title>Error..</title><center><span style='font-size:300px;color:gray;font-family:黑体'>404...</span></center>"
 };
 app.disable('x-powered-by');
@@ -491,15 +493,21 @@ var tools=
 		{
 			var jsfiles=args.unique().filter(function(item){return item.substr(-3)=='.js';}).map(function(item){return item.substr(0,1)==path.sep?item:path.join(cwd,item);});
 			var lessfiles=args.unique().filter(function(item){return item.substr(-5)=='.less';}).map(function(item){return item.substr(0,1)==path.sep?item:path.join(cwd,item);});
+			var imgfiles=args.unique().filter(function(item){return /^[\w\-]+\.(png|jpg|jpeg)$/i.test(item);}).map(function(item){return item.substr(0,1)==path.sep?item:path.join(cwd,item);});
 			var jsLen=jsfiles.length;
 			var lessLen=lessfiles.length;
+			var imgLen=imgfiles.length;
 			if(jsLen>0)
 			{
-				return this.compressJs(jsfiles);
+				this.compressJs(jsfiles);
 			}
 			if(lessLen>0)
 			{
-				return this.compressLess(lessfiles);
+				this.compressLess(lessfiles);
+			}
+			if(imgLen>0)
+			{
+				this.compressImages(imgfiles);
 			}
 		}
 	},
@@ -598,6 +606,64 @@ var tools=
 		{
 			console.log(error.toString());
 		});
+	},
+	compressImages:function(imgfiles)
+	{
+		var imgLen=imgfiles.length;
+		tinify.key=config.key;
+		var compressImg=function(file)
+		{
+			fs.exists(file,function(exists)
+			{
+				if(exists)
+				{
+					var minPath=file.replace('.png','.min.png').replace('.jpg','.min.jpg');
+					fs.exists(minPath,function(minExists)
+					{
+						if(minExists)
+						{
+							console.log(minPath+' already exists');
+						}
+						else
+						{
+							var source=tinify.fromFile(file);
+							source.toFile(minPath,function(err)
+							{
+								if(err instanceof tinify.AccountError)
+								{
+									console.log('AccountError:'+err.message+' -- '+file);
+								}
+								else if(err instanceof tinify.ClientError)
+								{
+									console.log('ClientError:'+err.message+' -- '+file);
+								}
+								else if(err instanceof tinify.ServerError)
+								{
+									console.log('ServerError:'+err.message+' -- '+file);
+								}
+								else if(err instanceof tinify.ConnectionError)
+								{
+									console.log('ConnectionError:'+err.message+' -- '+file);
+								}
+								else
+								{
+									console.log(err.toString()+' -- '+file);
+								}
+							});
+						}
+					});
+				}
+				else
+				{
+					console.log(file+' not found');
+				}
+			});
+		};
+		for(var i=0;i<imgLen;i++)
+		{
+			var file=imgfiles[i];
+			compressImg(file);
+		}
 	},
 	lint:function(args)
 	{
@@ -699,7 +765,6 @@ var tools=
 
 
 
-
 if(args.indexOf('-v')>=0)
 {
 	return console.log('air version: air/'+config.version);
@@ -708,6 +773,7 @@ args.forEach(function(item,index)
 {
 	var les=item.split('--less=');
 	var vers=item.split('--ver=');
+	var keys=item.split('--key=');
 	if(les.length==2)
 	{
 		delete args[index];
@@ -718,6 +784,13 @@ args.forEach(function(item,index)
 	{
 		delete args[index];
 		config.ver=vers[1].substr(0,9);
+		app.log('set less urlArgs '+config.ver);
+	}
+	else if(keys.length==2)
+	{
+		delete args[index];
+		config.key=keys[1];
+		app.log('set tinify key '+keys[1]);
 	}
 	else if(item=='--debug')
 	{
@@ -734,6 +807,7 @@ args.forEach(function(item,index)
 		delete args[index];
 		config.optimization=true;
 	}
+
 });
 args=args.filter(function(item){return item;});
 if(args[0]=='compress')
