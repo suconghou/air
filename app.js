@@ -16,12 +16,12 @@ var app=express();
 var config=
 {
 	debug:true,
-	version:'0.2.10',
+	version:'0.3.0',
 	port:args.indexOf('-p')>=0?(parseInt(args[args.indexOf('-p')+1])?parseInt(args[args.indexOf('-p')+1]):8088):8088,
 	staticPath:process.cwd(),
 	lessLibPath:path.join(process.cwd(),'less'),
 	gitexec:'git pull origin master',
-	key:'uyX0XAGKE89TIXTxPv81WqFgj4if6AUa',
+	k:'uyX0XAGKE89TIXTxPv81WqFgj4if6AUa',
 	error404:"<title>Error..</title><center><span style='font-size:300px;color:gray;font-family:黑体'>404...</span></center>"
 };
 app.disable('x-powered-by');
@@ -442,7 +442,6 @@ var tools=
 					var env=process.env;
 					if(config.watch && !env.watched)
 					{
-						console.log(process.pid);
 						env.watched=true;
 						var options={ignoreDotFiles:true,ignoreUnreadableDir:true,ignoreNotPermitted:true};
 						options.filter=function(f,stats)
@@ -610,7 +609,7 @@ var tools=
 	compressImages:function(imgfiles)
 	{
 		var imgLen=imgfiles.length;
-		tinify.key=config.key;
+		tinify.key=config.k;
 		var compressImg=function(file)
 		{
 			fs.exists(file,function(exists)
@@ -793,7 +792,7 @@ args.forEach(function(item,index)
 	else if(keys.length==2)
 	{
 		delete args[index];
-		config.key=keys[1];
+		config.k=keys[1];
 		app.log('set tinify key '+keys[1]);
 	}
 	else if(item=='--debug')
