@@ -616,7 +616,7 @@ var tools=
 			{
 				if(exists)
 				{
-					var minPath=file.replace('.png','.min.png').replace('.jpg','.min.jpg');
+					var minPath=file.replace('.png','.min.png').replace('.jpg','.min.jpg').replace('.jpeg','.min.jpeg');
 					fs.exists(minPath,function(minExists)
 					{
 						if(minExists)
