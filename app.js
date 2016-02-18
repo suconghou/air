@@ -772,6 +772,32 @@ if(args.indexOf('-v')>=0)
 {
 	return console.log('air version: air/'+config.version);
 }
+else if(args.indexOf('-h')>=0)
+{
+	var help=
+	[
+		'Usage:\r\n\tair [command] [flags]\r\nCommands:',
+		'\tdevelop    run a static server in debug mode,and also run a php server',
+		'\tserver     run a static server in server mode,compress js and css',
+		'\tlint       use jslint without http server,pass one or more js file or not',
+		'\tcompress   compress js files or compile and compress less files',
+		'Flags:',
+		'\t-v         show air version',
+		'\t-h         show this help information',
+		'\t-d         run in daemon mode',
+		'\t-p         set server listen port',
+		'\t-k         set webhook passwort',
+		'\t-g         enable git pull,pull origin master every minute',
+		'\t-w         enable jslint,jslint when javascript files changed',
+		'\t--o        optimize javascript code,remove console debugger',
+		'\t--debug    compress in debug mode,compile and compress lightly',
+		'\t--watch    compress in watch mode,when files changed,compres again',
+		'\t--less     set less lib path,use [air --less=/pathto/lesslib]',
+		'\t--key      set tinypng image tinify key,use [air --key=xxx]',
+		'\r\nSee more information on http://blog.suconghou.cn/project/air'
+	];
+	return console.log(help.join('\r\n'));
+}
 args.forEach(function(item,index)
 {
 	var les=item.split('--less=');
