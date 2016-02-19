@@ -16,7 +16,7 @@ var app=express();
 var config=
 {
 	debug:true,
-	version:'0.3.0',
+	version:'0.3.1',
 	port:args.indexOf('-p')>=0?(parseInt(args[args.indexOf('-p')+1])?parseInt(args[args.indexOf('-p')+1]):8088):8088,
 	staticPath:process.cwd(),
 	lessLibPath:path.join(process.cwd(),'less'),
@@ -29,7 +29,8 @@ app.set('port', process.env.PORT||config.port);
 app.use(function(req,res,next)
 {
 	res.header('Access-Control-Allow-Origin','*');
-	res.header('Access-Control-Allow-Headers','X-Requested-With');
+	res.header('Access-Control-Allow-Credentials','true');
+	res.header('Access-Control-Allow-Headers','Origin, X-Requested-With, Content-Type, Accept');
 	next();
 });
 app.use(compression());
@@ -791,7 +792,7 @@ else if(args.indexOf('-h')>=0)
 		'\t-w         enable jslint,jslint when javascript files changed',
 		'\t--o        optimize javascript code,remove console debugger',
 		'\t--debug    compress in debug mode,compile and compress lightly',
-		'\t--watch    compress in watch mode,when files changed,compres again',
+		'\t--watch    compress in watch mode,compres again when files changed',
 		'\t--less     set less lib path,use [air --less=/pathto/lesslib]',
 		'\t--key      set tinypng image tinify key,use [air --key=xxx]',
 		'\r\nSee more information on http://blog.suconghou.cn/project/air'
