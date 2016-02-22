@@ -16,7 +16,7 @@ var app=express();
 var config=
 {
 	debug:true,
-	version:'0.3.1',
+	version:'0.3.2',
 	port:args.indexOf('-p')>=0?(parseInt(args[args.indexOf('-p')+1])?parseInt(args[args.indexOf('-p')+1]):8088):8088,
 	staticPath:process.cwd(),
 	lessLibPath:path.join(process.cwd(),'less'),
@@ -396,6 +396,47 @@ var tools=
 	compress:function(args)
 	{
 		var cwd=config.staticPath;
+		var env=process.env;
+		var watchCompress=function()
+		{
+			if(config.watch && !env.watched)
+			{
+				env.watched=true;
+				var options={ignoreDotFiles:true,ignoreUnreadableDir:true,ignoreNotPermitted:true};
+				options.filter=function(f,stats)
+				{
+					if(stats.isDirectory())
+					{
+						return true;
+					}
+					else if(stats.isFile())
+					{
+						return ['js','less','json'].indexOf(f.split('.').pop())>=0;
+					}
+					return false;
+				};
+				watch.watchTree(config.staticPath,options,function(f,curr,prev)
+				{
+					if(!(typeof f == "object" && prev === null && curr === null))
+					{
+						var filepart=f.split('.');
+						if((['js','css'].indexOf(filepart.pop())>=0)&&(filepart.pop()=='min'))
+						{
+							return false;
+						}
+						var childArgv=[].concat(process.argv);
+						childArgv=childArgv.filter(function(item){return (item!='--watch')&&item;});
+						var opt=
+						{
+							stdio:'inherit',
+							env:env,
+							cwd:process.cwd
+						};
+						return child_process.spawn(process.execPath,childArgv.splice(1),opt);
+					}
+				});
+			}
+		};
 		if(args.length<=1)
 		{
 			var configFile=path.join(cwd,'static.json');
@@ -440,44 +481,7 @@ var tools=
 						var nitemList=cfg.static.css[nitemName].unique().map(getRealPathLess);
 						this.compressLess(nitemList,nitemPath);
 					}
-					var env=process.env;
-					if(config.watch && !env.watched)
-					{
-						env.watched=true;
-						var options={ignoreDotFiles:true,ignoreUnreadableDir:true,ignoreNotPermitted:true};
-						options.filter=function(f,stats)
-						{
-							if(stats.isDirectory())
-							{
-								return true;
-							}
-							else if(stats.isFile())
-							{
-								return ['js','less','json'].indexOf(f.split('.').pop())>=0;
-							}
-							return false;
-						};
-						watch.watchTree(config.staticPath,options,function(f,curr,prev)
-						{
-							if(!(typeof f == "object" && prev === null && curr === null))
-							{
-								var filepart=f.split('.');
-								if((['js','css'].indexOf(filepart.pop())>=0)&&(filepart.pop()=='min'))
-								{
-									return false;
-								}
-								var childArgv=[].concat(process.argv);
-								childArgv=childArgv.filter(function(item){return (item!='--watch')&&item;});
-								var opt=
-								{
-									stdio:'inherit',
-									env:env,
-									cwd:process.cwd
-								};
-								return child_process.spawn(process.execPath,childArgv.splice(1),opt);
-							}
-						});
-					}
+					return watchCompress();
 				}
 				catch(e)
 				{
@@ -509,6 +513,7 @@ var tools=
 			{
 				this.compressImages(imgfiles);
 			}
+			return watchCompress();
 		}
 	},
 	compressJs:function(jsfiles,savename)
