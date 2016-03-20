@@ -10,7 +10,7 @@
     "tinify": ">=1.1.1",
     "less": ">=2.5.3",
     "less-plugin-autoprefix": ">=1.5.1",
-    "watch": ">=0.16.0",
+    "chokidar": ">=1.4.3",
     "jshint": ">=2.8.0"
   },
   "engines": {

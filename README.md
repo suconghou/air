@@ -159,8 +159,5 @@ less文件解析合并压缩为style.min.css
 > 服务器模式 `air server -k 123456 -d`
 
 
-# TODO
-
-* 压缩PNG,JPG图片
 
 
