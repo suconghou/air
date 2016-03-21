@@ -7,10 +7,21 @@ var app=
 		instance.disable('x-powered-by');
 		instance.use(require('compression')());
 		instance.set('port',process.env.PORT||cfg.port);
-		instance.use(express.static(cfg.staticPath,{maxAge:cfg.debug?'1h':'1m'}));
-		instance.use(function(req,res,next)
+		instance.use(express.static(cfg.staticPath,{maxAge:cfg.debug?'5s':'1h',setHeaders:function(res,path,stat)
 		{
 			res.header('Access-Control-Allow-Origin','*');
+			res.header('Access-Control-Allow-Credentials','true');
+			res.header('Access-Control-Allow-Headers','Origin, X-Requested-With, Content-Type, Accept');
+		}}));
+		instance.use(function(req,res,next)
+		{
+			var refer=req.headers.referer;
+			if(refer)
+			{
+				var params=require('url').parse(refer);
+				refer=params.protocol+'//'+params.host;
+			}
+			res.header('Access-Control-Allow-Origin',refer?refer:'*');
 			res.header('Access-Control-Allow-Credentials','true');
 			res.header('Access-Control-Allow-Headers','Origin, X-Requested-With, Content-Type, Accept');
 			next();
@@ -415,7 +426,7 @@ var compress=
 			}
 			else
 			{
-				files=params.file.split('-').filter(function(item){return item;}).unique().map(function(item){return path.resolve(basePath,item.replace(/externals./,exterPath)+'.'+params.ext);});
+				files=params.file.split('-').filter(function(item){return item;}).unique().map(function(item){return path.resolve(basePath,item.replace(/externals./,exterPath)+'.'+(params.ext=='js'?params.ext:'less'));});
 			}
 			callback(files);
 		});
@@ -672,7 +683,6 @@ var tools=
 		m.log('enable watch mode');
 	}
 };
-
 
 var service=
 {
