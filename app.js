@@ -88,6 +88,8 @@ var app=
 		{
 			return res.status(404).send(cfg.error404);
 		});
+		delete require.cache[require.resolve('express')];
+		delete require.cache[require.resolve('compression')];
 		return instance;
 	},
 	compress:function(args,cfg)
@@ -271,6 +273,8 @@ var compress=
 					var errMsg=error.type+' Error : '+error.message+' in file '+error.filename+' on line '+error.line+':'+error.index+' '+error.extract.join('');
 					return errorCallback(500,errMsg);
 				});
+				delete require.cache[require.resolve('less-plugin-autoprefix')];
+				delete require.cache[require.resolve('less')];
 			}
 		});
 	},
@@ -306,6 +310,7 @@ var compress=
 					var result=require('uglify-js').minify(jsfiles,option).code;
 					content={content:result,updateTime:updateTime,ver:cfg.ver};
 					successCallback(content);
+					delete require.cache[require.resolve('uglify-js')];
 					return m.setLast(key,content);
 				}
 				catch(e)
@@ -567,6 +572,7 @@ var m=
 	},
 	getStatus:function(cfg)
 	{
+		var os=require('os');
 		var data=
 		{
 			cached:Object.keys(this.lastList).length,
@@ -575,6 +581,10 @@ var m=
 			node:process.version,
 			port:cfg.port,
 			os:process.platform+process.arch,
+			mem:os.freemem()/1048576,
+			all:os.totalmem()/1048576,
+			cpus:os.cpus(),
+			load:os.loadavg(),
 			uptime:process.uptime(),
 			memory:process.memoryUsage(),
 			version:cfg.version
