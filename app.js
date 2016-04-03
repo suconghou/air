@@ -560,7 +560,7 @@ var m=
 	{
 		if(this.errorlog.length>1000)
 		{
-			tools.gc(true,false);
+			this.gc(true,false);
 		}
 		msg=new Date()+'\r\n'+msg;
 		this.errorlog.push(msg);
