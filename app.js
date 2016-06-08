@@ -627,6 +627,21 @@ var tools=
 			}
 			return r;
 		};
+
+		function posix(path)
+		{
+			return path.charAt(0) === '/';
+		};
+		function win32(path)
+		{
+			var splitDeviceRe = /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/;
+			var result = splitDeviceRe.exec(path);
+			var device = result[1] || '';
+			var isUnc = !!device && device.charAt(1) !== ':';
+			return !!result[2] || isUnc;
+		};
+		// https://github.com/sindresorhus/path-is-absolute/blob/master/index.js
+		path.isAbsolute=process.platform==='win32'?win32:posix;
 	},
 	lint:function(filePath)
 	{
@@ -763,7 +778,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.3.4',
+		version:'0.3.5',
 		staticPath:process.cwd(),
 		lessLibPath:'less',
 		scriptLibPath:'script',
