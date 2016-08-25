@@ -49,6 +49,16 @@
 
 > `air compress --o` 开启极限优化压缩,去除console,debugger,优化常量表达式,循环,条件表达式优化等,同样适用于server模式`air server --o`
 
+> `air build -w` 或者 `air build --watch` watch 模式,文件发生变化,自动编译,推荐开发时使用
+
+> `air build --debug` 生成source map,消耗较多时间
+
+> `air build --optimize` 开启压缩,编译后压缩css,js,用于release,推荐部署时使用
+
+> `air build --debug -w` or `air build --debug --watch` 开启热加载模式,需要正确定义static.json `package`->`entry`字段
+
+> `air build main.jsx --debug -w` or `air build main.jsx --debug --wach` 指定文件为入口文件开启热加载模式
+
 **参数**
 
 > 参数-w,使用Jslint,文件修改实时触发,本地开发建议加上

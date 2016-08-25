@@ -4,10 +4,9 @@ var app=
 	{
 		var express=require('express');
 		var instance=new express();
-		instance.disable('x-powered-by');
-		instance.use(require('compression')());
+		this.route(instance);
 		instance.set('port',process.env.PORT||cfg.port);
-		instance.use(express.static(cfg.staticPath,{maxAge:cfg.debug?'5s':'1h',setHeaders:function(res,path,stat)
+		instance.use(express.static(cfg.workPath,{maxAge:cfg.debug?'5s':'1h',setHeaders:function(res,path,stat)
 		{
 			res.header('Access-Control-Allow-Origin','*');
 			res.header('Access-Control-Allow-Credentials','true');
@@ -31,6 +30,41 @@ var app=
 			cfg.port=server.address().port;
 			m.log('Server listening on port '+cfg.port);
 		});
+		instance.use('/webhook/:action',function(req,res,next)
+		{
+			var hook=service.hook;
+			if(hook[req.params.action]&&req.query.key==cfg.pass)
+			{
+				return hook[req.params.action](req,res,next,cfg);
+			}
+			return next();
+		});
+		instance.get('/reload',function(req,res,next)
+		{
+			var url='//'+req.headers.host+'/reload';
+			var reload='var a=new XMLHttpRequest;a.open("POST","'+url+'",1),a.onreadystatechange=function(){4==a.readyState&&location.reload()},a.send();';
+			res.type('js').send(reload);
+		});
+		instance.post('/reload',function(req,res,next)
+		{
+			if(cfg.watch)
+			{
+				cfg.waitChange.on('fresh',function(file)
+				{
+					return res.finished||res.send(file);
+				});
+			}
+		});
+		instance.use(function(req,res,next)
+		{
+			return res.status(404).send(cfg.error404);
+		});
+		return instance;
+	},
+	route:function(instance)
+	{
+		instance.disable('x-powered-by');
+		instance.use(require('compression')());
 		instance.use('((/:project?/static/)css/):file.css',function(req,res,next)
 		{
 			req.params.ext='css';
@@ -60,38 +94,6 @@ var app=
 				});
 			});
 		});
-		instance.use('/webhook/:action',function(req,res,next)
-		{
-			var hook=service.hook;
-			if(hook[req.params.action]&&req.query.key==cfg.pass)
-			{
-				return hook[req.params.action](req,res,next,cfg);
-			}
-			return next();
-		});
-		instance.get('/reload',function(req,res,next)
-		{
-			var url='//'+req.headers.host+'/reload';
-			var reload='var a=new XMLHttpRequest;a.open("POST","'+url+'",1),a.onreadystatechange=function(){4==a.readyState&&location.reload()},a.send();';
-			res.type('js').send(reload);
-		});
-		instance.post('/reload',function(req,res,next)
-		{
-			if(cfg.watchLint)
-			{
-				cfg.waitChange.on('fresh',function(file)
-				{
-					return res.finished||res.send(file);
-				});
-			}
-		});
-		instance.use(function(req,res,next)
-		{
-			return res.status(404).send(cfg.error404);
-		});
-		delete require.cache[require.resolve('express')];
-		delete require.cache[require.resolve('compression')];
-		return instance;
 	},
 	compress:function(args,cfg)
 	{
@@ -130,14 +132,14 @@ var app=
 		}
 		else
 		{
-			var jsfiles=args.unique().filter(function(item){return item&&item.substr(-3)=='.js';}).map(function(item){return path.resolve(cfg.staticPath,item);});
-			var lessfiles=args.unique().filter(function(item){return item&&item.substr(-5)=='.less';}).map(function(item){return path.resolve(cfg.staticPath,item);});
-			var imgfiles=args.unique().filter(function(item){return /^.+\.(png|jpg|jpeg)$/i.test(item);}).map(function(item){return path.resolve(cfg.staticPath,item);});
+			var jsfiles=args.unique().filter(function(item){return item&&item.substr(-3)=='.js';}).map(function(item){return path.resolve(cfg.workPath,item);});
+			var lessfiles=args.unique().filter(function(item){return item&&item.substr(-5)=='.less';}).map(function(item){return path.resolve(cfg.workPath,item);});
+			var imgfiles=args.unique().filter(function(item){return /^.+\.(png|jpg|jpeg)$/i.test(item);}).map(function(item){return path.resolve(cfg.workPath,item);});
 			if(jsfiles.length>0)
 			{
 				compress.compressJs(jsfiles,cfg,function(content)
 				{
-					var savename=path.join(cfg.staticPath,jsfiles.map(function(item){return path.basename(item,'.js');}).join('-'))+'.min.js';
+					var savename=path.join(cfg.workPath,jsfiles.map(function(item){return path.basename(item,'.js');}).join('-'))+'.min.js';
 					fs.writeFile(savename,content.content,function(err)
 					{
 						if(err)
@@ -159,7 +161,7 @@ var app=
 			{
 				compress.compressLess(lessfiles,cfg,function(content)
 				{
-					var savename=path.join(cfg.staticPath,lessfiles.map(function(item){return path.basename(item,'.less');}).join('-'))+'.min.css';
+					var savename=path.join(cfg.workPath,lessfiles.map(function(item){return path.basename(item,'.less');}).join('-'))+'.min.css';
 					fs.writeFile(savename,content.content,function(err)
 					{
 						if(err)
@@ -197,7 +199,7 @@ var app=
 		}
 		else
 		{
-			var jsfiles=args.unique().filter(function(item){return item&&item.substr(-3)=='.js';}).map(function(item){return path.resolve(cfg.staticPath,item);});
+			var jsfiles=args.unique().filter(function(item){return item&&item.substr(-3)=='.js';}).map(function(item){return path.resolve(cfg.workPath,item);});
 			jsfiles.forEach(function(v,k)
 			{
 				tools.lint(v);
@@ -238,6 +240,131 @@ var app=
 			var child=child_process.spawn(process.execPath,process.argv.splice(1),opt);
 			return child.unref();
 		}
+	},
+	build:function(args,cfg)
+	{
+		var entry,config=m.getConfig();
+		if(args.length>1)
+		{
+			var f=path.resolve(cfg.workPath,args[1]);
+			if(!fs.existsSync(f))
+			{
+				return m.log(f+' not exists');
+			}
+			entry=[f];
+		}
+		else
+		{
+			if(!config)
+			{
+				return m.log(cfg.cfgname+' not exists or error format');
+			}
+			if(config.package&&config.package.entry)
+			{
+				entry=Array.isArray(config.package.entry)?config.package.entry:[config.package.entry];
+				entry=entry.filter(function(item){return item;}).unique().map(function(item){return path.resolve(cfg.cfgPath,item);});
+			}
+			else
+			{
+				return m.log(cfg.cfgname+' error package info');
+			}
+		}
+		var webpack=require('webpack');
+		var autoprefixer=require('autoprefixer');
+		var ExtractTextPlugin=require("extract-text-webpack-plugin");
+		var options=
+		{
+			module:
+			{
+				loaders:
+				[
+					{test:/\.css$/,loader:ExtractTextPlugin.extract("style","css!postcss")},
+					{test:/\.less$/,loader:ExtractTextPlugin.extract("style","css!postcss!less")},
+					{test:/\.scss$/,loader:ExtractTextPlugin.extract("style","css!postcss!scss")},
+					{test:/\.jsx?$/,loader:'babel',exclude:/node_modules/},
+					{test:/\.ts$/,loader:'ts',exclude:/(typings)/},
+					{test:/\.coffee$/,loader:'coffee'},
+					{test:/\.json$/, loader:'json'},
+					{test:/\.txt$/, loader:'raw'},
+					{test:/\.(png|jpg|jpeg|gif|svg|woff|woff2)$/,loader:'url?limit=81920'},
+					{test:/\.(eot|ttf|wav|mp3)$/,loader:'file'}
+				]
+			},
+			postcss:[autoprefixer()],
+			resolve:
+			{
+				modulesDirectories:['node_modules'],
+				fallback:cfg.nodePath,
+				extensions:['','.js','.jsx']
+			},
+			resolveLoader:
+			{
+				modulesDirectories:['node_modules'],
+				fallback:cfg.nodePath,
+				extensions:['','.js','jsx']
+			},
+			plugins:
+			[
+				new ExtractTextPlugin(cfg.cfgPath?path.join(cfg.cfgPath,'dist','[name].min.css'):"./dist/[name].min.css",{allChunks:false})
+			],
+			entry:{app:entry},
+			output:
+			{
+				path:cfg.cfgPath?path.join(cfg.cfgPath,'dist'):path.join(cfg.workPath,'dist'),
+				filename:'[name].min.js',
+				pathinfo:true,
+			},
+			devtool:cfg.debug?'source-map':'eval'
+		};
+		if(cfg.watch&&cfg.debug)
+		{
+			var webpackDevServer=require('webpack-dev-server');
+			options.devtool='eval';
+			options.plugins.push(new webpack.HotModuleReplacementPlugin());
+			options.entry.app.unshift("webpack-dev-server/client?http://localhost:"+cfg.port+"/","webpack/hot/dev-server");
+			var compiler=webpack(options);
+			var server=new webpackDevServer(compiler,{hot:true});
+			this.route(server.app);
+			server.listen(cfg.port);
+			return m.log('Starting webpack-dev-server on port '+cfg.port);
+		}
+		else
+		{
+			if(cfg.optimization)
+			{
+				options.devtool='cheap-source-map';
+				options.plugins.push(new webpack.optimize.DedupePlugin());
+				options.plugins.push(new webpack.optimize.AggressiveMergingPlugin()),
+				options.plugins.push(new webpack.optimize.OccurrenceOrderPlugin()),
+				options.plugins.push(new webpack.optimize.UglifyJsPlugin({sourceMap:false,output:{comments:false},compress:{warnings:cfg.debug,sequences:true,properties:true,dead_code:true,unused:true,booleans:true,join_vars:true,if_return:true,conditionals:true,drop_console:true,drop_debugger:true,evaluate:true,loops:true}}));
+			}
+			var compiler=webpack(options);
+			var callback=function(err,stat)
+			{
+				if(err)
+				{
+					return m.log(err);
+				}
+				var jsonStats=stat.toJson();
+				if(jsonStats.errors.length>0)
+				{
+					return m.log(jsonStats.errors.join('\r\n'));
+				}
+				if(jsonStats.warnings.length>0)
+				{
+					return m.log(jsonStats.warnings.join('\r\n'));
+				}
+				return console.log('build success,cost time %d ms',stat.endTime-stat.startTime);
+			};
+			if(cfg.watch)
+			{
+				return compiler.watch({aggregateTimeout:900},callback);
+			}
+			else
+			{
+				return compiler.run(callback);
+			}
+		}
 	}
 };
 
@@ -255,10 +382,10 @@ var compress=
 			else
 			{
 				var autoprefix=require('less-plugin-autoprefix');
-				var includePath=path.isAbsolute(cfg.lessLibPath)?cfg.lessLibPath:[path.join(cfg.staticPath,cfg.lessLibPath),path.join(path.dirname(cfg.staticPath),cfg.lessLibPath),path.join(path.dirname(path.dirname(cfg.staticPath)),cfg.lessLibPath),path.join(path.dirname(path.dirname(path.dirname(cfg.staticPath))),cfg.lessLibPath)];
+				var includePath=path.isAbsolute(cfg.lessLibPath)?cfg.lessLibPath:[path.join(cfg.workPath,cfg.lessLibPath),path.join(path.dirname(cfg.workPath),cfg.lessLibPath),path.join(path.dirname(path.dirname(cfg.workPath)),cfg.lessLibPath),path.join(path.dirname(path.dirname(path.dirname(cfg.workPath))),cfg.lessLibPath)];
 				var lessInput=lessfiles.map(function(item){return '@import "'+item+'";';}).join("\r\n");
 				var option={plugins:[new autoprefix()],paths:includePath,urlArgs:cfg.ver?'ver='+cfg.ver:null};
-				if(!cfg.compressDebug)
+				if(!cfg.debug)
 				{
 					option.compress=true;
 					option.yuicompress=true;
@@ -291,7 +418,7 @@ var compress=
 			else
 			{
 				var option;
-				if(cfg.compressDebug)
+				if(cfg.debug)
 				{
 					option={mangle:false,compress:{sequences:false,properties:false,dead_code:false,unused:false,booleans:false,join_vars:false,if_return:false,conditionals:false,hoist_funs:false,drop_debugger:false,evaluate:false,loops:false}};
 				}
@@ -404,8 +531,8 @@ var compress=
 	{
 		cfg.ver=req.query.ver?req.query.ver.substr(0,9):null;
 		var params=req.params;
-		var basePath=path.join(cfg.staticPath,params[0]);
-		var configFile=path.join(cfg.staticPath,params[1],'static.json');
+		var basePath=path.join(cfg.workPath,params[0]);
+		var configFile=path.join(cfg.workPath,params[1],cfg.cfgname);
 		fs.exists(configFile,function(exists)
 		{
 			var hotPath=[];
@@ -439,7 +566,7 @@ var compress=
 	},
 	compressByConfig:function(cfg,successCallback,errorCallback)
 	{
-		var configFile=path.join(cfg.staticPath,'static.json');
+		var configFile=path.join(cfg.workPath,cfg.cfgname);
 		var getConfig=function(configFile,successCallback,errorCallback)
 		{
 			try
@@ -513,13 +640,13 @@ var compress=
 		{
 			if(exists)
 			{
-				cfg.static=cfg.staticPath;
+				cfg.static=cfg.workPath;
 				getConfig(configFile,successCallback,errorCallback);
 			}
 			else
 			{
-				cfg.static=path.join(cfg.staticPath,'static');
-				configFile=path.join(cfg.static,'static.json');
+				cfg.static=path.join(cfg.workPath,'static');
+				configFile=path.join(cfg.static,cfg.cfgname);
 				fs.exists(configFile,function(found)
 				{
 					if(found)
@@ -528,7 +655,7 @@ var compress=
 					}
 					else
 					{
-						errorCallback(404,'static.json not found');
+						errorCallback(404,cfg.cfgname+' not found');
 					}
 				});
 			}
@@ -608,6 +735,39 @@ var m=
 			this.log(msg);
 		}
 		return JSON.stringify({log:clearLog,cache:clearCache});
+	},
+	getConfig:function()
+	{
+		if(cfg.config)
+		{
+			return cfg.config;
+		}
+		var paths=[path.join(cfg.workPath,cfg.cfgname),path.join(path.dirname(cfg.workPath),cfg.cfgname),path.join(cfg.workPath,'static',cfg.cfgname)];
+		var configFile;
+		for(var i in paths)
+		{
+			var f=paths[i];
+			if(fs.existsSync(f))
+			{
+				configFile=f;
+			}
+		}
+		if(configFile)
+		{
+			try
+			{
+				var config=require(configFile);
+				cfg.config=config;
+				cfg.cfgPath=path.dirname(configFile);
+				return config;
+			}
+			catch(e)
+			{
+				m.log(e.toString());
+				return null;
+			}
+		}
+		return null;
 	}
 };
 
@@ -628,7 +788,6 @@ var tools=
 			}
 			return r;
 		};
-
 		function posix(path)
 		{
 			return path.charAt(0) === '/';
@@ -641,7 +800,6 @@ var tools=
 			var isUnc = !!device && device.charAt(1) !== ':';
 			return !!result[2] || isUnc;
 		};
-		// https://github.com/sindresorhus/path-is-absolute/blob/master/index.js
 		path.isAbsolute=process.platform==='win32'?win32:posix;
 	},
 	lint:function(filePath)
@@ -678,7 +836,7 @@ var tools=
 		function waitChange(){}
 		util.inherits(waitChange,Et);
 		cfg.waitChange=new waitChange();
-		chokidar.watch(cfg.staticPath,option).on('change',function(file,stats)
+		chokidar.watch(cfg.workPath,option).on('change',function(file,stats)
 		{
 			var ext=path.extname(file);
 			if(['.js','.less','.json'].indexOf(ext)>=0)
@@ -775,12 +933,14 @@ var service=
 	global.path=require('path');
 	global.fs=require('fs');
 	tools.helper();
-	var cfg=
+	global.cfg=
 	{
 		port:8088,
 		debug:true,
-		version:'0.3.5',
-		staticPath:process.cwd(),
+		version:'0.4.0',
+		cfgname:'static.json',
+		workPath:process.cwd(),
+		nodePath:process.env.NODE_PATH,
 		lessLibPath:'less',
 		scriptLibPath:'script',
 		gitexec:'git pull origin master',
@@ -821,7 +981,7 @@ var service=
 	}
 	else if(args.length===0)
 	{
-		cfg.compressDebug=true;
+		cfg.debug=true;
 		return app.serve(cfg);
 	}
 	else
@@ -836,7 +996,7 @@ var service=
 			if(less.length==2 && less[1])
 			{
 				delete args[index];
-				cfg.lessLibPath=path.resolve(cfg.staticPath,less[1]);
+				cfg.lessLibPath=path.resolve(cfg.workPath,less[1]);
 				m.log('set less lib path: '+cfg.lessLibPath);
 			}
 			else if(vers.length==2 && vers[1])
@@ -854,18 +1014,18 @@ var service=
 			else if(script.length==2 && script[1])
 			{
 				delete args[index];
-				cfg.scriptLibPath=path.resolve(cfg.staticPath,script[1]);
+				cfg.scriptLibPath=path.resolve(cfg.workPath,script[1]);
 				m.log('set script lib path: '+cfg.scriptLibPath);
 			}
 			else if(clone.length==2 && clone[1])
 			{
 				delete args[index];
 				var cwd=path.basename(clone[1]);
-				cfg.staticPath=path.join(cfg.staticPath,cwd);
+				cfg.workPath=path.join(cfg.workPath,cwd);
 				require('child_process').exec('git clone '+clone[1]+' && cd '+cwd,function(error,stdout,stderr)
 				{
 					process.chdir(cwd);
-					m.log('current working dir '+cfg.staticPath);
+					m.log('current working dir '+cfg.workPath);
 					if(error)
 					{
 						m.log(error.toString());
@@ -879,20 +1039,27 @@ var service=
 			else if(item=='--debug')
 			{
 				delete args[index];
-				cfg.compressDebug=true;
-				m.log('enable compress debug mode');
+				cfg.debug=true;
+				m.log('enable debug mode');
+			}
+			else if(item=='--optimize')
+			{
+				delete args[index];
+				cfg.debug=false;
+				cfg.optimization=true;
+				m.log('enable optimization mode');
 			}
 			else if(item=='--watch')
 			{
 				delete args[index];
 				cfg.watch=true;
+				m.log('enable watch mode');
 			}
-			else if(item=='--optimize')
+			else if(item=='-w')
 			{
 				delete args[index];
-				cfg.compressDebug=false;
-				cfg.optimization=true;
-				m.log('enable compress optimization mode');
+				cfg.watch=true;
+				m.log('enable watch mode');
 			}
 			else if(item=='-g')
 			{
@@ -914,16 +1081,19 @@ var service=
 			{
 				cfg.compress=true;
 			}
-			else if(item=='lint' || item=='-w')
+			else if(item=='build')
+			{
+				cfg.build=true;
+				cfg.debug=false;
+			}
+			else if(item=='lint')
 			{
 				cfg.lint=true;
-				cfg.watchLint=item=='-w'?true:false;
-				cfg.compressDebug=true;
+				cfg.debug=true;
 			}
 			else if(item=='server' || item=='-d')
 			{
 				cfg.debug=false;
-				cfg.compressDebug=false;
 				if(item=='-d')
 				{
 					cfg.daemon=true;
@@ -935,7 +1105,7 @@ var service=
 			}
 			else if(item=='develop')
 			{
-				cfg.compressDebug=true;
+				cfg.debug=true;
 				cfg.phpserver=true;
 			}
 		});
@@ -944,9 +1114,13 @@ var service=
 		{
 			return app.compress(args,cfg);
 		}
+		else if(cfg.build)
+		{
+			return app.build(args,cfg);
+		}
 		else if(cfg.lint)
 		{
-			if(cfg.watchLint)
+			if(cfg.watch)
 			{
 				app.serve(cfg);
 			}
@@ -954,15 +1128,15 @@ var service=
 		}
 		else if(cfg.daemon&&!process.env.daemon)
 		{
-			app.runDaemon(cfg);
+			return app.runDaemon(cfg);
 		}
 		else if(cfg.server)
 		{
-			app.runServer(cfg);
+			return app.runServer(cfg);
 		}
 		else
 		{
-			return app.serve(cfg)&&cfg.watchLint&&app.lint(args,cfg);
+			return app.serve(cfg)&&cfg.watch&&app.lint(args,cfg);
 		}
 	}
 })(global);
