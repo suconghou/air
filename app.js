@@ -281,7 +281,7 @@ var app=
 					{test:/\.css$/,loader:ExtractTextPlugin.extract("style","css!postcss")},
 					{test:/\.less$/,loader:ExtractTextPlugin.extract("style","css!postcss!less")},
 					{test:/\.scss$/,loader:ExtractTextPlugin.extract("style","css!postcss!sass")},
-					{test:/\.jsx?$/,loader:'babel',exclude:/node_modules/,query:{presets:['latest','react']}},
+					{test:/\.jsx?$/,loader:'babel',exclude:/node_modules/,query:{presets:['latest','stage-0','react']}},
 					{test:/\.ts$/,loader:'ts',exclude:/(typings)/},
 					{test:/\.coffee$/,loader:'coffee'},
 					{test:/\.json$/,loader:'json'},
@@ -937,7 +937,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.4.5',
+		version:'0.4.6',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,

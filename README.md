@@ -170,14 +170,9 @@ less文件解析合并压缩为style.min.css
 
 > Webpack打包 `air build`  `air build main.jsx`
 
-如需要其他库可自行添加到`.babelrc`文件中.
-```
-{"presets": [ "latest", "react", "angular2"]}
-```
 
 
-
-对于webpack打包需要安装 `npm i -g babel-core  babel-preset-latest babel-preset-react`
+webpack打包需要安装 `npm i -g babel-core  babel-preset-latest  babel-preset-stage-0 babel-preset-react ` 或者 `angular2` 等等
 
 
 
