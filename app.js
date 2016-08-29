@@ -280,12 +280,12 @@ var app=
 				[
 					{test:/\.css$/,loader:ExtractTextPlugin.extract("style","css!postcss")},
 					{test:/\.less$/,loader:ExtractTextPlugin.extract("style","css!postcss!less")},
-					{test:/\.scss$/,loader:ExtractTextPlugin.extract("style","css!postcss!scss")},
-					{test:/\.jsx?$/,loader:'babel',exclude:/node_modules/},
+					{test:/\.scss$/,loader:ExtractTextPlugin.extract("style","css!postcss!sass")},
+					{test:/\.jsx?$/,loader:'babel',exclude:/node_modules/,query:{presets:['latest','react']}},
 					{test:/\.ts$/,loader:'ts',exclude:/(typings)/},
 					{test:/\.coffee$/,loader:'coffee'},
-					{test:/\.json$/, loader:'json'},
-					{test:/\.txt$/, loader:'raw'},
+					{test:/\.json$/,loader:'json'},
+					{test:/\.txt$/,loader:'raw'},
 					{test:/\.(png|jpg|jpeg|gif|svg|woff|woff2)$/,loader:'url?limit=81920'},
 					{test:/\.(eot|ttf|wav|mp3)$/,loader:'file'}
 				]
@@ -301,7 +301,7 @@ var app=
 			{
 				modulesDirectories:['node_modules'],
 				fallback:cfg.nodePath,
-				extensions:['','.js','jsx']
+				extensions:['','.js','.jsx']
 			},
 			plugins:
 			[
@@ -323,7 +323,7 @@ var app=
 			options.plugins.push(new webpack.HotModuleReplacementPlugin());
 			options.entry.app.unshift("webpack-dev-server/client?http://localhost:"+cfg.port+"/","webpack/hot/dev-server");
 			var compiler=webpack(options);
-			var server=new webpackDevServer(compiler,{hot:true});
+			var server=new webpackDevServer(compiler,{hot:true,progress:true});
 			this.route(server.app);
 			server.listen(cfg.port);
 			return m.log('Starting webpack-dev-server on port '+cfg.port);
@@ -937,7 +937,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.4.0',
+		version:'0.4.5',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
@@ -960,6 +960,7 @@ var service=
 			'\tserver     run a static server in server mode,compress js and css',
 			'\tlint       use jslint without http server,pass one or more js file or not',
 			'\tcompress   compress js files or compile and compress less files',
+			'\tbuild      use webpack and webpack-dev-server',
 			'Flags:',
 			'\t-v         show air version',
 			'\t-h         show this help information',

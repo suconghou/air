@@ -47,7 +47,7 @@
 
 > `air compress --watch` 还可以监视文件变化,自动执行压缩合并
 
-> `air compress --o` 开启极限优化压缩,去除console,debugger,优化常量表达式,循环,条件表达式优化等,同样适用于server模式`air server --o`
+> `air compress --optimize` 开启极限优化压缩,去除console,debugger,优化常量表达式,循环,条件表达式优化等,同样适用于server模式`air server --optimize`
 
 > `air build -w` 或者 `air build --watch` watch 模式,文件发生变化,自动编译,推荐开发时使用
 
@@ -167,6 +167,17 @@ less文件解析合并压缩为style.min.css
 > 本地开发 `air develop -w`
 
 > 服务器模式 `air server -k 123456 -d`
+
+> Webpack打包 `air build`  `air build main.jsx`
+
+如需要其他库可自行添加到`.babelrc`文件中.
+```
+{"presets": [ "latest", "react", "angular2"]}
+```
+
+
+
+对于webpack打包需要安装 `npm i -g babel-core  babel-preset-latest babel-preset-react`
 
 
 
