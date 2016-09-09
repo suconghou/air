@@ -29,6 +29,9 @@ var app=
 		{
 			cfg.port=server.address().port;
 			m.log('Server listening on port '+cfg.port);
+		}).on('error',function(err)
+		{
+			console.log(err.toString());
 		});
 		instance.use('/webhook/:action',function(req,res,next)
 		{
@@ -937,7 +940,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.4.6',
+		version:'0.4.7',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
