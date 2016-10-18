@@ -1,6 +1,6 @@
 {
   "name": "airs",
-  "version": "0.4.7",
+  "version": "0.4.8",
   "description": "serve static files in the air",
   "main": "index.js",
   "dependencies" : {
@@ -15,6 +15,7 @@
     "jshint": ">=2.9.2",
     "webpack": ">=1.13.2",
     "webpack-dev-server": ">=1.15.0",
+    "html-webpack-plugin": ">=2.22.0",
     "less-loader": ">=2.2.3",
     "babel-loader": ">=6.2.5",
     "file-loader": ">=0.9.0",

@@ -308,7 +308,7 @@ var app=
 			},
 			plugins:
 			[
-				new ExtractTextPlugin(cfg.cfgPath?path.join(cfg.cfgPath,'dist','[name].min.css'):"./dist/[name].min.css",{allChunks:false})
+				new ExtractTextPlugin(cfg.cfgPath?path.join(cfg.cfgPath,'[name].min.css'):"./[name].min.css",{allChunks:true})
 			],
 			entry:{app:entry},
 			output:
@@ -322,8 +322,10 @@ var app=
 		if(cfg.watch&&cfg.debug)
 		{
 			var webpackDevServer=require('webpack-dev-server');
+			var HtmlWebpackPlugin=require('html-webpack-plugin');
 			options.devtool='eval';
 			options.plugins.push(new webpack.HotModuleReplacementPlugin());
+			options.plugins.push(new HtmlWebpackPlugin({template:args[2]?args[2]:'index.html',inject:'body'}));
 			options.entry.app.unshift("webpack-dev-server/client?http://localhost:"+cfg.port+"/","webpack/hot/dev-server");
 			var compiler=webpack(options);
 			var server=new webpackDevServer(compiler,{hot:true,progress:true});
@@ -940,7 +942,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.4.7',
+		version:'0.4.8',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,

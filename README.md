@@ -172,7 +172,9 @@ less文件解析合并压缩为style.min.css
 
 
 
-webpack打包需要安装 `npm i -g babel-core  babel-preset-latest  babel-preset-stage-0 babel-preset-react ` 或者 `angular2` 等等
+webpack打包需要安装 `npm i babel-core  babel-preset-latest  babel-preset-stage-0 babel-preset-react ` 或者 `angular2` 等等
+
+可能需要添加一些`npm i less-loader sass-loader css-loader style-loader postcss-loader babel-loader` 等
 
 
 
