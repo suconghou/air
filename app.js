@@ -4,7 +4,6 @@ var app=
 	{
 		var express=require('express');
 		var instance=new express();
-		this.route(instance);
 		instance.set('port',process.env.PORT||cfg.port);
 		instance.use(express.static(cfg.workPath,{maxAge:cfg.debug?'5s':'1h',setHeaders:function(res,path,stat)
 		{
@@ -58,6 +57,7 @@ var app=
 				});
 			}
 		});
+		this.route(instance);
 		instance.use(function(req,res,next)
 		{
 			return res.status(404).send(cfg.error404);
@@ -942,7 +942,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.4.8',
+		version:'0.4.9',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
