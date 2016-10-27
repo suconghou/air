@@ -247,6 +247,7 @@ var app=
 	build:function(args,cfg)
 	{
 		var entry,config=m.getConfig();
+		var pkg=config.package||{};
 		if(args.length>1)
 		{
 			var f=path.resolve(cfg.workPath,args[1]);
@@ -258,18 +259,14 @@ var app=
 		}
 		else
 		{
-			if(!config)
+			if(pkg.entry)
 			{
-				return m.log(cfg.cfgname+' not exists or error format');
-			}
-			if(config.package&&config.package.entry)
-			{
-				entry=Array.isArray(config.package.entry)?config.package.entry:[config.package.entry];
+				entry=Array.isArray(pkg.entry)?pkg.entry:[pkg.entry];
 				entry=entry.filter(function(item){return item;}).unique().map(function(item){return path.resolve(cfg.cfgPath,item);});
 			}
 			else
 			{
-				return m.log(cfg.cfgname+' error package info');
+				return m.log(cfg.cfgname+' not exists or error package info');
 			}
 		}
 		var webpack=require('webpack');
@@ -289,7 +286,7 @@ var app=
 					{test:/\.coffee$/,loader:'coffee'},
 					{test:/\.json$/,loader:'json'},
 					{test:/\.txt$/,loader:'raw'},
-					{test:/\.(png|jpg|jpeg|gif|svg|woff|woff2)$/,loader:'url?limit=81920'},
+					{test:/\.(png|jpg|jpeg|gif|svg|woff|woff2)$/,loader:'url?limit='+(parseInt(pkg.dataUrlLimit)?parseInt(pkg.dataUrlLimit):8192)},
 					{test:/\.(eot|ttf|wav|mp3)$/,loader:'file'}
 				]
 			},
@@ -337,6 +334,7 @@ var app=
 		{
 			if(cfg.optimization)
 			{
+				options.output.publicPath=cfg.publicPath?cfg.publicPath:(pkg.publicPath?pkg.publicPath:'/dist/');
 				options.devtool='cheap-source-map';
 				options.plugins.push(new webpack.optimize.DedupePlugin());
 				options.plugins.push(new webpack.optimize.AggressiveMergingPlugin()),
@@ -359,7 +357,7 @@ var app=
 				{
 					return m.log(jsonStats.warnings.join('\r\n'));
 				}
-				return console.log('build success,cost time %d ms',stat.endTime-stat.startTime);
+				return console.log(stat.hash+' build success,cost time %d ms',stat.endTime-stat.startTime);
 			};
 			if(cfg.watch)
 			{
@@ -942,7 +940,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.4.9',
+		version:'0.4.10',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
@@ -961,27 +959,28 @@ var service=
 		var help=
 		[
 			'Usage:\r\n\tair [command] [flags]\r\nCommands:',
-			'\tdevelop    run a static server in debug mode,and also run a php server',
-			'\tserver     run a static server in server mode,compress js and css',
-			'\tlint       use jslint without http server,pass one or more js file or not',
-			'\tcompress   compress js files or compile and compress less files',
-			'\tbuild      use webpack and webpack-dev-server',
+			'\tdevelop    		run a static server in debug mode,and also run a php server',
+			'\tserver     		run a static server in server mode,compress js and css',
+			'\tlint       		use jslint without http server,pass one or more js file or not',
+			'\tcompress   		compress js files or compile and compress less files',
+			'\tbuild      		use webpack and webpack-dev-server',
 			'Flags:',
-			'\t-v         show air version',
-			'\t-h         show this help information',
-			'\t-d         run in daemon mode',
-			'\t-p         set server listen port',
-			'\t-k         set webhook passwort',
-			'\t-g         enable git pull,pull origin master every minute',
-			'\t-w         enable jslint,jslint when javascript files changed',
-			'\t--optimize optimize javascript code,remove console debugger',
-			'\t--debug    compress in debug mode,compile and compress lightly',
-			'\t--watch    compress in watch mode,compres again when files changed',
-			'\t--less     set less lib path,use [air --less=/pathto/lesslib]',
-			'\t--script   set script lib path,use [air --script=/pathto/jslib]',
-			'\t--key      set tinypng image tinify key,use [air --key=xxx]',
-			'\t--ver      set compile less urlArgs,use [air --ver=v123]',
-			'\r\nSee more information on http://blog.suconghou.cn/project/air'
+			'\t-v         		show air version',
+			'\t-h         		show this help information',
+			'\t-d         		run in daemon mode',
+			'\t-p         		set server listen port',
+			'\t-k         		set webhook passwort',
+			'\t-g         		enable git pull,pull origin master every minute',
+			'\t-w         		enable jslint,jslint when javascript files changed',
+			'\t--optimize 		optimize javascript code,remove console debugger',
+			'\t--debug    		compress in debug mode,compile and compress lightly',
+			'\t--watch    		compress in watch mode,compres again when files changed',
+			'\t--less     		set less lib path,use [air --less=/pathto/lesslib]',
+			'\t--script   		set script lib path,use [air --script=/pathto/jslib]',
+			'\t--key      		set tinypng image tinify key,use [air --key=xxx]',
+			'\t--ver      		set compile less urlArgs,use [air --ver=v123]',
+			'\t--publicPath		set webpack output.publicPath,use [air --publicPath=/path/]',
+			'\r\nSee more information on http://blog.suconghou.cn/project/air\r\n'
 		];
 		return console.log(help.join('\r\n'));
 	}
@@ -999,6 +998,7 @@ var service=
 			var keys=item.split('--key=');
 			var script=item.split('--script=');
 			var clone=item.split('--clone=');
+			var publicPath=item.split('--publicPath=');
 			if(less.length==2 && less[1])
 			{
 				delete args[index];
@@ -1041,6 +1041,14 @@ var service=
 						m.log(stderr+stdout);
 					}
 				});
+			}
+			else if(publicPath.length==2 &&publicPath[1])
+			{
+				delete args[index];
+				cfg.publicPath=publicPath[1];
+				cfg.debug=false;
+				cfg.optimization=true;
+				m.log('set publicPath: '+publicPath[1]);
 			}
 			else if(item=='--debug')
 			{
