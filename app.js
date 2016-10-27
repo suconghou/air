@@ -357,7 +357,17 @@ var app=
 				{
 					return m.log(jsonStats.warnings.join('\r\n'));
 				}
-				return console.log(stat.hash+' build success,cost time %d ms',stat.endTime-stat.startTime);
+				console.log(stat.hash+' build success,cost time %d ms',stat.endTime-stat.startTime);
+				if(cfg.cwebpack)
+				{
+					compress.compressByConfig(cfg,function(files,savename)
+					{
+						m.log(files.join('\r\n')+'\r\nsave as:'+savename);
+					},function(code,errorMsg)
+					{
+						m.log('Error '+code+' : '+errorMsg);
+					});
+				}
 			};
 			if(cfg.watch)
 			{
@@ -569,12 +579,11 @@ var compress=
 	},
 	compressByConfig:function(cfg,successCallback,errorCallback)
 	{
-		var configFile=path.join(cfg.workPath,cfg.cfgname);
-		var getConfig=function(configFile,successCallback,errorCallback)
+		var config=m.getConfig();
+		if(config&&config.static)
 		{
 			try
 			{
-				var config=require(configFile);
 				var hotPathLess=[],hotPathJs=[];
 				if(config.static)
 				{
@@ -588,18 +597,18 @@ var compress=
 					}
 					var getRealPathLess=function(item)
 					{
-						return path.resolve(cfg.static,'css',item.replace(/externals./,cfg.lessLibPath+path.sep));
+						return path.resolve(cfg.cfgPath,'css',item.replace(/externals./,cfg.lessLibPath+path.sep));
 					};
 					var getRealPathJs=function(item)
 					{
-						return path.resolve(cfg.static,'js',item.replace(/externals./,cfg.scriptLibPath+path.sep));
+						return path.resolve(cfg.cfgPath,'js',item.replace(/externals./,cfg.scriptLibPath+path.sep));
 					};
 					hotPathLess.forEach(function(v,k)
 					{
 						var lessfiles=config.static.css[v].filter(function(item){return item;}).unique().map(getRealPathLess);
 						compress.compressLess(lessfiles,cfg,function(content)
 						{
-							var savename=path.resolve(cfg.static,'css',v+'.min.css');
+							var savename=path.resolve(cfg.cfgPath,'css',v+'.min.css');
 							fs.writeFile(savename,content.content,function(err)
 							{
 								if(err)
@@ -618,7 +627,7 @@ var compress=
 						var jsfiles=config.static.js[v].filter(function(item){return item;}).unique().map(getRealPathJs);
 						compress.compressJs(jsfiles,cfg,function(content)
 						{
-							var savename=path.resolve(cfg.static,'js',v+'.min.js');
+							var savename=path.resolve(cfg.cfgPath,'js',v+'.min.js');
 							fs.writeFile(savename,content.content,function(err)
 							{
 								if(err)
@@ -638,31 +647,8 @@ var compress=
 			{
 				return errorCallback(500,e.toString());
 			}
-		};
-		fs.exists(configFile,function(exists)
-		{
-			if(exists)
-			{
-				cfg.static=cfg.workPath;
-				getConfig(configFile,successCallback,errorCallback);
-			}
-			else
-			{
-				cfg.static=path.join(cfg.workPath,'static');
-				configFile=path.join(cfg.static,cfg.cfgname);
-				fs.exists(configFile,function(found)
-				{
-					if(found)
-					{
-						getConfig(configFile,successCallback,errorCallback);
-					}
-					else
-					{
-						errorCallback(404,cfg.cfgname+' not found');
-					}
-				});
-			}
-		});
+
+		}
 	}
 };
 
@@ -767,10 +753,10 @@ var m=
 			catch(e)
 			{
 				m.log(e.toString());
-				return null;
+				return {};
 			}
 		}
-		return null;
+		return {};
 	}
 };
 
@@ -940,7 +926,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.4.10',
+		version:'0.4.11',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
@@ -980,6 +966,7 @@ var service=
 			'\t--key      		set tinypng image tinify key,use [air --key=xxx]',
 			'\t--ver      		set compile less urlArgs,use [air --ver=v123]',
 			'\t--publicPath		set webpack output.publicPath,use [air --publicPath=/path/]',
+			'\t--compress		do compress after webpack,use with air build',
 			'\r\nSee more information on http://blog.suconghou.cn/project/air\r\n'
 		];
 		return console.log(help.join('\r\n'));
@@ -1068,6 +1055,11 @@ var service=
 				delete args[index];
 				cfg.watch=true;
 				m.log('enable watch mode');
+			}
+			else if(item=='--compress')
+			{
+				delete args[index];
+				cfg.cwebpack=true;
 			}
 			else if(item=='-w')
 			{
