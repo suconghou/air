@@ -59,6 +59,8 @@
 
 > `air build main.jsx --debug -w` or `air build main.jsx --debug --wach` 指定文件为入口文件开启热加载模式
 
+> `air compress *.png -r` 压缩图片时,`-r`替换原有文件
+
 **参数**
 
 > 参数-w,使用Jslint,文件修改实时触发,本地开发建议加上
@@ -168,7 +170,7 @@ less文件解析合并压缩为style.min.css
 
 > 服务器模式 `air server -k 123456 -d`
 
-> Webpack打包 `air build`  `air build main.jsx`
+> Webpack打包 `air build` 或者 `air build main.jsx`
 
 
 
@@ -176,6 +178,9 @@ webpack打包需要安装 `npm i babel-core  babel-preset-latest  babel-preset-s
 
 可能需要添加一些`npm i less-loader sass-loader css-loader style-loader postcss-loader babel-loader` 等
 
+开发时 `air build main.jsx --watch --debug` 或者指定注入的文件 `air build main.jsx index.html --watch --debug`
+
+部署打包 `air build main.jsx --optimize` 或者同时设定publicPath  `air build main.jsx --publicPath=http://some.domain/fed-static/fedv2/`
 
 
 

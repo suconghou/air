@@ -178,17 +178,17 @@ var app=
 					});
 				},function(code,errorMsg)
 				{
-					m.log('Error '+code+' : '+errorMsg);
+					m.log("\033[31m Error "+code+" : "+errorMsg+" \033[0m",true);
 				});
 			}
 			if(imgfiles.length>0)
 			{
 				compress.compressImages(imgfiles,cfg,function(file,minPath)
 				{
-					m.log('compress img files:\r\n'+file+'\r\nsave as:'+minPath);
+					m.log(file+' =>> '+minPath+' done',true);
 				},function(code,errorMsg)
 				{
-					m.log('Error '+code+' : '+errorMsg);
+					m.log("\033[31m Error "+code+" : "+errorMsg+" \033[0m",true);
 				});
 			}
 			return watchCompress(cfg);
@@ -246,7 +246,7 @@ var app=
 	},
 	build:function(args,cfg)
 	{
-		var entry,config=m.getConfig();
+		var entry,compiler,config=m.getConfig();
 		var pkg=config.package||{};
 		if(args.length>1)
 		{
@@ -324,7 +324,7 @@ var app=
 			options.plugins.push(new webpack.HotModuleReplacementPlugin());
 			options.plugins.push(new HtmlWebpackPlugin({template:args[2]?args[2]:'index.html',inject:'body'}));
 			options.entry.app.unshift("webpack-dev-server/client?http://localhost:"+cfg.port+"/","webpack/hot/dev-server");
-			var compiler=webpack(options);
+			compiler=webpack(options);
 			var server=new webpackDevServer(compiler,{hot:true,progress:true});
 			this.route(server.app);
 			server.listen(cfg.port);
@@ -341,7 +341,7 @@ var app=
 				options.plugins.push(new webpack.optimize.OccurrenceOrderPlugin()),
 				options.plugins.push(new webpack.optimize.UglifyJsPlugin({sourceMap:false,output:{comments:false},compress:{warnings:cfg.debug,sequences:true,properties:true,dead_code:true,unused:true,booleans:true,join_vars:true,if_return:true,conditionals:true,drop_console:true,drop_debugger:true,evaluate:true,loops:true}}));
 			}
-			var compiler=webpack(options);
+			compiler=webpack(options);
 			var callback=function(err,stat)
 			{
 				if(err)
@@ -466,51 +466,63 @@ var compress=
 	{
 		var tinify=require('tinify');
 		tinify.key=cfg.key;
+		var toFile=function(file,minPath,successCallback,errorCallback)
+		{
+			var source=tinify.fromFile(file);
+			source.toFile(minPath,function(err)
+			{
+				if(err instanceof tinify.AccountError)
+				{
+					return errorCallback(500,'AccountError:'+err.message+' -- '+file);
+				}
+				else if(err instanceof tinify.ClientError)
+				{
+					return errorCallback(500,'ClientError:'+err.message+' -- '+file);
+				}
+				else if(err instanceof tinify.ServerError)
+				{
+					return errorCallback(500,'ServerError:'+err.message+' -- '+file);
+				}
+				else if(err instanceof tinify.ConnectionError)
+				{
+					return errorCallback(500,'ConnectionError:'+err.message+' -- '+file);
+				}
+				else if(err)
+				{
+					return errorCallback(500,err.toString()+' -- '+file);
+				}
+				else
+				{
+					return successCallback(file,minPath);
+				}
+			});
+		};
 		var compressImg=function(file,successCallback,errorCallback)
 		{
 			fs.exists(file,function(exists)
 			{
 				if(exists)
 				{
-					var minPath=file.replace('.png','.min.png').replace('.jpg','.min.jpg').replace('.jpeg','.min.jpeg');
-					fs.exists(minPath,function(minExists)
+					var minPath=file;
+					if(cfg.replacemode)
 					{
-						if(minExists)
+						return toFile(file,minPath,successCallback,errorCallback);
+					}
+					else
+					{
+						minPath=file.replace(/(?:\.min)?\.(png|jpg|jpeg)/,'.min.$1');
+						fs.exists(minPath,function(minExists)
 						{
-							return errorCallback(500,minPath+' already exists');
-						}
-						else
-						{
-							var source=tinify.fromFile(file);
-							source.toFile(minPath,function(err)
+							if(minExists)
 							{
-								if(err instanceof tinify.AccountError)
-								{
-									return errorCallback(500,'AccountError:'+err.message+' -- '+file);
-								}
-								else if(err instanceof tinify.ClientError)
-								{
-									return errorCallback(500,'ClientError:'+err.message+' -- '+file);
-								}
-								else if(err instanceof tinify.ServerError)
-								{
-									return errorCallback(500,'ServerError:'+err.message+' -- '+file);
-								}
-								else if(err instanceof tinify.ConnectionError)
-								{
-									return errorCallback(500,'ConnectionError:'+err.message+' -- '+file);
-								}
-								else if(err)
-								{
-									return errorCallback(500,err.toString()+' -- '+file);
-								}
-								else
-								{
-									return successCallback(file,minPath);
-								}
-							});
-						}
-					});
+								return errorCallback(500,minPath+' already exists');
+							}
+							else
+							{
+								return toFile(file,minPath,successCallback,errorCallback);
+							}
+						});
+					}
 				}
 				else
 				{
@@ -673,13 +685,16 @@ var m=
 		}
 		return list;
 	},
-	log:function(msg)
+	log:function(msg,noDate)
 	{
 		if(this.errorlog.length>1000)
 		{
 			this.gc(true,false);
 		}
-		msg=new Date()+'\r\n'+msg;
+		if(!noDate)
+		{
+			msg=new Date()+'\r\n'+msg;
+		}
 		this.errorlog.push(msg);
 		console.log(msg);
 	},
@@ -780,7 +795,7 @@ var tools=
 		function posix(path)
 		{
 			return path.charAt(0) === '/';
-		};
+		}
 		function win32(path)
 		{
 			var splitDeviceRe = /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/;
@@ -788,7 +803,7 @@ var tools=
 			var device = result[1] || '';
 			var isUnc = !!device && device.charAt(1) !== ':';
 			return !!result[2] || isUnc;
-		};
+		}
 		path.isAbsolute=process.platform==='win32'?win32:posix;
 	},
 	lint:function(filePath)
@@ -926,7 +941,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.4.11',
+		version:'0.4.12',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
@@ -958,6 +973,7 @@ var service=
 			'\t-k         		set webhook passwort',
 			'\t-g         		enable git pull,pull origin master every minute',
 			'\t-w         		enable jslint,jslint when javascript files changed',
+			'\t-r         		replace mode,when compress images replace old file',
 			'\t--optimize 		optimize javascript code,remove console debugger',
 			'\t--debug    		compress in debug mode,compile and compress lightly',
 			'\t--watch    		compress in watch mode,compres again when files changed',
@@ -1060,6 +1076,11 @@ var service=
 			{
 				delete args[index];
 				cfg.cwebpack=true;
+			}
+			else if(item=='-r')
+			{
+				delete args[index];
+				cfg.replacemode=true;
 			}
 			else if(item=='-w')
 			{
