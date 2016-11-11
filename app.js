@@ -286,6 +286,8 @@ var app=
 					{test:/\.coffee$/,loader:'coffee'},
 					{test:/\.json$/,loader:'json'},
 					{test:/\.txt$/,loader:'raw'},
+					{test:/\.vue$/,loader:'vue'},
+					{test:/\.(html|tpl)$/,loader:'html'},
 					{test:/\.(png|jpg|jpeg|gif|svg|woff|woff2)$/,loader:'url?limit='+(parseInt(pkg.dataUrlLimit)?parseInt(pkg.dataUrlLimit):8192)},
 					{test:/\.(eot|ttf|wav|mp3)$/,loader:'file'}
 				]
@@ -295,13 +297,14 @@ var app=
 			{
 				modulesDirectories:['node_modules'],
 				fallback:cfg.nodePath,
-				extensions:['','.js','.jsx']
+				extensions:['','.js','.jsx','.vue'],
+				alias:{vue:'vue/dist/vue.js'}
 			},
 			resolveLoader:
 			{
 				modulesDirectories:['node_modules'],
 				fallback:cfg.nodePath,
-				extensions:['','.js','.jsx']
+				extensions:['','.js','.jsx','.vue']
 			},
 			plugins:
 			[
@@ -941,7 +944,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.4.12',
+		version:'0.4.13',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
@@ -1106,6 +1109,7 @@ var service=
 			}
 			else if(item=='compress')
 			{
+				cfg.debug=false;
 				cfg.compress=true;
 			}
 			else if(item=='build')

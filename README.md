@@ -183,4 +183,5 @@ webpack打包需要安装 `npm i babel-core  babel-preset-latest  babel-preset-s
 部署打包 `air build main.jsx --optimize` 或者同时设定publicPath  `air build main.jsx --publicPath=http://some.domain/fed-static/fedv2/`
 
 
+`npm i vue vue-resource vue-router html-loader`
 
