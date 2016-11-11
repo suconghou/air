@@ -417,8 +417,6 @@ var compress=
 					var errMsg=error.type+' Error : '+error.message+' in file '+error.filename+' on line '+error.line+':'+error.index+' '+error.extract.join('');
 					return errorCallback(500,errMsg);
 				});
-				delete require.cache[require.resolve('less-plugin-autoprefix')];
-				delete require.cache[require.resolve('less')];
 			}
 		});
 	},
@@ -454,7 +452,6 @@ var compress=
 					var result=require('uglify-js').minify(jsfiles,option).code;
 					content={content:result,updateTime:updateTime,ver:cfg.ver};
 					successCallback(content);
-					delete require.cache[require.resolve('uglify-js')];
 					return m.setLast(key,content);
 				}
 				catch(e)
@@ -696,7 +693,8 @@ var m=
 		}
 		if(!noDate)
 		{
-			msg=new Date()+'\r\n'+msg;
+			var nowDate = new Date();
+			msg=nowDate.toLocaleDateString()+'  '+nowDate.toLocaleTimeString()+'\r\n'+msg;
 		}
 		this.errorlog.push(msg);
 		console.log(msg);
@@ -845,17 +843,19 @@ var tools=
 		cfg.waitChange=new waitChange();
 		chokidar.watch(cfg.workPath,option).on('change',function(file,stats)
 		{
+			if(/\.min\./.test(file))
+			{
+				return false;
+			}
 			var ext=path.extname(file);
 			if(['.js','.less','.json'].indexOf(ext)>=0)
 			{
-				if(!/\.min\./.test(file))
-				{
-					cfg.waitChange.emit('compress',file);
-				}
+				cfg.waitChange.emit('compress',file);
 			}
 			if(ext=='.js')
 			{
-				return /\.min\./.test(file)||tools.lint(file);
+				cfg.waitChange.emit('fresh',file);
+				return tools.lint(file);
 			}
 			else if(ext=='.json')
 			{
@@ -864,6 +864,7 @@ var tools=
 				{
 					delete require.cache[file];
 					m.log('cleared cache '+file);
+					cfg.waitChange.emit('fresh',file);
 				}
 			}
 			else
@@ -944,7 +945,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.4.13',
+		version:'0.4.14',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
@@ -1129,15 +1130,11 @@ var service=
 				{
 					cfg.daemon=true;
 				}
-				else
-				{
-					cfg.server=true;
-				}
 			}
 			else if(item=='develop')
 			{
 				cfg.debug=true;
-				cfg.phpserver=true;
+				cfg.server=true;
 			}
 		});
 		args=args.filter(function(item){return item;});
