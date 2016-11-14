@@ -196,7 +196,7 @@ var app=
 	},
 	lint:function(args,cfg)
 	{
-		if(args.length<=1)
+		if(args.length<=1 || cfg.watch)
 		{
 			tools.watch(cfg);
 		}
@@ -872,7 +872,7 @@ var tools=
 				cfg.waitChange.emit('fresh',file);
 			}
 		});
-		m.log('enable watch mode');
+		m.log('watch mode enabled');
 	}
 };
 
@@ -945,7 +945,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.4.14',
+		version:'0.4.15',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
@@ -1160,11 +1160,19 @@ var service=
 		}
 		else if(cfg.server)
 		{
-			return app.runServer(cfg);
+			app.runServer(cfg);
+			if(cfg.watch)
+			{
+				app.lint(args,cfg);
+			}
 		}
 		else
 		{
-			return app.serve(cfg)&&cfg.watch&&app.lint(args,cfg);
+			app.serve(cfg);
+			if(cfg.watch)
+			{
+				app.lint(args,cfg);
+			}
 		}
 	}
 })(global);
