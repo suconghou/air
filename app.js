@@ -44,7 +44,7 @@ var app=
 		instance.get('/reload',function(req,res,next)
 		{
 			var url='//'+req.headers.host+'/reload';
-			var reload='var a=new XMLHttpRequest;a.open("POST","'+url+'",1),a.onreadystatechange=function(){4==a.readyState&&location.reload()},a.send();';
+			var reload='var a=new XMLHttpRequest;a.timeout=3e6;a.open("POST","'+url+'",1),a.onreadystatechange=function(){4==a.readyState&&location.reload()},a.send();';
 			res.type('js').send(reload);
 		});
 		instance.post('/reload',function(req,res,next)
@@ -945,7 +945,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.4.15',
+		version:'0.4.16',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
