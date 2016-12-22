@@ -47,7 +47,7 @@ var app=
 			if(cfg.watch)
 			{
 				var url='//'+req.headers.host+'/reload';
-				reload='var a=new XMLHttpRequest;a.timeout=3600;a.open("POST","'+url+'",1),a.onreadystatechange=function(){4==a.readyState&&location.reload()},a.send();';
+				reload='var a=new XMLHttpRequest;a.timeout=0;a.open("POST","'+url+'",1),a.onreadystatechange=function(){4==a.readyState&&location.reload()},a.send();';
 			}
 			res.type('js').send(reload);
 		});
@@ -949,7 +949,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.4.17',
+		version:'0.4.18',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
