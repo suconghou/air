@@ -101,6 +101,19 @@ var app=
 				});
 			});
 		});
+		instance.use(/[\w\-\/]+\.css$/,function(req,res,next)
+		{
+			var exterPath=cfg.lessLibPath+path.sep;
+			var files=req.baseUrl.replace('.css','').split('-').filter(function(item){return item;}).unique().map(function(item){return path.join(cfg.workPath,item.replace(/externals./,exterPath)+'.less');});
+			cfg.ver=req.query.ver?req.query.ver.substr(0,9):null;
+			compress.compressLess(files,cfg,function(content)
+			{
+				res.type('css').send(content.content);
+			},function(code,errorMsg)
+			{
+				res.type('txt').status(code).send(errorMsg);
+			});
+		});
 	},
 	compress:function(args,cfg)
 	{
@@ -543,18 +556,21 @@ var compress=
 	{
 		var mtimes=[];
 		var error=false;
-		files.forEach(function(v,k)
+		for(var i in files)
 		{
-			if(!fs.existsSync(v))
+			if(files.hasOwnProperty(i))
 			{
-				error=true;
-				return errorCallback(404,v+' not found');
+				var v=files[i];
+				if(!fs.existsSync(v))
+				{
+					return errorCallback(404,v+' not found');
+				}
+				var stat=fs.statSync(v);
+				mtimes.push(stat.mtime.getTime());
 			}
-			var stat=fs.statSync(v);
-			mtimes.push(stat.mtime.getTime());
-		});
+		}
 		var updateTime=Math.max.apply(this,mtimes);
-		return error||successCallback(updateTime,files.join('-'));
+		return successCallback(updateTime,files.join('-'));
 	},
 	getRequestFiles:function(cfg,req,callback)
 	{
@@ -949,7 +965,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.4.18',
+		version:'0.4.19',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
