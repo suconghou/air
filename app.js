@@ -5,25 +5,6 @@ var app=
 		var express=require('express');
 		var instance=new express();
 		instance.set('port',process.env.PORT||cfg.port);
-		instance.use(express.static(cfg.workPath,{maxAge:cfg.debug?'5s':'1h',setHeaders:function(res,path,stat)
-		{
-			res.header('Access-Control-Allow-Origin','*');
-			res.header('Access-Control-Allow-Credentials','true');
-			res.header('Access-Control-Allow-Headers','Origin, X-Requested-With, Content-Type, Accept');
-		}}));
-		instance.use(function(req,res,next)
-		{
-			var refer=req.headers.referer;
-			if(refer)
-			{
-				var params=require('url').parse(refer);
-				refer=params.protocol+'//'+params.host;
-			}
-			res.header('Access-Control-Allow-Origin',refer?refer:'*');
-			res.header('Access-Control-Allow-Credentials','true');
-			res.header('Access-Control-Allow-Headers','Origin, X-Requested-With, Content-Type, Accept');
-			next();
-		});
 		var server=instance.listen(instance.get('port'),function()
 		{
 			cfg.port=server.address().port;
@@ -31,6 +12,23 @@ var app=
 		}).on('error',function(err)
 		{
 			console.log(err.toString());
+		});
+		var setCors=function(req,res)
+		{
+			var refer='*';
+			if(req&&req.headers.referer)
+			{
+				var params=require('url').parse(req.headers.referer);
+				refer=params.protocol+'//'+params.host;
+			}
+			res.header('Access-Control-Allow-Origin',refer);
+			res.header('Access-Control-Allow-Credentials','true');
+			res.header('Access-Control-Allow-Headers','Origin, X-Requested-With, Content-Type, Accept');
+		};
+		instance.use(function(req,res,next)
+		{
+			setCors(req,res);
+			next();
 		});
 		instance.use('/webhook/:action',function(req,res,next)
 		{
@@ -61,9 +59,21 @@ var app=
 				});
 			}
 		});
+		instance.use(express.static(cfg.workPath,{maxAge:cfg.debug?'5s':'1h',setHeaders:function(res,path,stat)
+		{
+			setCors(null,res);
+		}}));
 		this.route(instance);
 		instance.use(function(req,res,next)
 		{
+			if(path.isAbsolute(req.headers.serveDir))
+			{
+				var file=path.join(req.headers.serveDir,req.baseUrl);
+				fs.exists(file,function(exists)
+				{
+					return exists?require('send')(req,file).pipe(res):res.status(404).send(cfg.error404);
+				});
+			}
 			return res.status(404).send(cfg.error404);
 		});
 		return instance;
@@ -104,7 +114,7 @@ var app=
 		instance.use(/[\w\-\/]+\.css$/,function(req,res,next)
 		{
 			var exterPath=cfg.lessLibPath+path.sep;
-			var files=req.baseUrl.replace('.css','').split('-').filter(function(item){return item;}).unique().map(function(item){return path.join(cfg.workPath,item.replace(/externals./,exterPath)+'.less');});
+			var files=req.baseUrl.replace('.css','').split('-').filter(function(item){return item;}).unique().map(function(item){return path.join(req.headers.serveDir?req.headers.serveDir:cfg.workPath,item.replace(/externals./,exterPath)+'.less');});
 			cfg.ver=req.query.ver?req.query.ver.substr(0,9):null;
 			compress.compressLess(files,cfg,function(content)
 			{
@@ -159,7 +169,8 @@ var app=
 			{
 				compress.compressJs(jsfiles,cfg,function(content)
 				{
-					var savename=path.join(cfg.workPath,jsfiles.map(function(item){return path.basename(item,'.js');}).join('-'))+'.min.js';
+					var ext=cfg.replacemode?'.js':'.min.js';
+					var savename=path.join(cfg.workPath,jsfiles.map(function(item){return path.basename(item,'.js');}).join('-'))+ext;
 					fs.writeFile(savename,content.content,function(err)
 					{
 						if(err)
@@ -181,7 +192,8 @@ var app=
 			{
 				compress.compressLess(lessfiles,cfg,function(content)
 				{
-					var savename=path.join(cfg.workPath,lessfiles.map(function(item){return path.basename(item,'.less');}).join('-'))+'.min.css';
+					var ext=cfg.replacemode?'.css':'.min.css';
+					var savename=path.join(cfg.workPath,lessfiles.map(function(item){return path.basename(item,'.less');}).join('-'))+ext;
 					fs.writeFile(savename,content.content,function(err)
 					{
 						if(err)
@@ -357,8 +369,8 @@ var app=
 				options.output.publicPath=cfg.publicPath?cfg.publicPath:(pkg.publicPath?pkg.publicPath:'/dist/');
 				options.devtool='cheap-source-map';
 				options.plugins.push(new webpack.optimize.DedupePlugin());
-				options.plugins.push(new webpack.optimize.AggressiveMergingPlugin()),
-				options.plugins.push(new webpack.optimize.OccurrenceOrderPlugin()),
+				options.plugins.push(new webpack.optimize.AggressiveMergingPlugin());
+				options.plugins.push(new webpack.optimize.OccurrenceOrderPlugin());
 				options.plugins.push(new webpack.optimize.UglifyJsPlugin({sourceMap:false,output:{comments:false},compress:{warnings:cfg.debug,sequences:true,properties:true,dead_code:true,unused:true,booleans:true,join_vars:true,if_return:true,conditionals:true,drop_console:true,drop_debugger:true,evaluate:true,loops:true}}));
 			}
 			compiler=webpack(options);
@@ -576,8 +588,8 @@ var compress=
 	{
 		cfg.ver=req.query.ver?req.query.ver.substr(0,9):null;
 		var params=req.params;
-		var basePath=path.join(cfg.workPath,params[0]);
-		var configFile=path.join(cfg.workPath,params[1],cfg.cfgname);
+		var basePath=path.join(req.headers.serveDir?req.headers.serveDir:cfg.workPath,params[0]);
+		var configFile=path.join(req.headers.serveDir?req.headers.serveDir:cfg.workPath,params[1],cfg.cfgname);
 		fs.exists(configFile,function(exists)
 		{
 			var hotPath=[];
@@ -965,7 +977,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.4.19',
+		version:'0.5.0',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
@@ -1018,6 +1030,7 @@ var service=
 	}
 	else
 	{
+		var withDebug = false;
 		args.forEach(function(item,index)
 		{
 			var less=item.split('--less=');
@@ -1081,12 +1094,14 @@ var service=
 			{
 				delete args[index];
 				cfg.debug=true;
+				withDebug=true;
 				m.log('enable debug mode');
 			}
 			else if(item=='--optimize')
 			{
 				delete args[index];
 				cfg.debug=false;
+				withDebug=false;
 				cfg.optimization=true;
 				m.log('enable optimization mode');
 			}
@@ -1130,13 +1145,13 @@ var service=
 			}
 			else if(item=='compress')
 			{
-				cfg.debug=false;
+				cfg.debug=withDebug;
 				cfg.compress=true;
 			}
 			else if(item=='build')
 			{
 				cfg.build=true;
-				cfg.debug=false;
+				cfg.debug=withDebug;
 			}
 			else if(item=='lint')
 			{
