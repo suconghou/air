@@ -1,3 +1,5 @@
+/* jshint undef: true, node: true */
+/* globals path,fs,cfg */
 var app=
 {
 	serve:function(cfg)
