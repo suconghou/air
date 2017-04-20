@@ -66,7 +66,7 @@ var app=
 		this.route(instance);
 		instance.use(function(req,res,next)
 		{
-			if(path.isAbsolute(req.headers.serveDir))
+			if(req.headers.serveDir&&path.isAbsolute(req.headers.serveDir))
 			{
 				var file=path.join(req.headers.serveDir,req.baseUrl);
 				fs.exists(file,function(exists)
@@ -977,7 +977,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.5.0',
+		version:'0.5.1',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
