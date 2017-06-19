@@ -480,10 +480,20 @@ var compress=
 				}
 				try
 				{
-					var result=require('uglify-js').minify(jsfiles,option).code;
-					content={content:result,updateTime:updateTime,ver:cfg.ver};
-					successCallback(content);
-					return m.setLast(key,content);
+					tools.getContents(jsfiles,function(objs)
+					{
+						var result=require('uglify-js').minify(objs,option);
+						if(result.error)
+						{
+							throw result.error;
+						}
+						content={content:result.code,updateTime:updateTime,ver:cfg.ver};
+						successCallback(content);
+						return m.setLast(key,content);
+					},function(err)
+					{
+						return errorCallback(500,err.toString());
+					});
 				}
 				catch(e)
 				{
@@ -907,6 +917,40 @@ var tools=
 			}
 		});
 		m.log('watch mode enabled');
+	},
+	getContents:function(files,successCallback,errorCallback)
+	{
+		var Promise=global.Promise;
+		var arr=files.map(function(file)
+		{
+			return new Promise(function(resolve,reject)
+			{
+				fs.readFile(file,'utf-8',function(err,data)
+				{
+					if(err)
+					{
+						reject(err);
+					}
+					else
+					{
+						resolve(data);
+					}
+				});
+			});
+		});
+		Promise.all(arr).then(function(res)
+		{
+			var objs={};
+			files.forEach(function(file,index)
+			{
+				objs[file]=res[index];
+			});
+			successCallback(objs);
+		}).catch(function(err)
+		{
+			console.log(err);
+			errorCallback(err);
+		});
 	}
 };
 
@@ -979,7 +1023,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.5.1',
+		version:'0.5.3',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
