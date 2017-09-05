@@ -431,7 +431,7 @@ var compress=
 				var autoprefix=require('less-plugin-autoprefix');
 				var includePath=path.isAbsolute(cfg.lessLibPath)?cfg.lessLibPath:[path.join(cfg.workPath,cfg.lessLibPath),path.join(path.dirname(cfg.workPath),cfg.lessLibPath),path.join(path.dirname(path.dirname(cfg.workPath)),cfg.lessLibPath),path.join(path.dirname(path.dirname(path.dirname(cfg.workPath))),cfg.lessLibPath)];
 				var lessInput=lessfiles.map(function(item){return '@import "'+item+'";';}).join("\r\n");
-				var option={plugins:[new autoprefix({browsers: ["last 5 versions"]})],paths:includePath,urlArgs:cfg.ver?'ver='+cfg.ver:null};
+				var option={plugins:[new autoprefix({browsers:['last 5 versions','ie > 8','Firefox ESR']})],paths:includePath,urlArgs:cfg.ver?'ver='+cfg.ver:null};
 				if(!cfg.debug)
 				{
 					option.compress=true;
@@ -1023,7 +1023,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.5.3',
+		version:'0.5.4',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
