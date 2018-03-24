@@ -145,7 +145,7 @@ var app=
 					{
 						stdio:'inherit',
 						env:env,
-						cwd:process.cwd
+						cwd:process.cwd()
 					};
 					return child_process.spawn(process.execPath,childArgv.splice(1),opt);
 				});
@@ -268,7 +268,7 @@ var app=
 			{
 				stdio:'ignore',
 				env:env,
-				cwd:process.cwd,
+				cwd:process.cwd(),
 				detached:true
 			};
 			var child=child_process.spawn(process.execPath,process.argv.splice(1),opt);
@@ -1023,7 +1023,7 @@ var service=
 	{
 		port:8088,
 		debug:true,
-		version:'0.5.4',
+		version:'0.5.5',
 		cfgname:'static.json',
 		workPath:process.cwd(),
 		nodePath:process.env.NODE_PATH,
