@@ -1,0 +1,344 @@
+#!/usr/bin/env node
+'use strict';
+
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
+var fs$1 = _interopDefault(require('fs'));
+require('util');
+var path$1 = _interopDefault(require('path'));
+var http = _interopDefault(require('http'));
+var process = _interopDefault(require('process'));
+var querystring = _interopDefault(require('querystring'));
+
+var utiljs = {
+	isFunction(value) {
+		return typeof value === "function";
+	},
+	unique(arr) {
+		return Array.from(new Set(arr));
+	}
+};
+
+class compress {
+	constructor(cfg) {
+		this.cfg = cfg;
+	}
+
+	compress() {}
+
+	compressLess(files) {
+		let { paths, urlArgs, compress } = this.cfg.less || {};
+		const lessfiles = utiljs.unique(files);
+		var lessInput = lessfiles
+			.map(function(item) {
+				return '@import "' + item + '";';
+			})
+			.join("\r\n");
+		const less = require("less");
+		const autoprefix = require("less-plugin-autoprefix");
+		const option = { plugins: [new autoprefix({ browsers: ["last 5 versions", "ie > 8", "Firefox ESR"] })], paths, urlArgs, compress };
+		return new Promise((resolve, reject) => {
+			less.render(lessInput, option)
+				.then(resolve, reject)
+				.catch(reject);
+		});
+	}
+
+	compressJs(files) {
+		const f = utiljs.unique(files);
+
+		const UglifyJS = require("uglify-js");
+		return new Promise((resolve, reject) => {
+			this.getContent(files)
+				.then(res => {
+					console.info(res);
+					// const result = UglifyJS.minify(code, options);
+					// return result;
+				})
+				.catch(reject);
+		});
+	}
+
+	compressByConfig() {}
+	getContent(files) {
+		const arr = files.map(file => {
+			return new Promise((resolve, reject) => {
+				fs$1.readFile(file, "utf-8", function(err, data) {
+					if (err) {
+						reject(err);
+					} else {
+						resolve(data);
+					}
+				});
+			});
+		});
+		return new Promise((resolve, reject) => {
+			Promise.all(arr)
+				.then(res => {
+					const objs = {};
+					files.forEach((file, index) => {
+						objs[file] = res[index];
+					});
+					resolve(objs);
+				})
+				.catch(reject);
+		});
+	}
+}
+
+var util$1 = {
+	resolveLookupPaths(pathstr, file) {
+		const arr = [];
+		const tmp = [];
+		pathstr.split(path$1.sep).forEach(item => {
+			tmp.push(item);
+			arr.push(path$1.resolve(path$1.join(path$1.sep, ...tmp, file)));
+		});
+		return arr.reverse();
+	},
+	getConfig(cwd, name) {
+		const paths = this.resolveLookupPaths(cwd, name);
+		const f = this.findExist(paths);
+		if (f) {
+			try {
+				const json = require(f);
+				return json;
+			} catch (e) {
+				console.error(e.toString());
+			}
+		}
+		return {};
+	},
+	findExist(paths) {
+		for (let i = 0, j = paths.length; i < j; i++) {
+			const file = paths[i];
+			try {
+				fs$1.accessSync(file, fs$1.constants.R_OK);
+				return file;
+			} catch (e) {}
+		}
+	}
+};
+
+const maxItem = 1e3;
+var log = {
+	errorlog: [],
+	log(msg) {
+		msg = msg.toString();
+		if (this.errorlog.length > maxItem) {
+			this.errorlog = [];
+		}
+		var nowDate = new Date();
+		msg = nowDate.toLocaleDateString() + " " + nowDate.toLocaleTimeString() + " " + msg;
+		this.errorlog.push(msg);
+		console.log(msg);
+	}
+};
+
+const POST = {
+	reload(request, response, args, query) {}
+};
+
+const GET = {
+	reload(request, response, args, query) {}
+};
+
+const routers = {
+	POST,
+	GET
+};
+
+const regxpPath = [
+	{
+		reg: /[\w\-\/]+\.css$/,
+		handler: () => {}
+	},
+	{}
+];
+
+const regRouters = {
+	GET: regxpPath
+};
+
+var route = {
+	getRouter(m) {
+		if (routers[m]) {
+			return routers[m];
+		}
+	},
+	getRegxpRouter(m) {
+		if (regRouters[m]) {
+			return regRouters[m];
+		}
+	}
+};
+
+// import mime from "./mime/mime.js";
+
+var sendFile = (response, stat, filePath) => {
+	const type = mime.lookup(filePath);
+	response.writeHead(200, {
+		"Content-Type": type,
+		"Content-Length": stat.size
+	});
+	const readStream = fs.createReadStream(filePath);
+	readStream.pipe(response);
+};
+
+const defaultPort = 8088;
+const defaultAddress = "0.0.0.0";
+const defaultRoot = process.cwd();
+
+class httpserver {
+	constructor(cfg) {
+		const { port, address, root } = cfg;
+		this.port = port || process.env.PORT || defaultPort;
+		this.address = address || defaultAddress;
+		this.root = root || defaultRoot;
+	}
+	start() {
+		http.createServer((request, response) => {
+			try {
+				const router = route.getRouter(request.method);
+				if (router) {
+					const [pathinfo, qs] = request.url.split("?");
+					const query = querystring.parse(qs);
+					const [fn, ...args] = pathinfo.split("/").filter(item => item);
+					if (!fn) {
+						return this.noIndex(request, response, pathinfo, query);
+					}
+					const m = router[fn];
+					if (utiljs.isFunction(m)) {
+						// 优先级1 预定义函数
+						return m(request, response, args, query);
+					}
+				}
+				this.err404(response);
+			} catch (e) {
+				const err = e.toString();
+				log.log(err);
+				this.err500(response, err);
+			}
+		});
+	}
+
+	noIndex(request, response, pathinfo, query) {
+		response.writeHead(200, { "Content-Type": "text/plain" });
+		response.end("index\n");
+	}
+
+	tryfile(response, filePath) {
+		const file = path.join(this.root, filePath);
+		fs$1.stat(file, (err, stat) => {
+			if (err) {
+				return this.err404(response);
+			}
+			sendFile(response, stat, file);
+		});
+	}
+
+	err404(response) {
+		response.writeHead(404, { "Content-Type": "text/plain" });
+		response.end("Not Found\n");
+	}
+
+	err500(response, err) {
+		response.writeHead(500, { "Content-Type": "text/plain" });
+		response.end(err + "\n");
+	}
+}
+
+const configName = "static.json";
+
+class server {
+	constructor(cwd) {
+		this.cwd = cwd;
+	}
+
+	serve() {
+		const cfg = {};
+		new httpserver(cfg).start();
+	}
+
+	run(args) {}
+
+	lint(args) {}
+
+	install(args) {}
+
+	compress(args) {
+		const config = util$1.getConfig(this.cwd, configName);
+		const c = new compress(config);
+		if (args) {
+			console.info(args);
+			const less = args
+				.filter(item => {
+					return item.split(".").pop() == "less";
+				})
+				.map(item => {
+					return path$1.join(this.cwd, item);
+				});
+			const js = args
+				.filter(item => {
+					return item.split(".").pop() == "js";
+				})
+				.map(item => {
+					return path$1.join(this.cwd, item);
+				});
+
+			c.compressLess(less)
+				.then(res => {
+					console.info(res);
+				})
+				.catch(err => {
+					console.error(err.toString());
+				});
+			c.compressJs(js)
+				.then(res => {
+					console.info(res);
+				})
+				.catch(err => {
+					console.error(err.toString());
+				});
+		} else {
+			c.compressByConfig();
+		}
+		console.info(args);
+	}
+}
+
+class cli {
+	constructor(server) {
+		this.server = server;
+	}
+	run(argv) {
+		const [node, cfile, ...args] = argv;
+		this.node = node;
+		this.cfile = cfile;
+		this.args = args;
+		if (args.length > 0) {
+			this.runArgs();
+		} else {
+			this.runInit();
+		}
+		console.info(node, cfile, args);
+	}
+	runArgs() {
+		const [m, ...args] = this.args;
+		console.info(args);
+		const f = this.server[m];
+		if (utiljs.isFunction(f)) {
+			return f.call(this.server, args);
+		}
+		return this.fallback(m, args);
+	}
+	runInit() {
+		console.info("init");
+	}
+
+	fallback(m, args) {
+		this.server.serve();
+	}
+}
+
+new cli(new server(process.cwd())).run(process.argv);
