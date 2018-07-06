@@ -20,7 +20,10 @@ export default {
 			(async () => {
 				try {
 					const maxtime = await util.getUpdateTime(files);
-					console.info(maxtime);
+					const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
+					response.writeHead(200, { "Content-Type": "text/css", "X-Cache": hit ? "hit" : "miss" });
+					response.end(css);
+					resolve(true);
 				} catch (e) {
 					const k = matches[0].replace(/\/static\//, "");
 					const { css } = config.static;

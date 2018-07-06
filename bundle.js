@@ -1,15 +1,17 @@
-'use strict';
+"use strict";
 
-function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+function _interopDefault(ex) {
+	return ex && typeof ex === "object" && "default" in ex ? ex["default"] : ex;
+}
 
-var fs = _interopDefault(require('fs'));
-var util = _interopDefault(require('util'));
-var path = _interopDefault(require('path'));
-var os = _interopDefault(require('os'));
-var http = _interopDefault(require('http'));
-var process$1 = _interopDefault(require('process'));
-var querystring = _interopDefault(require('querystring'));
-var child_process = _interopDefault(require('child_process'));
+var fs = _interopDefault(require("fs"));
+var util = _interopDefault(require("util"));
+var path = _interopDefault(require("path"));
+var os = _interopDefault(require("os"));
+var http = _interopDefault(require("http"));
+var process$1 = _interopDefault(require("process"));
+var querystring = _interopDefault(require("querystring"));
+var child_process = _interopDefault(require("child_process"));
 
 const fsStat = util.promisify(fs.stat);
 
@@ -23,10 +25,7 @@ var util$1 = {
 		});
 		return arr.reverse();
 	},
-	getConfig(cwd, name) {
-		if (!/static$/.test(cwd)) {
-			cwd = path.join(cwd, "static");
-		}
+	getConfig(cwd, name) {if (!/static$/.test(cwd)) {cwd = path.join(cwd, "static");}
 		const paths = this.resolveLookupPaths(cwd, name);
 		const f = this.findExist(paths);
 		if (f) {
@@ -166,7 +165,10 @@ var compress = {
 			(async () => {
 				try {
 					const maxtime = await util$1.getUpdateTime(files);
-					console.info(maxtime);
+					const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
+					response.writeHead(200, { "Content-Type": "text/css", "X-Cache": hit ? "hit" : "miss" });
+					response.end(css);
+					resolve(true);
 				} catch (e) {
 					const k = matches[0].replace(/\/static\//, "");
 					const { css } = config.static;
