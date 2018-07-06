@@ -17,10 +17,6 @@ const regxpPath = [
 	{
 		reg: /[\w\-\/]+\.css$/,
 		handler: compress.compressLessReq.bind(compress)
-	},
-	{
-		reg: /\d+/,
-		handler: () => {}
 	}
 ];
 

@@ -1,6 +1,9 @@
 import fs from "fs";
 import util from "util";
 import path from "path";
+import os from "os";
+
+const fsStat = util.promisify(fs.stat);
 
 export default {
 	resolveLookupPaths(pathstr, file) {
@@ -13,11 +16,15 @@ export default {
 		return arr.reverse();
 	},
 	getConfig(cwd, name) {
+		if (!/static$/.test(cwd)) {
+			cwd = path.join(cwd, "static");
+		}
 		const paths = this.resolveLookupPaths(cwd, name);
 		const f = this.findExist(paths);
 		if (f) {
 			try {
 				const json = require(f);
+				json.path = path.dirname(f);
 				return json;
 			} catch (e) {
 				console.error(e.toString());
@@ -43,5 +50,38 @@ export default {
 		}
 		const updateTime = Math.max.apply(this, mtimes);
 		return updateTime;
+	},
+	async getUpdateTime(files) {
+		const mtimes = [];
+		for (let i = 0, j = files.length; i < j; i++) {
+			const v = files[i];
+			const stat = await fsStat(v);
+			mtimes.push(stat.mtime.getTime());
+		}
+		const updateTime = Math.max.apply(this, mtimes);
+		return updateTime;
+	},
+	getName(cwd, files, ext) {
+		const name = files
+			.map(item => {
+				return path.basename(item, ext);
+			})
+			.join("-");
+		return path.join(cwd, name);
+	},
+
+	getStatus() {
+		const data = {
+			pid: process.pid,
+			node: process.version,
+			os: process.platform + process.arch,
+			freemem: Math.round(os.freemem() / 1048576),
+			allmem: Math.round(os.totalmem() / 1048576),
+			cpus: os.cpus(),
+			load: os.loadavg(),
+			uptime: process.uptime(),
+			memory: process.memoryUsage()
+		};
+		return data;
 	}
 };

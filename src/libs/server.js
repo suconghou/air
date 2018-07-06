@@ -1,9 +1,10 @@
 import path from "path";
+import fs from "fs";
 import compress from "./compress.js";
 import utiljs from "./utiljs.js";
 import util from "./util.js";
-import httpserver from "./httpserver";
-
+import httpserver from "./httpserver.js";
+import lint from "./lint.js";
 const configName = "static.json";
 
 export default class server {
@@ -11,22 +12,29 @@ export default class server {
 		this.cwd = cwd;
 	}
 
-	serve() {
-		const cfg = {};
-		new httpserver(cfg).start();
+	serve(args) {
+		const params = utiljs.getParams(args);
+		const config = util.getConfig(this.cwd, configName);
+		new httpserver(params).start(config);
 	}
 
 	run(args) {}
 
 	lint(args) {}
 
-	install(args) {}
+	gitlint(args) {
+		new lint(this.cwd, args).lint();
+	}
+
+	install(args) {
+		new lint(this.cwd, args).install();
+	}
 
 	compress(args) {
 		const config = util.getConfig(this.cwd, configName);
-		const c = new compress(config);
-		if (args) {
-			console.info(args);
+		const params = utiljs.getParams(args);
+		const filed = args.filter(item => item.charAt(0) !== "-").length;
+		if (args && args.length > 0 && filed) {
 			const less = args
 				.filter(item => {
 					return item.split(".").pop() == "less";
@@ -42,23 +50,26 @@ export default class server {
 					return path.join(this.cwd, item);
 				});
 
-			c.compressLess(less)
+			compress
+				.compressLess(less, params)
 				.then(res => {
-					console.info(res);
+					const file = util.getName(this.cwd, less, ".less");
+					fs.writeFileSync(`${file}.min.css`, res.css);
 				})
 				.catch(err => {
 					console.error(err.toString());
 				});
-			c.compressJs(js)
+			compress
+				.compressJs(js, params)
 				.then(res => {
-					console.info(res);
+					const file = util.getName(this.cwd, js, ".js");
+					fs.writeFileSync(`${file}.min.js`, res.code);
 				})
 				.catch(err => {
 					console.error(err.toString());
 				});
 		} else {
-			c.compressByConfig();
+			compress.compressByConfig(config, params);
 		}
-		console.info(args);
 	}
 }

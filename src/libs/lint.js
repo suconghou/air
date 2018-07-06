@@ -6,26 +6,17 @@ const spawnSync = child_process.spawnSync;
 const prettyTypes = ["js", "vue", "jsx", "json", "css", "less", "ts", "md"];
 const esTypes = ["js", "jsx", "vue"];
 
+const configDir = "config";
+
 const exit = code => process.exit(code);
 
 export default class lint {
-	constructor(node, files) {
-		if (Array.isArray(files)) {
-			const [c, ...f] = files;
-			this.node = node;
-			this.c = c;
-			this.cwd = process.cwd();
-			this.prettierrc = path.join(this.cwd, "config", ".prettierrc");
-			this.eslintrc = path.join(this.cwd, "config", ".eslintrc.js");
-			if (files[1] == "install") {
-				return this.install();
-			}
-			if (Array.isArray(f) && f.length > 0) {
-				this.files = this.parse(f);
-			}
-		}
-		if (Array.isArray(this.files) && this.files.length > 0) {
-			this.lint();
+	constructor(cwd, files) {
+		this.cwd = cwd;
+		if (Array.isArray(files) && files.length > 0) {
+			this.prettierrc = path.join(this.cwd, configDir, ".prettierrc");
+			this.eslintrc = path.join(this.cwd, configDir, ".eslintrc.js");
+			this.files = this.parse(files);
 		}
 	}
 	parse(files) {
@@ -93,27 +84,32 @@ export default class lint {
 		return spawnSync("git", ["add", f], { stdio: "inherit" });
 	}
 	install() {
-		const prehook = path.join(this.cwd, "config", "pre-commit");
-		const posthook = path.join(this.cwd, "config", "post-commit");
+		const git = ".git";
+		const hooks = "hooks";
+		const precommit = "pre-commit";
+		const postcommit = "post-commit";
+		const prehook = path.join(this.cwd, configDir, precommit);
+		const posthook = path.join(this.cwd, configDir, postcommit);
 
-		const dst = path.join(this.cwd, ".git", "pre-commit");
-		const postdst = path.join(this.cwd, ".git", "post-commit");
+		const dst = path.join(this.cwd, git, hooks, precommit);
+		const postdst = path.join(this.cwd, git, hooks, postcommit);
+
 		try {
 			fs.accessSync(prehook, fs.constants.R_OK | fs.constants.W_OK);
 		} catch (err) {
-			console.error(`${prehook} Not Exist`);
+			console.error(err.toString());
 			exit(1);
 		}
 		fs.copyFileSync(prehook, dst);
 		try {
 			fs.accessSync(posthook, fs.constants.R_OK | fs.constants.W_OK);
 		} catch (err) {
-			console.error(`${posthook} Not Exist`);
+			console.error(err.toString());
 			exit(1);
 		}
 		fs.copyFileSync(posthook, postdst);
-		const mode = 7;
-		fs.chmodSync(prehook, mode);
-		fs.chmodSync(posthook, mode);
+		const mode = 0o755;
+		fs.chmodSync(dst, mode);
+		fs.chmodSync(postdst, mode);
 	}
 }

@@ -1,11 +1,12 @@
 import fs from "fs";
+import os from "os";
 import util from "./util.js";
 import path from "path";
 import tool from "./tool.js";
 import utiljs from "./utiljs.js";
 
 export default {
-	compressLessReq(response, matches, query, cwd) {
+	compressLessReq(response, matches, query, cwd, config) {
 		const key = matches[0].replace(".css", "");
 		const files = key
 			.split("-")
@@ -13,26 +14,46 @@ export default {
 			.map(item => {
 				return path.join(cwd, item) + ".less";
 			});
-		let maxTime;
-		try {
-			maxTime = util.getMaxUpdateTime(files);
-		} catch (e) {}
 		const options = { urlArgs: query.ver ? `ver=${query.ver}` : null, env: "development", useFileCache: false };
+
+		return new Promise((resolve, reject) => {
+			(async () => {
+				try {
+					const maxtime = await util.getUpdateTime(files);
+					console.info(maxtime);
+				} catch (e) {
+					const k = matches[0].replace(/\/static\//, "");
+					const { css } = config.static;
+					if (css) {
+						const entry = Object.keys(css);
+						if (entry.includes(k)) {
+							const hotfiles = css[k].map(item => path.join(config.path, item));
+							try {
+								const mtime = await util.getUpdateTime(hotfiles);
+								const { css, hit } = await this.compressLessCache(mtime, k, hotfiles, options);
+								response.writeHead(200, { "Content-Type": "text/css", "X-Cache": hit ? "hit" : "miss" });
+								response.end(css);
+								resolve(true);
+							} catch (e) {
+								reject(e);
+							}
+						} else {
+							resolve(false);
+						}
+					}
+				}
+			})();
+		});
+	},
+
+	async compressLessCache(mtime, key, files, options) {
 		const cache = tool.get(key);
-		if (cache && cache.maxTime == maxTime && maxTime && options.urlArgs == cache.urlArgs) {
-			response.writeHead(200, { "Content-Type": "text/css" });
-			return response.end(cache.css);
+		if (cache && cache.maxTime == mtime && options.urlArgs == cache.urlArgs) {
+			return { css: cache.css, hit: true };
 		}
-		this.compressLess(files, options)
-			.then(res => {
-				response.writeHead(200, { "Content-Type": "text/css" });
-				response.end(res.css);
-				tool.set(key, { css: res.css, urlArgs: options.urlArgs, maxTime });
-			})
-			.catch(err => {
-				response.writeHead(500, { "Content-Type": "text/plain" });
-				response.end(err.toString() + "\n");
-			});
+		const ret = await this.compressLess(files, options);
+		tool.set(key, { css: ret.css, urlArgs: options.urlArgs, maxTime: mtime });
+		return { css: ret.css, hit: false };
 	},
 
 	compressLess(files, options) {
@@ -46,6 +67,7 @@ export default {
 		const less = require("less");
 		const autoprefix = require("less-plugin-autoprefix");
 		const option = { plugins: [new autoprefix({ browsers: ["last 5 versions", "ie > 8", "Firefox ESR"] })], paths, urlArgs, compress, useFileCache, env };
+		this.cleanLessCache(less, lessfiles);
 		return new Promise((resolve, reject) => {
 			less.render(lessInput, option)
 				.then(resolve, reject)
@@ -53,10 +75,23 @@ export default {
 		});
 	},
 
-	compressJs(files) {
+	cleanLessCache(less, files) {
+		const fileManagers = (less.environment && less.environment.fileManagers) || [];
+		fileManagers.forEach(fileManager => {
+			if (fileManager.contents) {
+				Object.keys(fileManager.contents).forEach(k => {
+					if (files.includes(k)) {
+						delete fileManager.contents[k];
+					}
+				});
+			}
+		});
+	},
+
+	compressJs(files, ops) {
 		const f = utiljs.unique(files);
 		let options;
-		if (1) {
+		if (ops.debug) {
 			options = {
 				mangle: false,
 				compress: {
@@ -79,7 +114,7 @@ export default {
 				mangle: true,
 				compress: { sequences: true, properties: true, dead_code: true, unused: true, booleans: true, join_vars: true, if_return: true, conditionals: true }
 			};
-			if (1) {
+			if (ops.clean) {
 				options.compress.drop_console = true;
 				options.compress.drop_debugger = true;
 				options.compress.evaluate = true;
@@ -89,7 +124,7 @@ export default {
 
 		const UglifyJS = require("uglify-js");
 		return new Promise((resolve, reject) => {
-			this.getContent(files)
+			this.getContent(f)
 				.then(res => {
 					const result = UglifyJS.minify(res, options);
 					resolve(result);
@@ -98,7 +133,38 @@ export default {
 		});
 	},
 
-	compressByConfig() {},
+	compressByConfig(config, params) {
+		if (config && config.static) {
+			const { css, js } = config.static;
+			if (css) {
+				Object.keys(css).forEach(item => {
+					const files = css[item].map(item => path.join(config.path, item));
+					const dst = path.join(config.path, item);
+					this.compressLess(files, params)
+						.then(res => {
+							fs.writeFileSync(dst, res.css);
+						})
+						.catch(err => {
+							console.error(err.toString());
+						});
+				});
+			}
+			if (js) {
+				Object.keys(js).forEach(item => {
+					const files = js[item].map(item => path.join(config.path, item));
+					const dst = path.join(config.path, item);
+					console.info(files, dst);
+					this.compressJs(files, params)
+						.then(res => {
+							fs.writeFileSync(dst, res.code);
+						})
+						.catch(err => {
+							console.error(err.toString());
+						});
+				});
+			}
+		}
+	},
 
 	getContent(files) {
 		const arr = files.map(file => {

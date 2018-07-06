@@ -1,8 +1,4 @@
-const types = require("types.json");
-
-console.info(types);
-
-const typesMap = {};
+import typesMap from "./mtypes.js";
 
 const defaultMime = "application/octet-stream";
 

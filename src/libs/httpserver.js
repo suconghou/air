@@ -1,15 +1,18 @@
 import http from "http";
+import path from "path";
 import fs from "fs";
 import process from "process";
 import querystring from "querystring";
 
 import log from "./tool";
-import route from "./route.js";
+import route from "./route";
+import utilnode from "./util";
 import utiljs from "./utiljs";
-import sendFile from "./sendfile.js";
+import sendFile from "./sendfile";
 
 const defaultPort = 8088;
 const defaultRoot = process.cwd();
+const index = "index.html";
 
 export default class {
 	constructor(cfg) {
@@ -17,7 +20,7 @@ export default class {
 		this.port = port || process.env.PORT || defaultPort;
 		this.root = root || defaultRoot;
 	}
-	start() {
+	start(config) {
 		http.createServer((request, response) => {
 			try {
 				const router = route.getRouter(request.method);
@@ -36,13 +39,25 @@ export default class {
 						// 优先级2 预处理文件 , 优先级3 静态文件
 						const regRouter = route.getRegxpRouter(request.method, pathinfo);
 						if (regRouter) {
-							return regRouter.handler(response, regRouter.matches, query, this.root);
+							return regRouter
+								.handler(response, regRouter.matches, query, this.root, config)
+								.then(res => {
+									if (!res) {
+										this.tryfile(response, pathinfo);
+									}
+								})
+								.catch(e => {
+									const err = e.toString();
+									log.log(err);
+									this.err500(response, err);
+								});
+						} else {
+							return this.tryfile(response, pathinfo);
 						}
 					}
 				}
 				this.err404(response);
 			} catch (e) {
-				console.info(e);
 				const err = e.toString();
 				log.log(err);
 				this.err500(response, err);
@@ -52,8 +67,15 @@ export default class {
 	}
 
 	noIndex(request, response, pathinfo, query) {
-		response.writeHead(200, { "Content-Type": "text/plain" });
-		response.end("index\n");
+		const file = path.join(this.root, index);
+		fs.stat(file, (err, stat) => {
+			if (err) {
+				const info = utilnode.getStatus();
+				response.writeHead(200, { "Content-Type": "application/json" });
+				return response.end(JSON.stringify(info));
+			}
+			sendFile(response, stat, file);
+		});
 	}
 
 	tryfile(response, filePath) {

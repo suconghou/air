@@ -1,0 +1,10 @@
+{
+	"static": {
+		"js": {
+			"js/all.js": ["js/jquery.js", "js/etpl.js"]
+		},
+		"css": {
+			"css/style.css": ["css/page.less", "css/admin.less"]
+		}
+	}
+}

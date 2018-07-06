@@ -1,4 +1,5 @@
-// import mime from "./mime/mime.js";
+import fs from "fs";
+import mime from "./mime.js";
 
 export default (response, stat, filePath) => {
 	const type = mime.lookup(filePath);

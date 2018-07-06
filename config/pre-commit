@@ -1,0 +1,2 @@
+#!/bin/sh
+air gitlint $(git diff --cached --name-only --diff-filter=ACM)

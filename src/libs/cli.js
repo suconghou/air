@@ -1,5 +1,5 @@
 import utiljs from "./utiljs.js";
-
+import help, { version } from "../config.js";
 export default class {
 	constructor(server) {
 		this.server = server;
@@ -14,11 +14,9 @@ export default class {
 		} else {
 			this.runInit();
 		}
-		console.info(node, cfile, args);
 	}
 	runArgs() {
 		const [m, ...args] = this.args;
-		console.info(args);
 		const f = this.server[m];
 		if (utiljs.isFunction(f)) {
 			return f.call(this.server, args);
@@ -26,10 +24,24 @@ export default class {
 		return this.fallback(m, args);
 	}
 	runInit() {
-		console.info("init");
+		this.server.serve([]);
 	}
 
 	fallback(m, args) {
-		this.server.serve();
+		if (m == "-v") {
+			this.showVersion();
+		} else if (m == "-h") {
+			this.showHelp();
+		} else {
+			this.server.serve([m, ...args]);
+		}
+	}
+
+	showHelp() {
+		console.info(help);
+	}
+
+	showVersion() {
+		console.log("air version: air/" + version);
 	}
 }
