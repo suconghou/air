@@ -62,7 +62,11 @@ export default class {
 				log.log(err);
 				this.err500(response, err);
 			}
-		}).listen(this.port);
+		})
+			.listen(this.port)
+			.on("error", err => {
+				console.info(err.toString());
+			});
 		console.log("Server running at http://127.0.0.1:%s", this.port);
 	}
 

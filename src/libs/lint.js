@@ -31,18 +31,23 @@ export default class lint {
 		});
 	}
 	lint() {
+		if (!(this.prettierrc && this.eslintrc)) {
+			return;
+		}
 		try {
 			fs.accessSync(this.prettierrc, fs.constants.R_OK | fs.constants.W_OK);
 		} catch (err) {
-			console.error(`${this.prettierrc} Not Exist`);
+			console.info(err);
+			console.error(err.toString());
 			exit(1);
 		}
 		try {
 			fs.accessSync(this.eslintrc, fs.constants.R_OK | fs.constants.W_OK);
 		} catch (err) {
-			console.error(`${this.eslintrc} Not Exist`);
+			console.error(err.toString());
 			exit(1);
 		}
+		console.info(this.files);
 		for (let i = 0, j = this.files.length; i < j; i++) {
 			const { path, type, name } = this.files[i];
 

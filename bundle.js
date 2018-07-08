@@ -1,21 +1,19 @@
-"use strict";
+'use strict';
 
-function _interopDefault(ex) {
-	return ex && typeof ex === "object" && "default" in ex ? ex["default"] : ex;
-}
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-var fs = _interopDefault(require("fs"));
-var util = _interopDefault(require("util"));
-var path = _interopDefault(require("path"));
-var os = _interopDefault(require("os"));
-var http = _interopDefault(require("http"));
-var process$1 = _interopDefault(require("process"));
-var querystring = _interopDefault(require("querystring"));
-var child_process = _interopDefault(require("child_process"));
+var fs = _interopDefault(require('fs'));
+var util = _interopDefault(require('util'));
+var path = _interopDefault(require('path'));
+var os = _interopDefault(require('os'));
+var http = _interopDefault(require('http'));
+var process$1 = _interopDefault(require('process'));
+var querystring = _interopDefault(require('querystring'));
+var child_process = _interopDefault(require('child_process'));
 
 const fsStat = util.promisify(fs.stat);
 
-var util$1 = {
+var utilnode = {
 	resolveLookupPaths(pathstr, file) {
 		const arr = [];
 		const tmp = [];
@@ -25,7 +23,10 @@ var util$1 = {
 		});
 		return arr.reverse();
 	},
-	getConfig(cwd, name) {if (!/static$/.test(cwd)) {cwd = path.join(cwd, "static");}
+	getConfig(cwd, name) {
+		if (!/static$/.test(cwd)) {
+			cwd = path.join(cwd, "static");
+		}
 		const paths = this.resolveLookupPaths(cwd, name);
 		const f = this.findExist(paths);
 		if (f) {
@@ -95,7 +96,7 @@ var util$1 = {
 
 const maxItem = 1e3;
 const caches = new Map();
-var tool = {
+var log = {
 	errorlog: [],
 	log(msg) {
 		msg = msg.toString();
@@ -164,7 +165,7 @@ var compress = {
 		return new Promise((resolve, reject) => {
 			(async () => {
 				try {
-					const maxtime = await util$1.getUpdateTime(files);
+					const maxtime = await utilnode.getUpdateTime(files);
 					const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
 					response.writeHead(200, { "Content-Type": "text/css", "X-Cache": hit ? "hit" : "miss" });
 					response.end(css);
@@ -177,7 +178,7 @@ var compress = {
 						if (entry.includes(k)) {
 							const hotfiles = css[k].map(item => path.join(config.path, item));
 							try {
-								const mtime = await util$1.getUpdateTime(hotfiles);
+								const mtime = await utilnode.getUpdateTime(hotfiles);
 								const { css, hit } = await this.compressLessCache(mtime, k, hotfiles, options);
 								response.writeHead(200, { "Content-Type": "text/css", "X-Cache": hit ? "hit" : "miss" });
 								response.end(css);
@@ -195,12 +196,12 @@ var compress = {
 	},
 
 	async compressLessCache(mtime, key, files, options) {
-		const cache = tool.get(key);
+		const cache = log.get(key);
 		if (cache && cache.maxTime == mtime && options.urlArgs == cache.urlArgs) {
 			return { css: cache.css, hit: true };
 		}
 		const ret = await this.compressLess(files, options);
-		tool.set(key, { css: ret.css, urlArgs: options.urlArgs, maxTime: mtime });
+		log.set(key, { css: ret.css, urlArgs: options.urlArgs, maxTime: mtime });
 		return { css: ret.css, hit: false };
 	},
 
@@ -710,7 +711,7 @@ class httpserver {
 								})
 								.catch(e => {
 									const err = e.toString();
-									tool.log(err);
+									log.log(err);
 									this.err500(response, err);
 								});
 						} else {
@@ -721,10 +722,14 @@ class httpserver {
 				this.err404(response);
 			} catch (e) {
 				const err = e.toString();
-				tool.log(err);
+				log.log(err);
 				this.err500(response, err);
 			}
-		}).listen(this.port);
+		})
+			.listen(this.port)
+			.on("error", err => {
+				console.info(err.toString());
+			});
 		console.log("Server running at http://127.0.0.1:%s", this.port);
 	}
 
@@ -732,7 +737,7 @@ class httpserver {
 		const file = path.join(this.root, index);
 		fs.stat(file, (err, stat) => {
 			if (err) {
-				const info = util$1.getStatus();
+				const info = utilnode.getStatus();
 				response.writeHead(200, { "Content-Type": "application/json" });
 				return response.end(JSON.stringify(info));
 			}
@@ -790,18 +795,23 @@ class lint {
 		});
 	}
 	lint() {
+		if (!(this.prettierrc && this.eslintrc)) {
+			return;
+		}
 		try {
 			fs.accessSync(this.prettierrc, fs.constants.R_OK | fs.constants.W_OK);
 		} catch (err) {
-			console.error(`${this.prettierrc} Not Exist`);
+			console.info(err);
+			console.error(err.toString());
 			exit(1);
 		}
 		try {
 			fs.accessSync(this.eslintrc, fs.constants.R_OK | fs.constants.W_OK);
 		} catch (err) {
-			console.error(`${this.eslintrc} Not Exist`);
+			console.error(err.toString());
 			exit(1);
 		}
+		console.info(this.files);
 		for (let i = 0, j = this.files.length; i < j; i++) {
 			const { path: path$$1, type, name } = this.files[i];
 
@@ -882,7 +892,7 @@ class server {
 
 	serve(args) {
 		const params = utiljs.getParams(args);
-		const config = util$1.getConfig(this.cwd, configName);
+		const config = utilnode.getConfig(this.cwd, configName);
 		new httpserver(params).start(config);
 	}
 
@@ -899,7 +909,7 @@ class server {
 	}
 
 	compress(args) {
-		const config = util$1.getConfig(this.cwd, configName);
+		const config = utilnode.getConfig(this.cwd, configName);
 		const params = utiljs.getParams(args);
 		const filed = args.filter(item => item.charAt(0) !== "-").length;
 		if (args && args.length > 0 && filed) {
@@ -921,7 +931,7 @@ class server {
 			compress
 				.compressLess(less, params)
 				.then(res => {
-					const file = util$1.getName(this.cwd, less, ".less");
+					const file = utilnode.getName(this.cwd, less, ".less");
 					fs.writeFileSync(`${file}.min.css`, res.css);
 				})
 				.catch(err => {
@@ -930,7 +940,7 @@ class server {
 			compress
 				.compressJs(js, params)
 				.then(res => {
-					const file = util$1.getName(this.cwd, js, ".js");
+					const file = utilnode.getName(this.cwd, js, ".js");
 					fs.writeFileSync(`${file}.min.js`, res.code);
 				})
 				.catch(err => {
