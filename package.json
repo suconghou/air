@@ -1,35 +1,15 @@
 {
   "name": "airs",
-  "version": "0.5.5",
+  "version": "0.6.0",
   "description": "serve static files in the air",
   "main": "index.js",
   "dependencies" : {
-    "express": ">=4.14.0",
-    "compression": ">=1.6.0",
-    "send": ">=0.15.1",
-    "uglify-js": ">=3.0.18",
-    "tinify": ">=1.1.1",
-    "less": ">=2.7.1",
-    "autoprefixer": ">=6.4.0",
-    "less-plugin-autoprefix": ">=1.5.1",
-    "chokidar": ">=1.6.0",
-    "jshint": ">=2.9.2",
-    "webpack": ">=1.13.2",
-    "webpack-dev-server": ">=1.15.0",
-    "html-webpack-plugin": ">=2.22.0",
-    "less-loader": ">=2.2.3",
-    "babel-loader": ">=6.2.5",
-    "file-loader": ">=0.9.0",
-    "json-loader": ">=0.5.4",
-    "raw-loader": ">=0.5.1",
-    "url-loader": ">=0.5.7",
-    "sass-loader": ">=4.0.0",
-    "coffee-loader": ">=0.7.2",
-    "postcss-loader": ">=0.11.0",
-    "extract-text-webpack-plugin": ">=1.0.1"
+    "uglify-js": ">=3.4.1",
+    "less": ">=3.5.3",
+    "less-plugin-autoprefix": ">=1.5.1"
   },
   "engines": {
-    "node": ">=0.12"
+    "node": ">=8.10"
   },
   "bin":{
     "air": "./cli.js"
