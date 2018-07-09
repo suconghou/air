@@ -64,7 +64,7 @@
 对`async`支持,还需要添加`babel-eslint`
 
 ```
-yarn global add eslint-plugin-html prettier eslint babel-eslint vue-eslint-parser eslint-plugin-vue eslint-config-airbnb-base eslint-plugin-import
+yarn global add prettier eslint babel-eslint vue-eslint-parser eslint-plugin-vue
 
 ```
 
