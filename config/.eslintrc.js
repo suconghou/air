@@ -6,6 +6,7 @@ module.exports = {
 	parserOptions: {
 		sourceType: "module"
 	},
+	parser: "babel-eslint",
 	globals: {
 		require: false,
 		module: false
