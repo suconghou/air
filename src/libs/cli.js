@@ -1,5 +1,5 @@
-import utiljs from "./utiljs.js";
-import help, { version } from "../config.js";
+import utiljs from './utiljs.js';
+import help, { version } from '../config.js';
 export default class {
 	constructor(server) {
 		this.server = server;
@@ -28,9 +28,9 @@ export default class {
 	}
 
 	fallback(m, args) {
-		if (m == "-v") {
+		if (m == '-v') {
 			this.showVersion();
-		} else if (m == "-h") {
+		} else if (m == '-h') {
 			this.showHelp();
 		} else {
 			this.server.serve([m, ...args]);
@@ -42,6 +42,6 @@ export default class {
 	}
 
 	showVersion() {
-		console.log("air version: air/" + version);
+		console.log('air version: air/' + version);
 	}
 }

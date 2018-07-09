@@ -1,3 +1,4 @@
+import process from 'process';
 import path from 'path';
 import child_process from 'child_process';
 import fs from 'fs';

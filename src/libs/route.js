@@ -15,11 +15,11 @@ const routers = {
 
 const regxpPath = [
 	{
-		reg: /[\w\-\/]+\.css$/,
+		reg: /[\w\-/]+\.css$/,
 		handler: compress.compressLessReq.bind(compress)
 	},
 	{
-		reg: /[\w\-\/]+\.js$/,
+		reg: /[\w\-/]+\.js$/,
 		handler: compress.compressJsReg.bind(compress)
 	}
 ];

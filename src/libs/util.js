@@ -1,7 +1,8 @@
-import fs from "fs";
-import util from "util";
-import path from "path";
-import os from "os";
+import process from 'process';
+import fs from 'fs';
+import util from 'util';
+import path from 'path';
+import os from 'os';
 
 const fsStat = util.promisify(fs.stat);
 
@@ -17,7 +18,7 @@ export default {
 	},
 	getConfig(cwd, name) {
 		if (!/static$/.test(cwd)) {
-			cwd = path.join(cwd, "static");
+			cwd = path.join(cwd, 'static');
 		}
 		const paths = this.resolveLookupPaths(cwd, name);
 		const f = this.findExist(paths);
@@ -38,7 +39,9 @@ export default {
 			try {
 				fs.accessSync(file, fs.constants.R_OK);
 				return file;
-			} catch (e) {}
+			} catch (e) {
+				// not exist try next
+			}
 		}
 	},
 	getMaxUpdateTime: function(files) {
@@ -66,7 +69,7 @@ export default {
 			.map(item => {
 				return path.basename(item, ext);
 			})
-			.join("-");
+			.join('-');
 		return path.join(cwd, name);
 	},
 

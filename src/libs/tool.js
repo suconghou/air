@@ -8,7 +8,7 @@ export default {
 			this.errorlog = [];
 		}
 		var nowDate = new Date();
-		msg = nowDate.toLocaleDateString() + " " + nowDate.toLocaleTimeString() + " " + msg;
+		msg = nowDate.toLocaleDateString() + ' ' + nowDate.toLocaleTimeString() + ' ' + msg;
 		this.errorlog.push(msg);
 		console.log(msg);
 	},
