@@ -11,6 +11,10 @@ export default {
 		const arr = [];
 		const tmp = [];
 		pathstr.split(path.sep).forEach(item => {
+			if (/^[a-zA-Z]:$/.test(item)) {
+				// for windows
+				return;
+			}
 			tmp.push(item);
 			arr.push(path.resolve(path.join(path.sep, ...tmp, file)));
 		});

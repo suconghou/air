@@ -1,6 +1,6 @@
 {
-  "dependencies": {
-    "less": "^3.0.4",
-    "less-plugin-autoprefix": "^1.5.1"
-  }
+	"dependencies": {
+		"less": "^3.5.3",
+		"less-plugin-autoprefix": "^1.5.1"
+	}
 }

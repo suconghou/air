@@ -213,7 +213,6 @@ export default {
 				Object.keys(js).forEach(item => {
 					const files = js[item].map(item => path.join(config.path, item));
 					const dst = path.join(config.path, item);
-					console.info(files, dst);
 					this.compressJs(files, params)
 						.then(res => {
 							fs.writeFileSync(dst, res.code);

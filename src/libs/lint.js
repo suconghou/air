@@ -8,6 +8,7 @@ const prettyTypes = ['js', 'vue', 'jsx', 'json', 'css', 'less', 'ts', 'md'];
 const esTypes = ['js', 'jsx', 'vue'];
 
 const configDir = 'config';
+const spawnOps = { stdio: 'inherit', shell: true };
 
 const exit = code => process.exit(code);
 
@@ -79,13 +80,13 @@ export default class lint {
 	}
 
 	eslint(f) {
-		return spawnSync('eslint', ['-c', this.eslintrc, '--fix', f], { stdio: 'inherit' });
+		return spawnSync('eslint', ['-c', this.eslintrc, '--fix', f], spawnOps);
 	}
 	prettier(f) {
-		return spawnSync('prettier', ['-c', this.prettierrc, '--write', f], { stdio: 'inherit' });
+		return spawnSync('prettier', ['-c', this.prettierrc, '--write', f], spawnOps);
 	}
 	gitadd(f) {
-		return spawnSync('git', ['add', f], { stdio: 'inherit' });
+		return spawnSync('git', ['add', f], spawnOps);
 	}
 	install() {
 		const git = '.git';
