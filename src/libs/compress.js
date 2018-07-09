@@ -1,31 +1,33 @@
-import fs from "fs";
-import os from "os";
-import util from "./util.js";
-import path from "path";
-import tool from "./tool.js";
-import utiljs from "./utiljs.js";
+import fs from 'fs';
+import os from 'os';
+import util from './util.js';
+import path from 'path';
+import tool from './tool.js';
+import utiljs from './utiljs.js';
 
 export default {
 	compressLessReq(response, matches, query, cwd, config) {
-		const key = matches[0].replace(".css", "");
-		const files = key
-			.split("-")
+		const key = matches[0].replace('.css', '');
+		const dirs = key.split('/');
+		const segment = dirs.pop();
+		const files = segment
+			.split('-')
 			.filter(item => item)
 			.map(item => {
-				return path.join(cwd, item) + ".less";
+				return path.join(cwd, ...dirs, item) + '.less';
 			});
-		const options = { urlArgs: query.ver ? `ver=${query.ver}` : null, env: "development", useFileCache: false };
+		const options = { urlArgs: query.ver ? `ver=${query.ver}` : null, env: 'development', useFileCache: false };
 
 		return new Promise((resolve, reject) => {
 			(async () => {
 				try {
 					const maxtime = await util.getUpdateTime(files);
 					const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
-					response.writeHead(200, { "Content-Type": "text/css", "X-Cache": hit ? "hit" : "miss" });
+					response.writeHead(200, { 'Content-Type': 'text/css', 'X-Cache': hit ? 'hit' : 'miss' });
 					response.end(css);
 					resolve(true);
 				} catch (e) {
-					const k = matches[0].replace(/\/static\//, "");
+					const k = matches[0].replace(/\/static\//, '');
 					const { css } = config.static;
 					if (css) {
 						const entry = Object.keys(css);
@@ -34,7 +36,7 @@ export default {
 							try {
 								const mtime = await util.getUpdateTime(hotfiles);
 								const { css, hit } = await this.compressLessCache(mtime, k, hotfiles, options);
-								response.writeHead(200, { "Content-Type": "text/css", "X-Cache": hit ? "hit" : "miss" });
+								response.writeHead(200, { 'Content-Type': 'text/css', 'X-Cache': hit ? 'hit' : 'miss' });
 								response.end(css);
 								resolve(true);
 							} catch (e) {
@@ -66,10 +68,10 @@ export default {
 			.map(function(item) {
 				return '@import "' + item + '";';
 			})
-			.join("\r\n");
-		const less = require("less");
-		const autoprefix = require("less-plugin-autoprefix");
-		const option = { plugins: [new autoprefix({ browsers: ["last 5 versions", "ie > 8", "Firefox ESR"] })], paths, urlArgs, compress, useFileCache, env };
+			.join('\r\n');
+		const less = require('less');
+		const autoprefix = require('less-plugin-autoprefix');
+		const option = { plugins: [new autoprefix({ browsers: ['last 5 versions', 'ie > 8', 'Firefox ESR'] })], paths, urlArgs, compress, useFileCache, env };
 		this.cleanLessCache(less, lessfiles);
 		return new Promise((resolve, reject) => {
 			less.render(lessInput, option)
@@ -89,6 +91,61 @@ export default {
 				});
 			}
 		});
+	},
+
+	compressJsReg(response, matches, query, cwd, config) {
+		const key = matches[0].replace('.js', '');
+		const dirs = key.split('/');
+		const segment = dirs.pop();
+		const files = segment
+			.split('-')
+			.filter(item => item)
+			.map(item => {
+				return path.join(cwd, ...dirs, item) + '.js';
+			});
+		const options = { debug: true };
+
+		return new Promise((resolve, reject) => {
+			(async () => {
+				try {
+					const maxtime = await util.getUpdateTime(files);
+					const { js, hit } = await this.compressJsCache(maxtime, key, files, options);
+					response.writeHead(200, { 'Content-Type': 'application/javascript', 'X-Cache': hit ? 'hit' : 'miss' });
+					response.end(js);
+					resolve(true);
+				} catch (e) {
+					const k = matches[0].replace(/\/static\//, '');
+					const { js } = config.static;
+					if (js) {
+						const entry = Object.keys(js);
+						if (entry.includes(k)) {
+							const hotfiles = js[k].map(item => path.join(config.path, item));
+							try {
+								const mtime = await util.getUpdateTime(hotfiles);
+								const { js, hit } = await this.compressJsCache(mtime, k, hotfiles, options);
+								response.writeHead(200, { 'Content-Type': 'application/javascript', 'X-Cache': hit ? 'hit' : 'miss' });
+								response.end(js);
+								resolve(true);
+							} catch (e) {
+								reject(e);
+							}
+						} else {
+							resolve(false);
+						}
+					}
+				}
+			})();
+		});
+	},
+
+	async compressJsCache(mtime, key, files, options) {
+		const cache = tool.get(key);
+		if (cache && cache.maxTime == mtime) {
+			return { js: cache.js, hit: true };
+		}
+		const ret = await this.compressJs(files, options);
+		tool.set(key, { js: ret.code, maxTime: mtime });
+		return { js: ret.code, hit: false };
 	},
 
 	compressJs(files, ops) {
@@ -125,7 +182,7 @@ export default {
 			}
 		}
 
-		const UglifyJS = require("uglify-js");
+		const UglifyJS = require('uglify-js');
 		return new Promise((resolve, reject) => {
 			this.getContent(f)
 				.then(res => {
@@ -172,7 +229,7 @@ export default {
 	getContent(files) {
 		const arr = files.map(file => {
 			return new Promise((resolve, reject) => {
-				fs.readFile(file, "utf-8", function(err, data) {
+				fs.readFile(file, 'utf-8', function(err, data) {
 					if (err) {
 						reject(err);
 					} else {

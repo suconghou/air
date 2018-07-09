@@ -1,11 +1,11 @@
-import path from "path";
-import fs from "fs";
-import compress from "./compress.js";
-import utiljs from "./utiljs.js";
-import util from "./util.js";
-import httpserver from "./httpserver.js";
-import lint from "./lint.js";
-const configName = "static.json";
+import path from 'path';
+import fs from 'fs';
+import compress from './compress.js';
+import utiljs from './utiljs.js';
+import util from './util.js';
+import httpserver from './httpserver.js';
+import lint from './lint.js';
+const configName = 'static.json';
 
 export default class server {
 	constructor(cwd) {
@@ -20,7 +20,9 @@ export default class server {
 
 	run(args) {}
 
-	lint(args) {}
+	lint(args) {
+		new lint(this.cwd, args).lint();
+	}
 
 	gitlint(args) {
 		new lint(this.cwd, args).lint();
@@ -33,18 +35,18 @@ export default class server {
 	compress(args) {
 		const config = util.getConfig(this.cwd, configName);
 		const params = utiljs.getParams(args);
-		const filed = args.filter(item => item.charAt(0) !== "-").length;
+		const filed = args.filter(item => item.charAt(0) !== '-').length;
 		if (args && args.length > 0 && filed) {
 			const less = args
 				.filter(item => {
-					return item.split(".").pop() == "less";
+					return item.split('.').pop() == 'less';
 				})
 				.map(item => {
 					return path.join(this.cwd, item);
 				});
 			const js = args
 				.filter(item => {
-					return item.split(".").pop() == "js";
+					return item.split('.').pop() == 'js';
 				})
 				.map(item => {
 					return path.join(this.cwd, item);
@@ -53,7 +55,7 @@ export default class server {
 			compress
 				.compressLess(less, params)
 				.then(res => {
-					const file = util.getName(this.cwd, less, ".less");
+					const file = util.getName(this.cwd, less, '.less');
 					fs.writeFileSync(`${file}.min.css`, res.css);
 				})
 				.catch(err => {
@@ -62,7 +64,7 @@ export default class server {
 			compress
 				.compressJs(js, params)
 				.then(res => {
-					const file = util.getName(this.cwd, js, ".js");
+					const file = util.getName(this.cwd, js, '.js');
 					fs.writeFileSync(`${file}.min.js`, res.code);
 				})
 				.catch(err => {

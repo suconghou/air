@@ -1,4 +1,4 @@
-import compress from "./compress.js";
+import compress from './compress.js';
 
 const POST = {
 	reload(request, response, args, query) {}
@@ -17,6 +17,10 @@ const regxpPath = [
 	{
 		reg: /[\w\-\/]+\.css$/,
 		handler: compress.compressLessReq.bind(compress)
+	},
+	{
+		reg: /[\w\-\/]+\.js$/,
+		handler: compress.compressJsReg.bind(compress)
 	}
 ];
 

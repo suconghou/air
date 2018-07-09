@@ -1,33 +1,37 @@
-import http from "http";
-import path from "path";
-import fs from "fs";
-import process from "process";
-import querystring from "querystring";
+import http from 'http';
+import path from 'path';
+import fs from 'fs';
+import process from 'process';
+import querystring from 'querystring';
 
-import log from "./tool";
-import route from "./route";
-import utilnode from "./util";
-import utiljs from "./utiljs";
-import sendFile from "./sendfile";
+import log from './tool';
+import route from './route';
+import utilnode from './util';
+import utiljs from './utiljs';
+import sendFile from './sendfile';
 
 const defaultPort = 8088;
 const defaultRoot = process.cwd();
-const index = "index.html";
+const index = 'index.html';
 
 export default class {
 	constructor(cfg) {
 		const { port, root } = cfg;
 		this.port = port || process.env.PORT || defaultPort;
 		this.root = root || defaultRoot;
+		if (!(this.port > 1 && this.port < 65535)) {
+			console.error('port %s error,should be 1-65535', this.port);
+			process.exit(1);
+		}
 	}
 	start(config) {
 		http.createServer((request, response) => {
 			try {
 				const router = route.getRouter(request.method);
 				if (router) {
-					const [pathinfo, qs] = request.url.split("?");
+					const [pathinfo, qs] = request.url.split('?');
 					const query = querystring.parse(qs);
-					const [fn, ...args] = pathinfo.split("/").filter(item => item);
+					const [fn, ...args] = pathinfo.split('/').filter(item => item);
 					if (!fn) {
 						return this.noIndex(request, response, pathinfo, query);
 					}
@@ -64,10 +68,10 @@ export default class {
 			}
 		})
 			.listen(this.port)
-			.on("error", err => {
+			.on('error', err => {
 				console.info(err.toString());
 			});
-		console.log("Server running at http://127.0.0.1:%s", this.port);
+		console.log('Server running at http://127.0.0.1:%s', this.port);
 	}
 
 	noIndex(request, response, pathinfo, query) {
@@ -75,7 +79,7 @@ export default class {
 		fs.stat(file, (err, stat) => {
 			if (err) {
 				const info = utilnode.getStatus();
-				response.writeHead(200, { "Content-Type": "application/json" });
+				response.writeHead(200, { 'Content-Type': 'application/json' });
 				return response.end(JSON.stringify(info));
 			}
 			sendFile(response, stat, file);
@@ -93,12 +97,12 @@ export default class {
 	}
 
 	err404(response) {
-		response.writeHead(404, { "Content-Type": "text/plain" });
-		response.end("Not Found\n");
+		response.writeHead(404, { 'Content-Type': 'text/plain' });
+		response.end('Not Found\n');
 	}
 
 	err500(response, err) {
-		response.writeHead(500, { "Content-Type": "text/plain" });
-		response.end(err + "\n");
+		response.writeHead(500, { 'Content-Type': 'text/plain' });
+		response.end(err + '\n');
 	}
 }

@@ -238,6 +238,22 @@ var compress = {
 		});
 	},
 
+	compressJsReg(response, matches, query, cwd, config) {
+		return new Promise((resolve, reject) => {
+			const key = matches[0].replace(".js", "");
+			const files = key
+				.split("/")
+				.pop()
+				.split("-")
+				.filter(item => item)
+				.map(item => {
+					console.info(item);
+					return path.join(cwd, item) + ".js";
+				});
+			console.info(files, key);
+		});
+	},
+
 	compressJs(files, ops) {
 		const f = utiljs.unique(files);
 		let options;
@@ -359,6 +375,10 @@ const regxpPath = [
 	{
 		reg: /[\w\-\/]+\.css$/,
 		handler: compress.compressLessReq.bind(compress)
+	},
+	{
+		reg: /[\w\-\/]+\.js$/,
+		handler: compress.compressJsReg.bind(compress)
 	}
 ];
 
@@ -683,6 +703,10 @@ class httpserver {
 		const { port, root } = cfg;
 		this.port = port || process$1.env.PORT || defaultPort;
 		this.root = root || defaultRoot;
+		if (!(this.port > 1 && this.port < 65535)) {
+			console.error("port %s error,should be 1-65535", this.port);
+			process$1.exit(1);
+		}
 	}
 	start(config) {
 		http.createServer((request, response) => {
@@ -726,7 +750,11 @@ class httpserver {
 				tool.log(err);
 				this.err500(response, err);
 			}
-		}).listen(this.port);
+		})
+			.listen(this.port)
+			.on("error", err => {
+				console.info(err.toString());
+			});
 		console.log("Server running at http://127.0.0.1:%s", this.port);
 	}
 
@@ -764,10 +792,10 @@ class httpserver {
 }
 
 const spawnSync = child_process.spawnSync;
-const prettyTypes = ["js", "vue", "jsx", "json", "css", "less", "ts", "md"];
-const esTypes = ["js", "jsx", "vue"];
+const prettyTypes = ['js', 'vue', 'jsx', 'json', 'css', 'less', 'ts', 'md'];
+const esTypes = ['js', 'jsx', 'vue'];
 
-const configDir = "config";
+const configDir = 'config';
 
 const exit = code => process.exit(code);
 
@@ -775,15 +803,15 @@ class lint {
 	constructor(cwd, files) {
 		this.cwd = cwd;
 		if (Array.isArray(files) && files.length > 0) {
-			this.prettierrc = path.join(this.cwd, configDir, ".prettierrc");
-			this.eslintrc = path.join(this.cwd, configDir, ".eslintrc.js");
+			this.prettierrc = path.join(this.cwd, configDir, '.prettierrc');
+			this.eslintrc = path.join(this.cwd, configDir, '.eslintrc.js');
 			this.files = this.parse(files);
 		}
 	}
 	parse(files) {
 		return files.map(item => {
 			const name = item.trim();
-			const type = item.split(".").pop();
+			const type = item.split('.').pop();
 			let p = name;
 			if (!path.isAbsolute(name)) {
 				p = path.join(this.cwd, name);
@@ -792,16 +820,19 @@ class lint {
 		});
 	}
 	lint() {
+		if (!(this.prettierrc && this.eslintrc)) {
+			return;
+		}
 		try {
 			fs.accessSync(this.prettierrc, fs.constants.R_OK | fs.constants.W_OK);
 		} catch (err) {
-			console.error(`${this.prettierrc} Not Exist`);
+			console.error(err.toString());
 			exit(1);
 		}
 		try {
 			fs.accessSync(this.eslintrc, fs.constants.R_OK | fs.constants.W_OK);
 		} catch (err) {
-			console.error(`${this.eslintrc} Not Exist`);
+			console.error(err.toString());
 			exit(1);
 		}
 		for (let i = 0, j = this.files.length; i < j; i++) {
@@ -809,7 +840,7 @@ class lint {
 
 			fs.access(path$$1, fs.constants.R_OK | fs.constants.W_OK, err => {
 				if (err) {
-					console.error(`${path$$1} Not Exist`);
+					console.error(err.toString());
 					exit(1);
 					return;
 				}
@@ -836,19 +867,19 @@ class lint {
 	}
 
 	eslint(f) {
-		return spawnSync("eslint", ["-c", this.eslintrc, "--fix", f], { stdio: "inherit" });
+		return spawnSync('eslint', ['-c', this.eslintrc, '--fix', f], { stdio: 'inherit' });
 	}
 	prettier(f) {
-		return spawnSync("prettier", ["-c", this.prettierrc, "--write", f], { stdio: "inherit" });
+		return spawnSync('prettier', ['-c', this.prettierrc, '--write', f], { stdio: 'inherit' });
 	}
 	gitadd(f) {
-		return spawnSync("git", ["add", f], { stdio: "inherit" });
+		return spawnSync('git', ['add', f], { stdio: 'inherit' });
 	}
 	install() {
-		const git = ".git";
-		const hooks = "hooks";
-		const precommit = "pre-commit";
-		const postcommit = "post-commit";
+		const git = '.git';
+		const hooks = 'hooks';
+		const precommit = 'pre-commit';
+		const postcommit = 'post-commit';
 		const prehook = path.join(this.cwd, configDir, precommit);
 		const posthook = path.join(this.cwd, configDir, postcommit);
 
@@ -890,7 +921,9 @@ class server {
 
 	run(args) {}
 
-	lint(args) {}
+	lint(args) {
+		new lint(this.cwd, args).lint();
+	}
 
 	gitlint(args) {
 		new lint(this.cwd, args).lint();
