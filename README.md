@@ -34,13 +34,15 @@
 
 
 
-####`air serve`
+####air serve
 
 开启http server
 
 与直接执行`air`一样
 
-#### `air compress`
+
+
+#### air compress
 
 压缩less,javascript
 
@@ -54,9 +56,9 @@
 
 
 
-####`air install`
+####air install
 
-
+安装git hooks
 
 要使用格式化和lint,需要全局安装`prettier`,`eslint`
 
@@ -70,10 +72,6 @@ yarn global add eslint-plugin-html prettier eslint babel-eslint
 
 
 
-
-
-安装git hooks
-
 要跳过eslint检查,使用
 
 `git commit -n`
@@ -84,7 +82,7 @@ yarn global add eslint-plugin-html prettier eslint babel-eslint
 
 
 
-#### `air lint`
+#### air lint
 
 手动对指定文件进行格式化和lint
 
