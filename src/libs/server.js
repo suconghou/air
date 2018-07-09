@@ -53,7 +53,7 @@ export default class server {
 				});
 
 			compress
-				.compressLess(less, params)
+				.compressLess(less, Object.assign({ compress: params.debug ? false : true }, params))
 				.then(res => {
 					const file = util.getName(this.cwd, less, '.less');
 					fs.writeFileSync(`${file}.min.css`, res.css);

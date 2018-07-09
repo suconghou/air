@@ -200,7 +200,7 @@ export default {
 				Object.keys(css).forEach(item => {
 					const files = css[item].map(item => path.join(config.path, item));
 					const dst = path.join(config.path, item);
-					this.compressLess(files, params)
+					this.compressLess(files, Object.assign({ compress: params.debug ? false : true }, params))
 						.then(res => {
 							fs.writeFileSync(dst, res.css);
 						})
