@@ -11,7 +11,6 @@
 
 `yarn global add airs`
 
-
 # 使用
 
 直接执行`air`启动http server
@@ -32,9 +31,7 @@
 
 ### 命令
 
-
-
-####air serve
+### air serve
 
 开启http server
 
@@ -42,7 +39,7 @@
 
 
 
-#### air compress
+### air compress
 
 压缩less,javascript
 
@@ -56,7 +53,7 @@
 
 
 
-####air install
+### air install
 
 安装git hooks
 
@@ -82,7 +79,7 @@ yarn global add eslint-plugin-html prettier eslint babel-eslint
 
 
 
-#### air lint
+### air lint
 
 手动对指定文件进行格式化和lint
 
