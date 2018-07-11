@@ -10,12 +10,14 @@ export default {
 		const key = matches[0].replace('.css', '');
 		const dirs = key.split('/');
 		const segment = dirs.pop();
-		const files = segment
-			.split('-')
-			.filter(item => item)
-			.map(item => {
-				return path.join(cwd, ...dirs, item) + '.less';
-			});
+		const files = utiljs.unique(
+			segment
+				.split('-')
+				.filter(item => item)
+				.map(item => {
+					return path.join(cwd, ...dirs, item) + '.less';
+				})
+		);
 		const options = { urlArgs: query.ver ? `ver=${query.ver}` : null, env: 'development', useFileCache: false };
 
 		return new Promise((resolve, reject) => {
@@ -23,7 +25,7 @@ export default {
 				try {
 					const maxtime = await util.getUpdateTime(files);
 					const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
-					response.writeHead(200, { 'Content-Type': 'text/css', 'X-Cache': hit ? 'hit' : 'miss' });
+					response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=60', 'X-Cache': hit ? 'hit' : 'miss' });
 					response.end(css);
 					resolve(true);
 				} catch (e) {
@@ -36,7 +38,7 @@ export default {
 							try {
 								const mtime = await util.getUpdateTime(hotfiles);
 								const { css, hit } = await this.compressLessCache(mtime, k, hotfiles, options);
-								response.writeHead(200, { 'Content-Type': 'text/css', 'X-Cache': hit ? 'hit' : 'miss' });
+								response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=60', 'X-Cache': hit ? 'hit' : 'miss' });
 								response.end(css);
 								resolve(true);
 							} catch (e) {
@@ -97,20 +99,26 @@ export default {
 		const key = matches[0].replace('.js', '');
 		const dirs = key.split('/');
 		const segment = dirs.pop();
-		const files = segment
-			.split('-')
-			.filter(item => item)
-			.map(item => {
-				return path.join(cwd, ...dirs, item) + '.js';
-			});
+		const files = utiljs.unique(
+			segment
+				.split('-')
+				.filter(item => item)
+				.map(item => {
+					return path.join(cwd, ...dirs, item) + '.js';
+				})
+		);
 		const options = { debug: true };
 
 		return new Promise((resolve, reject) => {
 			(async () => {
 				try {
 					const maxtime = await util.getUpdateTime(files);
+					if (files.length === 1) {
+						// 直接请求一个js文件并且存在,让他直接使用静态文件
+						return resolve(false);
+					}
 					const { js, hit } = await this.compressJsCache(maxtime, key, files, options);
-					response.writeHead(200, { 'Content-Type': 'application/javascript', 'X-Cache': hit ? 'hit' : 'miss' });
+					response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=60', 'X-Cache': hit ? 'hit' : 'miss' });
 					response.end(js);
 					resolve(true);
 				} catch (e) {
@@ -123,7 +131,7 @@ export default {
 							try {
 								const mtime = await util.getUpdateTime(hotfiles);
 								const { js, hit } = await this.compressJsCache(mtime, k, hotfiles, options);
-								response.writeHead(200, { 'Content-Type': 'application/javascript', 'X-Cache': hit ? 'hit' : 'miss' });
+								response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=60', 'X-Cache': hit ? 'hit' : 'miss' });
 								response.end(js);
 								resolve(true);
 							} catch (e) {
