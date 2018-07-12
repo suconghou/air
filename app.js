@@ -182,6 +182,9 @@ var compress = {
 					resolve(true);
 				} catch (e) {
 					const k = matches[0].replace(/\/static\//, '');
+					if (!config.static) {
+						return resolve(false);
+					}
 					const { css } = config.static;
 					if (css) {
 						const entry = Object.keys(css);
@@ -275,6 +278,9 @@ var compress = {
 					resolve(true);
 				} catch (e) {
 					const k = matches[0].replace(/\/static\//, '');
+					if (!config.static) {
+						return resolve(false);
+					}
 					const { js } = config.static;
 					if (js) {
 						const entry = Object.keys(js);
@@ -1048,7 +1054,7 @@ Flags:
 	--clean			compress with clean mode
 `;
 
-const version = '0.6.3';
+const version = '0.6.4';
 
 class cli {
 	constructor(server) {
