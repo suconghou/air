@@ -201,6 +201,15 @@ export default {
 			this.getContent(f)
 				.then(res => {
 					const result = UglifyJS.minify(res, options);
+					const er = result.error;
+					if (er) {
+						const s = er.toString();
+						const { filename, line, col, pos } = er;
+						er.toString = () => {
+							return `${filename}: ${s} on line ${line}, ${col}:${pos}`;
+						};
+						return reject(er);
+					}
 					resolve(result);
 				})
 				.catch(reject);
