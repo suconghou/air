@@ -353,6 +353,15 @@ var compress = {
 			this.getContent(f)
 				.then(res => {
 					const result = UglifyJS.minify(res, options);
+					const er = result.error;
+					if (er) {
+						const s = er.toString();
+						const { filename, line, col, pos } = er;
+						er.toString = () => {
+							return `${filename}: ${s} on line ${line}, ${col}:${pos}`;
+						};
+						return reject(er);
+					}
 					resolve(result);
 				})
 				.catch(reject);
@@ -1012,25 +1021,28 @@ class server {
 				.map(item => {
 					return path.join(this.cwd, item);
 				});
-
-			compress
-				.compressLess(less, Object.assign({ compress: params.debug ? false : true }, params))
-				.then(res => {
-					const file = utilnode.getName(this.cwd, less, '.less');
-					fs.writeFileSync(`${file}.min.css`, res.css);
-				})
-				.catch(err => {
-					console.error(err.toString());
-				});
-			compress
-				.compressJs(js, params)
-				.then(res => {
-					const file = utilnode.getName(this.cwd, js, '.js');
-					fs.writeFileSync(`${file}.min.js`, res.code);
-				})
-				.catch(err => {
-					console.error(err.toString());
-				});
+			if (less.length) {
+				compress
+					.compressLess(less, Object.assign({ compress: params.debug ? false : true }, params))
+					.then(res => {
+						const file = utilnode.getName(this.cwd, less, '.less');
+						fs.writeFileSync(`${file}.min.css`, res.css);
+					})
+					.catch(err => {
+						console.error(err.toString());
+					});
+			}
+			if (js.length) {
+				compress
+					.compressJs(js, params)
+					.then(res => {
+						const file = utilnode.getName(this.cwd, js, '.js');
+						fs.writeFileSync(`${file}.min.js`, res.code);
+					})
+					.catch(err => {
+						console.error(err.toString());
+					});
+			}
 		} else {
 			compress.compressByConfig(config, params);
 		}
@@ -1054,7 +1066,7 @@ Flags:
 	--clean			compress with clean mode
 `;
 
-const version = '0.6.4';
+const version = '0.6.5';
 
 class cli {
 	constructor(server) {
