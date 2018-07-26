@@ -875,7 +875,7 @@ class httpserver {
 			try {
 				const router = route.getRouter(request.method);
 				if (router) {
-					const [pathinfo, qs] = request.url.split('?');
+					const [pathinfo, qs] = decodeURI(request.url).split('?');
 					const query = querystring.parse(qs);
 					const [fn, ...args] = pathinfo.split('/').filter(item => item);
 					if (!fn) {
@@ -1166,7 +1166,7 @@ Flags:
 	--clean			compress with clean mode
 `;
 
-const version = '0.6.7';
+const version = '0.6.8';
 
 class cli {
 	constructor(server) {
