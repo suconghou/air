@@ -4,7 +4,7 @@ import fs from 'fs';
 
 const readFile = util.promisify(fs.readFile);
 
-const includefile = /<!--#\s{1,5}include\s{1,5}file="(?<file>[\w+\/\.]{3,50})"\s{1,5}-->/g;
+const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+\/\.]{3,50})"\s{1,5}-->/g;
 
 export default {
 	load(response, matches, query, cwd, config) {
@@ -46,9 +46,10 @@ export default {
 
 		while (true) {
 			while ((res = includefile.exec(html))) {
-				matches[res[0]] = res.groups.file;
-				if (!filesMap[res.groups.file]) {
-					filesMap[res.groups.file] = '';
+				const [holder, file] = res;
+				matches[holder] = file;
+				if (!filesMap[file]) {
+					filesMap[file] = '';
 				}
 			}
 			if (i == 0 && Object.keys(filesMap).length == 0) {

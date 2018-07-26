@@ -30,7 +30,7 @@ export default class {
 			try {
 				const router = route.getRouter(request.method);
 				if (router) {
-					const [pathinfo, qs] = request.url.split('?');
+					const [pathinfo, qs] = decodeURI(request.url).split('?');
 					const query = querystring.parse(qs);
 					const [fn, ...args] = pathinfo.split('/').filter(item => item);
 					if (!fn) {
