@@ -9,6 +9,7 @@ import route from './route';
 import utilnode from './util';
 import utiljs from './utiljs';
 import sendFile from './sendfile';
+import ssi from './ssi';
 
 const defaultPort = 8088;
 const defaultRoot = process.cwd();
@@ -82,7 +83,13 @@ export default class {
 				response.writeHead(200, { 'Content-Type': 'application/json' });
 				return response.end(JSON.stringify(info));
 			}
-			sendFile(response, stat, file);
+			(async () => {
+				try {
+					await ssi.loadHtml(response, index, query, this.root);
+				} catch (e) {
+					this.err500(response, e.toString());
+				}
+			})();
 		});
 	}
 

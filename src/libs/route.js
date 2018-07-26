@@ -1,4 +1,5 @@
 import compress from './compress.js';
+import ssi from './ssi.js';
 
 const POST = {
 	reload(request, response, args, query) {}
@@ -21,6 +22,10 @@ const regxpPath = [
 	{
 		reg: /[\w\-/]+\.js$/,
 		handler: compress.compressJsReg.bind(compress)
+	},
+	{
+		reg: /[\w\-/]+\.html$/,
+		handler: ssi.load.bind(ssi)
 	}
 ];
 
