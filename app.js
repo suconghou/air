@@ -183,11 +183,18 @@ var compress = {
 			(async () => {
 				try {
 					const maxtime = await utilnode.getUpdateTime(files);
-					const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
-					response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=60', 'X-Cache': hit ? 'hit' : 'miss' });
-					response.end(css);
-					resolve(true);
+					try {
+						const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
+						response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=60', 'X-Cache': hit ? 'hit' : 'miss' });
+						response.end(css);
+						resolve(true);
+					} catch (e) {
+						reject(e);
+					}
 				} catch (e) {
+					if (!(e.syscall == 'stat' && e.errno == -2)) {
+						return reject(e);
+					}
 					const k = matches[0].replace(/\/static\//, '');
 					if (!config.static) {
 						return resolve(false);
@@ -1099,7 +1106,8 @@ class server {
 
 	serve(args) {
 		const params = utiljs.getParams(args);
-		const config = utilnode.getConfig(this.cwd, configName);
+		const cwd = params.root ? params.root : this.cwd;
+		const config = utilnode.getConfig(cwd, configName);
 		new httpserver(params).start(config);
 	}
 
@@ -1218,7 +1226,7 @@ Flags:
 	--clean			compress with clean mode
 `;
 
-const version = '0.6.9';
+const version = '0.6.10';
 
 class cli {
 	constructor(server) {
