@@ -24,11 +24,19 @@ export default {
 			(async () => {
 				try {
 					const maxtime = await util.getUpdateTime(files);
-					const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
-					response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=60', 'X-Cache': hit ? 'hit' : 'miss' });
-					response.end(css);
-					resolve(true);
+					try {
+						const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
+						response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=60', 'X-Cache': hit ? 'hit' : 'miss' });
+						response.end(css);
+						resolve(true);
+					} catch (e) {
+						reject(e);
+					}
 				} catch (e) {
+					if (!(e.syscall == 'stat' && e.errno == -2)) {
+						// file not found
+						reject(e);
+					}
 					const k = matches[0].replace(/\/static\//, '');
 					if (!config.static) {
 						return resolve(false);

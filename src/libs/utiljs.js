@@ -9,6 +9,7 @@ export default {
 		const kMap = {
 			'-p': 'port',
 			'-d': 'root',
+			'-o': 'output',
 			'--debug': 'debug',
 			'--clean': 'clean'
 		};

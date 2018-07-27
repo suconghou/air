@@ -90,5 +90,11 @@ export default {
 			memory: process.memoryUsage()
 		};
 		return data;
+	},
+
+	exit(e, code) {
+		const str = e.toString() + os.EOL;
+		process.stderr.write(str);
+		process.exit(code);
 	}
 };
