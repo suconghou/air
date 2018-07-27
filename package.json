@@ -1,17 +1,18 @@
 {
   "name": "airs",
-  "version": "0.6.8",
+  "version": "0.6.9",
   "description": "serve static files in the air",
   "main": "index.js",
-  "dependencies" : {
-    "uglify-js": ">=3.4.1",
-    "less": ">=3.5.3",
-    "less-plugin-autoprefix": ">=1.5.1"
+  "dependencies": {
+    "art-template": "^4.12.2",
+    "less": "^3.8.0",
+    "less-plugin-autoprefix": "^2.0.0",
+    "uglify-js": "^3.4.5"
   },
   "engines": {
     "node": ">=8.10"
   },
-  "bin":{
+  "bin": {
     "air": "./cli.js"
   },
   "scripts": {

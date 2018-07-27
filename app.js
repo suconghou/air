@@ -97,6 +97,12 @@ var utilnode = {
 			memory: process.memoryUsage()
 		};
 		return data;
+	},
+
+	exit(e, code) {
+		const str = e.toString() + os.EOL;
+		process.stderr.write(str);
+		process.exit(code);
 	}
 };
 
@@ -133,6 +139,7 @@ var utiljs = {
 		const kMap = {
 			'-p': 'port',
 			'-d': 'root',
+			'-o': 'output',
 			'--debug': 'debug',
 			'--clean': 'clean'
 		};
@@ -1075,6 +1082,14 @@ class lint {
 	}
 }
 
+var template = {
+	template(filename, data, options) {
+		const template = require('art-template');
+		Object.assign(template.defaults, options);
+		return template(filename, data);
+	}
+};
+
 const configName = 'static.json';
 
 class server {
@@ -1086,6 +1101,43 @@ class server {
 		const params = utiljs.getParams(args);
 		const config = utilnode.getConfig(this.cwd, configName);
 		new httpserver(params).start(config);
+	}
+
+	template(args) {
+		const params = utiljs.getParams(args);
+		const [file, datafile] = args;
+		const writeFile = util.promisify(fs.writeFile);
+		if (file && datafile) {
+			try {
+				const data = require(path.join(this.cwd, datafile));
+				let options = {
+					debug: params.debug,
+					minimize: !params.debug
+				};
+				const res = template.template(path.join(this.cwd, file), data, options);
+				if (params.output) {
+					(async () => {
+						try {
+							let dstfile;
+							if (path.isAbsolute(params.output)) {
+								dstfile = params.output;
+							} else {
+								dstfile = path.join(this.cwd, params.output);
+							}
+							await writeFile(dstfile, res);
+						} catch (e) {
+							utilnode.exit(e, 1);
+						}
+					})();
+				} else {
+					process.stdout.write(res + os.EOL);
+				}
+			} catch (e) {
+				utilnode.exit(e, 1);
+			}
+		} else {
+			utilnode.exit('file and filedata must be set', 1);
+		}
 	}
 
 	run(args) {}
@@ -1166,7 +1218,7 @@ Flags:
 	--clean			compress with clean mode
 `;
 
-const version = '0.6.8';
+const version = '0.6.9';
 
 class cli {
 	constructor(server) {
