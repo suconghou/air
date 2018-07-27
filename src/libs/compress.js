@@ -33,9 +33,8 @@ export default {
 						reject(e);
 					}
 				} catch (e) {
-					if (!(e.syscall == 'stat' && e.errno == -2)) {
-						// file not found
-						reject(e);
+					if (!(e.syscall == 'stat')) {
+						return reject(e);
 					}
 					const k = matches[0].replace(/\/static\//, '');
 					if (!config.static) {

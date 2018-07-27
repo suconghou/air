@@ -15,4 +15,4 @@ Flags:
 	--clean			compress with clean mode
 `;
 
-export const version = '0.6.9';
+export const version = '0.6.12';

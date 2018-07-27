@@ -85,7 +85,11 @@ export default class {
 			}
 			(async () => {
 				try {
-					await ssi.loadHtml(response, index, query, this.root);
+					await ssi.loadHtml(response, index, query, this.root).then(res => {
+						if (!res) {
+							return sendFile(response, stat, file);
+						}
+					});
 				} catch (e) {
 					this.err500(response, e.toString());
 				}
