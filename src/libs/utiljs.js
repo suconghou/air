@@ -10,6 +10,7 @@ export default {
 			'-p': 'port',
 			'-d': 'root',
 			'-o': 'output',
+			'--escape': 'escape',
 			'--debug': 'debug',
 			'--clean': 'clean'
 		};

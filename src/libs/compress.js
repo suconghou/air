@@ -33,7 +33,7 @@ export default {
 						reject(e);
 					}
 				} catch (e) {
-					if (!(e.syscall == 'stat')) {
+					if (e.syscall !== 'stat') {
 						return reject(e);
 					}
 					const k = matches[0].replace(/\/static\//, '');

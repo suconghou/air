@@ -33,7 +33,8 @@ export default class server {
 				const data = require(path.join(this.cwd, datafile));
 				let options = {
 					debug: params.debug,
-					minimize: !params.debug
+					minimize: !params.debug,
+					escape: params.escape
 				};
 				const res = template.template(path.join(this.cwd, file), data, options);
 				if (params.output) {
