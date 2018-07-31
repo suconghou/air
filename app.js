@@ -1121,7 +1121,7 @@ class server {
 				let options = {
 					debug: params.debug,
 					minimize: !params.debug,
-					escape: params.escape
+					escape: !!params.escape
 				};
 				const res = template.template(path.join(this.cwd, file), data, options);
 				if (params.output) {
@@ -1227,7 +1227,7 @@ Flags:
 	--clean			compress with clean mode
 `;
 
-const version = '0.6.13';
+const version = '0.6.14';
 
 class cli {
 	constructor(server) {
