@@ -135,6 +135,7 @@ var utiljs = {
 			'-p': 'port',
 			'-d': 'root',
 			'-o': 'output',
+			'--escape': 'escape',
 			'--debug': 'debug',
 			'--clean': 'clean'
 		};
@@ -187,7 +188,7 @@ var compress = {
 						reject(e);
 					}
 				} catch (e) {
-					if (!(e.syscall == 'stat' && e.errno == -2)) {
+					if (e.syscall !== 'stat') {
 						return reject(e);
 					}
 					const k = matches[0].replace(/\/static\//, '');
@@ -939,7 +940,11 @@ class httpserver {
 			}
 			(async () => {
 				try {
-					await ssi.loadHtml(response, index, query, this.root);
+					await ssi.loadHtml(response, index, query, this.root).then(res => {
+						if (!res) {
+							return sendFile(response, stat, file);
+						}
+					});
 				} catch (e) {
 					this.err500(response, e.toString());
 				}
@@ -1115,7 +1120,8 @@ class server {
 				const data = require(path.join(this.cwd, datafile));
 				let options = {
 					debug: params.debug,
-					minimize: !params.debug
+					minimize: !params.debug,
+					escape: params.escape
 				};
 				const res = template.template(path.join(this.cwd, file), data, options);
 				if (params.output) {
@@ -1221,7 +1227,7 @@ Flags:
 	--clean			compress with clean mode
 `;
 
-const version = '0.6.11';
+const version = '0.6.13';
 
 class cli {
 	constructor(server) {
