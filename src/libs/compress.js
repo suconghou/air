@@ -1,6 +1,6 @@
 import fs from 'fs';
 import os from 'os';
-import util from './util.js';
+import util, { writeFile } from './util.js';
 import path from 'path';
 import tool from './tool.js';
 import utiljs from './utiljs.js';
@@ -26,7 +26,7 @@ export default {
 					const maxtime = await util.getUpdateTime(files);
 					try {
 						const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
-						response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=60', 'X-Cache': hit ? 'hit' : 'miss' });
+						response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
 						response.end(css);
 						resolve(true);
 					} catch (e) {
@@ -48,7 +48,7 @@ export default {
 							try {
 								const mtime = await util.getUpdateTime(hotfiles);
 								const { css, hit } = await this.compressLessCache(mtime, k, hotfiles, options);
-								response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=60', 'X-Cache': hit ? 'hit' : 'miss' });
+								response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
 								response.end(css);
 								resolve(true);
 							} catch (e) {
@@ -128,7 +128,7 @@ export default {
 						return resolve(false);
 					}
 					const { js, hit } = await this.compressJsCache(maxtime, key, files, options);
-					response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=60', 'X-Cache': hit ? 'hit' : 'miss' });
+					response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
 					response.end(js);
 					resolve(true);
 				} catch (e) {
@@ -144,7 +144,7 @@ export default {
 							try {
 								const mtime = await util.getUpdateTime(hotfiles);
 								const { js, hit } = await this.compressJsCache(mtime, k, hotfiles, options);
-								response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=60', 'X-Cache': hit ? 'hit' : 'miss' });
+								response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
 								response.end(js);
 								resolve(true);
 							} catch (e) {
@@ -227,29 +227,20 @@ export default {
 		if (config && config.static) {
 			const { css, js } = config.static;
 			if (css) {
-				Object.keys(css).forEach(item => {
+				Object.keys(css).forEach(async item => {
 					const files = css[item].map(item => path.join(config.path, item));
 					const dst = path.join(config.path, item);
-					this.compressLess(files, Object.assign({ compress: params.debug ? false : true }, params))
-						.then(res => {
-							fs.writeFileSync(dst, res.css);
-						})
-						.catch(err => {
-							console.error(err.toString());
-						});
+					const lessOps = Object.assign({ compress: params.debug ? false : true }, params);
+					const res = await this.compressLess(files, lessOps);
+					await writeFile(dst, res.css);
 				});
 			}
 			if (js) {
-				Object.keys(js).forEach(item => {
+				Object.keys(js).forEach(async item => {
 					const files = js[item].map(item => path.join(config.path, item));
 					const dst = path.join(config.path, item);
-					this.compressJs(files, params)
-						.then(res => {
-							fs.writeFileSync(dst, res.code);
-						})
-						.catch(err => {
-							console.error(err.toString());
-						});
+					const res = await this.compressJs(files, params);
+					await writeFile(dst, res.code);
 				});
 			}
 		}

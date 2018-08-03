@@ -13,6 +13,7 @@ Flags:
 	-d     			set server document root
 	--debug			compress with debug mode
 	--clean			compress with clean mode
+	--escape		escape when use template
 `;
 
 export const version = '0.6.14';

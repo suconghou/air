@@ -4,7 +4,9 @@ import util from 'util';
 import path from 'path';
 import os from 'os';
 
-const fsStat = util.promisify(fs.stat);
+export const stat = util.promisify(fs.stat);
+export const access = util.promisify(fs.access);
+export const writeFile = util.promisify(fs.writeFile);
 
 export default {
 	resolveLookupPaths(pathstr, file) {
@@ -25,38 +27,41 @@ export default {
 			cwd = path.join(cwd, 'static');
 		}
 		const paths = this.resolveLookupPaths(cwd, name);
-		const f = this.findExist(paths);
-		if (f) {
-			try {
-				const json = require(f);
-				json.path = path.dirname(f);
-				return json;
-			} catch (e) {
-				console.error(e.toString());
-			}
-		}
-		return {};
+		return new Promise((resolve, reject) => {
+			(async () => {
+				let f,
+					json = {};
+				try {
+					f = await this.tryFiles(paths);
+				} catch (e) {}
+				if (f) {
+					try {
+						json = require(f);
+						json.path = path.dirname(f);
+					} catch (e) {
+						reject(e);
+					}
+				}
+				resolve(json);
+			})();
+		});
 	},
-	findExist(paths) {
-		for (let i = 0, j = paths.length; i < j; i++) {
-			const file = paths[i];
-			try {
-				fs.accessSync(file, fs.constants.R_OK);
-				return file;
-			} catch (e) {
-				// not exist try next
-			}
-		}
-	},
-	getMaxUpdateTime: function(files) {
-		const mtimes = [];
-		for (let i = 0, j = files.length; i < j; i++) {
-			const v = files[i];
-			const stat = fs.statSync(v);
-			mtimes.push(stat.mtime.getTime());
-		}
-		const updateTime = Math.max.apply(this, mtimes);
-		return updateTime;
+	tryFiles(paths) {
+		return new Promise((resolve, reject) => {
+			(async () => {
+				for (let i = 0, j = paths.length; i < j; i++) {
+					const file = paths[i];
+					try {
+						await access(file, fs.constants.R_OK);
+						resolve(file);
+						return;
+					} catch (e) {
+						// not exist try next
+					}
+				}
+				reject('not exist');
+			})();
+		});
 	},
 	async getUpdateTime(files) {
 		const mtimes = [];

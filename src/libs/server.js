@@ -5,7 +5,7 @@ import process from 'process';
 import os from 'os';
 import compress from './compress.js';
 import utiljs from './utiljs.js';
-import utilnode from './util.js';
+import utilnode, { writeFile } from './util.js';
 import httpserver from './httpserver.js';
 import lint from './lint.js';
 import template from './template.js';
@@ -17,17 +17,20 @@ export default class server {
 		this.cwd = cwd;
 	}
 
-	serve(args) {
-		const params = utiljs.getParams(args);
-		const cwd = params.root ? params.root : this.cwd;
-		const config = utilnode.getConfig(cwd, configName);
-		new httpserver(params).start(config);
+	async serve(args) {
+		try {
+			const params = utiljs.getParams(args);
+			const cwd = params.root ? params.root : this.cwd;
+			const config = await utilnode.getConfig(cwd, configName);
+			new httpserver(params).start(config);
+		} catch (e) {
+			utilnode.exit(e, 1);
+		}
 	}
 
 	template(args) {
 		const params = utiljs.getParams(args);
 		const [file, datafile] = args;
-		const writeFile = util.promisify(fs.writeFile);
 		if (file && datafile) {
 			try {
 				const data = require(path.join(this.cwd, datafile));
@@ -76,49 +79,42 @@ export default class server {
 		new lint(this.cwd, args).install();
 	}
 
-	compress(args) {
-		const config = utilnode.getConfig(this.cwd, configName);
-		const params = utiljs.getParams(args);
-		const filed = args.filter(item => item.charAt(0) !== '-').length;
-		if (args && args.length > 0 && filed) {
-			const less = args
-				.filter(item => {
-					return item.split('.').pop() == 'less';
-				})
-				.map(item => {
-					return path.join(this.cwd, item);
-				});
-			const js = args
-				.filter(item => {
-					return item.split('.').pop() == 'js';
-				})
-				.map(item => {
-					return path.join(this.cwd, item);
-				});
-			if (less.length) {
-				compress
-					.compressLess(less, Object.assign({ compress: params.debug ? false : true }, params))
-					.then(res => {
-						const file = utilnode.getName(this.cwd, less, '.less');
-						fs.writeFileSync(`${file}.min.css`, res.css);
+	async compress(args) {
+		try {
+			const config = await utilnode.getConfig(this.cwd, configName);
+			const params = utiljs.getParams(args);
+			const filed = args.filter(item => item.charAt(0) !== '-').length;
+			if (args && args.length > 0 && filed) {
+				const less = args
+					.filter(item => {
+						return item.split('.').pop() == 'less';
 					})
-					.catch(err => {
-						console.error(err.toString());
+					.map(item => {
+						return path.join(this.cwd, item);
 					});
-			}
-			if (js.length) {
-				compress
-					.compressJs(js, params)
-					.then(res => {
-						const file = utilnode.getName(this.cwd, js, '.js');
-						fs.writeFileSync(`${file}.min.js`, res.code);
+				const js = args
+					.filter(item => {
+						return item.split('.').pop() == 'js';
 					})
-					.catch(err => {
-						console.error(err.toString());
+					.map(item => {
+						return path.join(this.cwd, item);
 					});
+				if (less.length) {
+					const lessOps = Object.assign({ compress: params.debug ? false : true }, params);
+					const res = await compress.compressLess(less, lessOps);
+					const file = utilnode.getName(this.cwd, less, '.less');
+					await writeFile(`${file}.min.css`, res.css);
+				}
+				if (js.length) {
+					const res = await compress.compressJs(js, params);
+					const file = utilnode.getName(this.cwd, js, '.js');
+					await writeFile(`${file}.min.js`, res.code);
+				}
+			} else {
+				compress.compressByConfig(config, params);
 			}
-		} else {
-			compress.compressByConfig(config, params);
+		} catch (e) {
+			utilnode.exit(e, 1);
 		}
 	}
 }
