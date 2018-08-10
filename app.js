@@ -11,9 +11,10 @@ var http = _interopDefault(require('http'));
 var querystring = _interopDefault(require('querystring'));
 var child_process = _interopDefault(require('child_process'));
 
-const stat = util.promisify(fs.stat);
-const access = util.promisify(fs.access);
-const writeFile = util.promisify(fs.writeFile);
+const fsStat = util.promisify(fs.stat);
+const fsAccess = util.promisify(fs.access);
+
+const fsWriteFile = util.promisify(fs.writeFile);
 
 var utilnode = {
 	resolveLookupPaths(pathstr, file) {
@@ -59,7 +60,7 @@ var utilnode = {
 				for (let i = 0, j = paths.length; i < j; i++) {
 					const file = paths[i];
 					try {
-						await access(file, fs.constants.R_OK);
+						await fsAccess(file, fs.constants.R_OK);
 						resolve(file);
 						return;
 					} catch (e) {
@@ -397,7 +398,7 @@ var compress = {
 					const dst = path.join(config.path, item);
 					const lessOps = Object.assign({ compress: params.debug ? false : true }, params);
 					const res = await this.compressLess(files, lessOps);
-					await writeFile(dst, res.css);
+					await fsWriteFile(dst, res.css);
 				});
 			}
 			if (js) {
@@ -405,7 +406,7 @@ var compress = {
 					const files = js[item].map(item => path.join(config.path, item));
 					const dst = path.join(config.path, item);
 					const res = await this.compressJs(files, params);
-					await writeFile(dst, res.code);
+					await fsWriteFile(dst, res.code);
 				});
 			}
 		}
@@ -504,6 +505,7 @@ var ssi = {
 				response.end(html);
 				resolve(true);
 			} catch (e) {
+				console.error(e);
 				reject(e);
 			}
 		});
@@ -980,7 +982,7 @@ class httpserver {
 
 	noIndex(request, response, pathinfo, query, config) {
 		const file = path.join(this.root, index);
-		fs.stat(file, (err, stat$$1) => {
+		fs.stat(file, (err, stat) => {
 			if (err) {
 				const info = utilnode.getStatus();
 				response.writeHead(200, { 'Content-Type': 'application/json' });
@@ -990,7 +992,7 @@ class httpserver {
 				try {
 					await ssi.loadHtml(response, index, query, this.root, config, this.params).then(res => {
 						if (!res) {
-							return sendFile(response, stat$$1, file);
+							return sendFile(response, stat, file);
 						}
 					});
 				} catch (e) {
@@ -1002,11 +1004,11 @@ class httpserver {
 
 	tryfile(response, filePath) {
 		const file = path.join(this.root, filePath);
-		fs.stat(file, (err, stat$$1) => {
+		fs.stat(file, (err, stat) => {
 			if (err) {
 				return this.err404(response);
 			}
-			sendFile(response, stat$$1, file);
+			sendFile(response, stat, file);
 		});
 	}
 
@@ -1186,7 +1188,7 @@ class server {
 							} else {
 								dstfile = path.join(this.cwd, params.output);
 							}
-							await writeFile(dstfile, res);
+							await fsWriteFile(dstfile, res);
 						} catch (e) {
 							utilnode.exit(e, 1);
 						}
@@ -1240,12 +1242,12 @@ class server {
 					const lessOps = Object.assign({ compress: params.debug ? false : true }, params);
 					const res = await compress.compressLess(less, lessOps);
 					const file = utilnode.getName(this.cwd, less, '.less');
-					await writeFile(`${file}.min.css`, res.css);
+					await fsWriteFile(`${file}.min.css`, res.css);
 				}
 				if (js.length) {
 					const res = await compress.compressJs(js, params);
 					const file = utilnode.getName(this.cwd, js, '.js');
-					await writeFile(`${file}.min.js`, res.code);
+					await fsWriteFile(`${file}.min.js`, res.code);
 				}
 			} else {
 				compress.compressByConfig(config, params);
@@ -1278,7 +1280,7 @@ Flags:
 	--art  			use art-template not ssi
 `;
 
-const version = '0.6.17';
+const version = '0.6.18';
 
 class cli {
 	constructor(server) {
