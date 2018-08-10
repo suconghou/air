@@ -11,7 +11,9 @@ var http = _interopDefault(require('http'));
 var querystring = _interopDefault(require('querystring'));
 var child_process = _interopDefault(require('child_process'));
 
-const fsStat = util.promisify(fs.stat);
+const stat = util.promisify(fs.stat);
+const access = util.promisify(fs.access);
+const writeFile = util.promisify(fs.writeFile);
 
 var utilnode = {
 	resolveLookupPaths(pathstr, file) {
@@ -32,38 +34,41 @@ var utilnode = {
 			cwd = path.join(cwd, 'static');
 		}
 		const paths = this.resolveLookupPaths(cwd, name);
-		const f = this.findExist(paths);
-		if (f) {
-			try {
-				const json = require(f);
-				json.path = path.dirname(f);
-				return json;
-			} catch (e) {
-				console.error(e.toString());
-			}
-		}
-		return {};
+		return new Promise((resolve, reject) => {
+			(async () => {
+				let f,
+					json = {};
+				try {
+					f = await this.tryFiles(paths);
+				} catch (e) {}
+				if (f) {
+					try {
+						json = require(f);
+						json.path = path.dirname(f);
+					} catch (e) {
+						reject(e);
+					}
+				}
+				resolve(json);
+			})();
+		});
 	},
-	findExist(paths) {
-		for (let i = 0, j = paths.length; i < j; i++) {
-			const file = paths[i];
-			try {
-				fs.accessSync(file, fs.constants.R_OK);
-				return file;
-			} catch (e) {
-				// not exist try next
-			}
-		}
-	},
-	getMaxUpdateTime: function(files) {
-		const mtimes = [];
-		for (let i = 0, j = files.length; i < j; i++) {
-			const v = files[i];
-			const stat = fs.statSync(v);
-			mtimes.push(stat.mtime.getTime());
-		}
-		const updateTime = Math.max.apply(this, mtimes);
-		return updateTime;
+	tryFiles(paths) {
+		return new Promise((resolve, reject) => {
+			(async () => {
+				for (let i = 0, j = paths.length; i < j; i++) {
+					const file = paths[i];
+					try {
+						await access(file, fs.constants.R_OK);
+						resolve(file);
+						return;
+					} catch (e) {
+						// not exist try next
+					}
+				}
+				reject('not exist');
+			})();
+		});
 	},
 	async getUpdateTime(files) {
 		const mtimes = [];
@@ -127,6 +132,9 @@ var utiljs = {
 	isFunction(value) {
 		return typeof value === 'function';
 	},
+	isObject(value) {
+		return value && typeof value === 'object' && value.constructor === Object;
+	},
 	unique(arr) {
 		return Array.from(new Set(arr));
 	},
@@ -137,7 +145,9 @@ var utiljs = {
 			'-o': 'output',
 			'--escape': 'escape',
 			'--debug': 'debug',
-			'--clean': 'clean'
+			'--clean': 'clean',
+			'--dry': 'dry',
+			'--art': 'art'
 		};
 		const ret = {};
 		const keys = Object.keys(kMap);
@@ -181,7 +191,7 @@ var compress = {
 					const maxtime = await utilnode.getUpdateTime(files);
 					try {
 						const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
-						response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=60', 'X-Cache': hit ? 'hit' : 'miss' });
+						response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
 						response.end(css);
 						resolve(true);
 					} catch (e) {
@@ -203,7 +213,7 @@ var compress = {
 							try {
 								const mtime = await utilnode.getUpdateTime(hotfiles);
 								const { css, hit } = await this.compressLessCache(mtime, k, hotfiles, options);
-								response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=60', 'X-Cache': hit ? 'hit' : 'miss' });
+								response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
 								response.end(css);
 								resolve(true);
 							} catch (e) {
@@ -283,7 +293,7 @@ var compress = {
 						return resolve(false);
 					}
 					const { js, hit } = await this.compressJsCache(maxtime, key, files, options);
-					response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=60', 'X-Cache': hit ? 'hit' : 'miss' });
+					response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
 					response.end(js);
 					resolve(true);
 				} catch (e) {
@@ -299,7 +309,7 @@ var compress = {
 							try {
 								const mtime = await utilnode.getUpdateTime(hotfiles);
 								const { js, hit } = await this.compressJsCache(mtime, k, hotfiles, options);
-								response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=60', 'X-Cache': hit ? 'hit' : 'miss' });
+								response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
 								response.end(js);
 								resolve(true);
 							} catch (e) {
@@ -382,29 +392,20 @@ var compress = {
 		if (config && config.static) {
 			const { css, js } = config.static;
 			if (css) {
-				Object.keys(css).forEach(item => {
+				Object.keys(css).forEach(async item => {
 					const files = css[item].map(item => path.join(config.path, item));
 					const dst = path.join(config.path, item);
-					this.compressLess(files, Object.assign({ compress: params.debug ? false : true }, params))
-						.then(res => {
-							fs.writeFileSync(dst, res.css);
-						})
-						.catch(err => {
-							console.error(err.toString());
-						});
+					const lessOps = Object.assign({ compress: params.debug ? false : true }, params);
+					const res = await this.compressLess(files, lessOps);
+					await writeFile(dst, res.css);
 				});
 			}
 			if (js) {
-				Object.keys(js).forEach(item => {
+				Object.keys(js).forEach(async item => {
 					const files = js[item].map(item => path.join(config.path, item));
 					const dst = path.join(config.path, item);
-					this.compressJs(files, params)
-						.then(res => {
-							fs.writeFileSync(dst, res.code);
-						})
-						.catch(err => {
-							console.error(err.toString());
-						});
+					const res = await this.compressJs(files, params);
+					await writeFile(dst, res.code);
 				});
 			}
 		}
@@ -441,18 +442,21 @@ const readFile = util.promisify(fs.readFile);
 const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+\/\.]{3,50})"\s{1,5}-->/g;
 
 var ssi = {
-	load(response, matches, query, cwd, config) {
+	load(response, matches, query, cwd, config, params) {
 		const file = matches[0];
-		return this.loadHtml(response, file, query, cwd);
+		return this.loadHtml(response, file, query, cwd, config, params);
 	},
-	loadHtml(response, file, query, cwd) {
+	loadHtml(response, file, query, cwd, config, params) {
+		if (params.art) {
+			return this.artHtml(response, file, query, cwd, config, params);
+		}
 		return new Promise((resolve, reject) => {
 			(async () => {
 				try {
 					const main = path.join(cwd, file);
 					const res = await this.parseHtml(main, query, cwd);
 					if (res) {
-						response.writeHead(200, { 'Content-Type': 'text/html' });
+						response.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'public,max-age=5' });
 						response.end(res);
 						resolve(true);
 					} else {
@@ -462,6 +466,46 @@ var ssi = {
 					reject(e);
 				}
 			})();
+		});
+	},
+	artHtml(response, file, query, cwd, config, params) {
+		if (file.charAt(0) == '/') {
+			file = file.substr(1);
+		}
+		const template = require('art-template');
+		const debug = !!params.debug;
+		const escape = !!params.escape;
+		const options = {
+			debug: debug,
+			minimize: !debug,
+			compileDebug: debug,
+			escape: escape,
+			root: cwd,
+			cache: false
+		};
+		Object.assign(template.defaults, options);
+		const dstfile = path.join(cwd, file);
+		return new Promise((resolve, reject) => {
+			try {
+				let data = query;
+				if (config.template && config.template[file]) {
+					const v = config.template[file];
+					let r = {};
+					if (utiljs.isObject(v)) {
+						r = v;
+					} else {
+						const datafile = path.join(cwd, config.template[file]);
+						r = require(datafile);
+					}
+					data = Object.assign({}, data, r);
+				}
+				const html = template(dstfile, data);
+				response.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'public,max-age=5' });
+				response.end(html);
+				resolve(true);
+			} catch (e) {
+				reject(e);
+			}
 		});
 	},
 	async parseHtml(file, query, cwd) {
@@ -871,10 +915,11 @@ const defaultRoot = process.cwd();
 const index = 'index.html';
 
 class httpserver {
-	constructor(cfg) {
-		const { port, root } = cfg;
+	constructor(params) {
+		const { port, root } = params;
 		this.port = port || process.env.PORT || defaultPort;
 		this.root = root || defaultRoot;
+		this.params = params;
 		if (!(this.port > 1 && this.port < 65535)) {
 			console.error('port %s error,should be 1-65535', this.port);
 			process.exit(1);
@@ -883,14 +928,17 @@ class httpserver {
 	start(config) {
 		http.createServer((request, response) => {
 			try {
+				const [pathinfo, qs] = decodeURI(request.url).split('?');
+				const query = querystring.parse(qs);
+				if (this.params.dry) {
+					return this.tryfile(response, pathinfo);
+				}
+				const [fn, ...args] = pathinfo.split('/').filter(item => item);
+				if (!fn) {
+					return this.noIndex(request, response, pathinfo, query, config);
+				}
 				const router = route.getRouter(request.method);
 				if (router) {
-					const [pathinfo, qs] = decodeURI(request.url).split('?');
-					const query = querystring.parse(qs);
-					const [fn, ...args] = pathinfo.split('/').filter(item => item);
-					if (!fn) {
-						return this.noIndex(request, response, pathinfo, query);
-					}
 					const m = router[fn];
 					if (utiljs.isFunction(m)) {
 						// 优先级1 预定义函数
@@ -900,7 +948,7 @@ class httpserver {
 						const regRouter = route.getRegxpRouter(request.method, pathinfo);
 						if (regRouter) {
 							return regRouter
-								.handler(response, regRouter.matches, query, this.root, config)
+								.handler(response, regRouter.matches, query, this.root, config, this.params)
 								.then(res => {
 									if (!res) {
 										this.tryfile(response, pathinfo);
@@ -930,9 +978,9 @@ class httpserver {
 		console.log('Server running at http://127.0.0.1:%s', this.port);
 	}
 
-	noIndex(request, response, pathinfo, query) {
+	noIndex(request, response, pathinfo, query, config) {
 		const file = path.join(this.root, index);
-		fs.stat(file, (err, stat) => {
+		fs.stat(file, (err, stat$$1) => {
 			if (err) {
 				const info = utilnode.getStatus();
 				response.writeHead(200, { 'Content-Type': 'application/json' });
@@ -940,9 +988,9 @@ class httpserver {
 			}
 			(async () => {
 				try {
-					await ssi.loadHtml(response, index, query, this.root).then(res => {
+					await ssi.loadHtml(response, index, query, this.root, config, this.params).then(res => {
 						if (!res) {
-							return sendFile(response, stat, file);
+							return sendFile(response, stat$$1, file);
 						}
 					});
 				} catch (e) {
@@ -954,11 +1002,11 @@ class httpserver {
 
 	tryfile(response, filePath) {
 		const file = path.join(this.root, filePath);
-		fs.stat(file, (err, stat) => {
+		fs.stat(file, (err, stat$$1) => {
 			if (err) {
 				return this.err404(response);
 			}
-			sendFile(response, stat, file);
+			sendFile(response, stat$$1, file);
 		});
 	}
 
@@ -1104,24 +1152,29 @@ class server {
 		this.cwd = cwd;
 	}
 
-	serve(args) {
-		const params = utiljs.getParams(args);
-		const cwd = params.root ? params.root : this.cwd;
-		const config = utilnode.getConfig(cwd, configName);
-		new httpserver(params).start(config);
+	async serve(args) {
+		try {
+			const params = utiljs.getParams(args);
+			const cwd = params.root ? params.root : this.cwd;
+			const config = await utilnode.getConfig(cwd, configName);
+			new httpserver(params).start(config);
+		} catch (e) {
+			utilnode.exit(e, 1);
+		}
 	}
 
 	template(args) {
 		const params = utiljs.getParams(args);
 		const [file, datafile] = args;
-		const writeFile = util.promisify(fs.writeFile);
 		if (file && datafile) {
 			try {
 				const data = require(path.join(this.cwd, datafile));
 				let options = {
 					debug: params.debug,
 					minimize: !params.debug,
-					escape: !!params.escape
+					compileDebug: !!params.debug,
+					escape: !!params.escape,
+					root: this.cwd
 				};
 				const res = template.template(path.join(this.cwd, file), data, options);
 				if (params.output) {
@@ -1163,49 +1216,42 @@ class server {
 		new lint(this.cwd, args).install();
 	}
 
-	compress(args) {
-		const config = utilnode.getConfig(this.cwd, configName);
-		const params = utiljs.getParams(args);
-		const filed = args.filter(item => item.charAt(0) !== '-').length;
-		if (args && args.length > 0 && filed) {
-			const less = args
-				.filter(item => {
-					return item.split('.').pop() == 'less';
-				})
-				.map(item => {
-					return path.join(this.cwd, item);
-				});
-			const js = args
-				.filter(item => {
-					return item.split('.').pop() == 'js';
-				})
-				.map(item => {
-					return path.join(this.cwd, item);
-				});
-			if (less.length) {
-				compress
-					.compressLess(less, Object.assign({ compress: params.debug ? false : true }, params))
-					.then(res => {
-						const file = utilnode.getName(this.cwd, less, '.less');
-						fs.writeFileSync(`${file}.min.css`, res.css);
+	async compress(args) {
+		try {
+			const config = await utilnode.getConfig(this.cwd, configName);
+			const params = utiljs.getParams(args);
+			const filed = args.filter(item => item.charAt(0) !== '-').length;
+			if (args && args.length > 0 && filed) {
+				const less = args
+					.filter(item => {
+						return item.split('.').pop() == 'less';
 					})
-					.catch(err => {
-						console.error(err.toString());
+					.map(item => {
+						return path.join(this.cwd, item);
 					});
-			}
-			if (js.length) {
-				compress
-					.compressJs(js, params)
-					.then(res => {
-						const file = utilnode.getName(this.cwd, js, '.js');
-						fs.writeFileSync(`${file}.min.js`, res.code);
+				const js = args
+					.filter(item => {
+						return item.split('.').pop() == 'js';
 					})
-					.catch(err => {
-						console.error(err.toString());
+					.map(item => {
+						return path.join(this.cwd, item);
 					});
+				if (less.length) {
+					const lessOps = Object.assign({ compress: params.debug ? false : true }, params);
+					const res = await compress.compressLess(less, lessOps);
+					const file = utilnode.getName(this.cwd, less, '.less');
+					await writeFile(`${file}.min.css`, res.css);
+				}
+				if (js.length) {
+					const res = await compress.compressJs(js, params);
+					const file = utilnode.getName(this.cwd, js, '.js');
+					await writeFile(`${file}.min.js`, res.code);
+				}
+			} else {
+				compress.compressByConfig(config, params);
 			}
-		} else {
-			compress.compressByConfig(config, params);
+		} catch (e) {
+			utilnode.exit(e, 1);
 		}
 	}
 }
@@ -1224,10 +1270,12 @@ Flags:
 	-p     			set server listen port
 	-d     			set server document root
 	--debug			compress with debug mode
-	--clean			compress with clean mode
+	--clean			compress with clean mode,remove console debugger
+	--escape		escape when use template
+	--dry  			just run as a static server
 `;
 
-const version = '0.6.14';
+const version = '0.6.15';
 
 class cli {
 	constructor(server) {
