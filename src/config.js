@@ -6,6 +6,8 @@ Commands:
 	lint			eslint js
 	compress		compress less or javascript files
 	install			install git hooks
+	template 		use art-template render html
+    
 Flags:
 	-v     			show air version
 	-h      		show this help information
@@ -15,6 +17,7 @@ Flags:
 	--clean			compress with clean mode,remove console debugger
 	--escape		escape when use template
 	--dry  			just run as a static server
+	--art  			use art-template not ssi
 `;
 
-export const version = '0.6.15';
+export const version = '0.6.16';
