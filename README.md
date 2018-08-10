@@ -114,7 +114,15 @@ yarn global add prettier eslint babel-eslint vue-eslint-parser eslint-plugin-vue
 
 
 
+### air template
 
+使用`art-template`模板渲染
+
+`air template index.html data.json -o output.html --debug`
+
+加上`--debug`为不压缩
+
+`-o`指定输出文件,如果不指定则直接输出到标准输出
 
 
 
@@ -157,6 +165,47 @@ less文件解析合并压缩为style.css
 
 
 
+### 使用服务端模板渲染
 
 
+
+* 默认已支持nginx ssi 规则,且默认启用
+* 支持另一种模板 `art-template`
+
+如需使用`art-template`模板引擎,使用`air -p 8899 --art`启动
+
+同时,可以使用配置文件对模板填充数据,配置文件声明在`template`段内
+
+```json
+{
+	"static": {
+		"js": {
+			"js/all.js": ["js/jquery.js", "js/etpl.js"]
+		},
+		"css": {
+			"css/style.min.css": ["css/page.less", "css/admin.less"]
+		}
+	},
+	"template": {
+		"index.html": "data/index.json"
+	}
+}
+
+```
+
+其中为`index.html`这个请求路径指定了模板数据,数据可使用三种格式
+
+* 直接在配置文件里以对象的方式声明
+* 在配置文件里指定使用一个json文件声明
+* 在配置文件里指定使用一个js文件申明,js文件需为commonJs模块化
+
+
+
+> 模板文件的修改会立即生效
+>
+> 配置文件的修改需重启
+>
+> 模板数据文件的修改需重启
+>
+> query 参数会自动传递给模板,如果有申明同名的模板数据则被覆盖
 

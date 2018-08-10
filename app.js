@@ -1273,9 +1273,10 @@ Flags:
 	--clean			compress with clean mode,remove console debugger
 	--escape		escape when use template
 	--dry  			just run as a static server
+	--art  			use art template egin not ssi
 `;
 
-const version = '0.6.15';
+const version = '0.6.16';
 
 class cli {
 	constructor(server) {
