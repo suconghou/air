@@ -9,16 +9,18 @@ const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+\/\.]{3,50})"\s{1,5}--
 export default {
 	load(response, matches, query, cwd, config) {
 		const file = matches[0];
-		return this.loadHtml(response, file, query, cwd);
+		return this.loadHtml(response, file, query, cwd, config);
 	},
-	loadHtml(response, file, query, cwd) {
+	loadHtml(response, file, query, cwd, config) {
+		console.info(matches, cwd, config);
+
 		return new Promise((resolve, reject) => {
 			(async () => {
 				try {
 					const main = path.join(cwd, file);
 					const res = await this.parseHtml(main, query, cwd);
 					if (res) {
-						response.writeHead(200, { 'Content-Type': 'text/html' });
+						response.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'public,max-age=5' });
 						response.end(res);
 						resolve(true);
 					} else {

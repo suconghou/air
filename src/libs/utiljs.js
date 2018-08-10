@@ -13,7 +13,8 @@ export default {
 			'--escape': 'escape',
 			'--debug': 'debug',
 			'--clean': 'clean',
-			'--dry': 'dry'
+			'--dry': 'dry',
+			'--art': 'art'
 		};
 		const ret = {};
 		const keys = Object.keys(kMap);

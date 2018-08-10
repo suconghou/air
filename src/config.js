@@ -12,8 +12,9 @@ Flags:
 	-p     			set server listen port
 	-d     			set server document root
 	--debug			compress with debug mode
-	--clean			compress with clean mode
+	--clean			compress with clean mode,remove console debugger
 	--escape		escape when use template
+	--dry  			just run as a static server
 `;
 
-export const version = '0.6.14';
+export const version = '0.6.15';

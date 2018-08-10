@@ -37,6 +37,7 @@ export default class server {
 				let options = {
 					debug: params.debug,
 					minimize: !params.debug,
+					compileDebug: !!params.debug,
 					escape: !!params.escape
 				};
 				const res = template.template(path.join(this.cwd, file), data, options);

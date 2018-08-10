@@ -36,7 +36,7 @@ export default class {
 				}
 				const [fn, ...args] = pathinfo.split('/').filter(item => item);
 				if (!fn) {
-					return this.noIndex(request, response, pathinfo, query);
+					return this.noIndex(request, response, pathinfo, query, config);
 				}
 				const router = route.getRouter(request.method);
 				if (router) {
@@ -79,7 +79,7 @@ export default class {
 		console.log('Server running at http://127.0.0.1:%s', this.port);
 	}
 
-	noIndex(request, response, pathinfo, query) {
+	noIndex(request, response, pathinfo, query, config) {
 		const file = path.join(this.root, index);
 		fs.stat(file, (err, stat) => {
 			if (err) {
@@ -89,7 +89,7 @@ export default class {
 			}
 			(async () => {
 				try {
-					await ssi.loadHtml(response, index, query, this.root).then(res => {
+					await ssi.loadHtml(response, index, query, this.root, config).then(res => {
 						if (!res) {
 							return sendFile(response, stat, file);
 						}
