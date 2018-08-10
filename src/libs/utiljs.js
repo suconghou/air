@@ -12,7 +12,8 @@ export default {
 			'-o': 'output',
 			'--escape': 'escape',
 			'--debug': 'debug',
-			'--clean': 'clean'
+			'--clean': 'clean',
+			'--dry': 'dry'
 		};
 		const ret = {};
 		const keys = Object.keys(kMap);

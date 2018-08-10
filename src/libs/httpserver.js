@@ -17,9 +17,10 @@ const index = 'index.html';
 
 export default class {
 	constructor(cfg) {
-		const { port, root } = cfg;
+		const { port, root, dry } = cfg;
 		this.port = port || process.env.PORT || defaultPort;
 		this.root = root || defaultRoot;
+		this.dry = dry;
 		if (!(this.port > 1 && this.port < 65535)) {
 			console.error('port %s error,should be 1-65535', this.port);
 			process.exit(1);
@@ -28,14 +29,17 @@ export default class {
 	start(config) {
 		http.createServer((request, response) => {
 			try {
+				const [pathinfo, qs] = decodeURI(request.url).split('?');
+				const query = querystring.parse(qs);
+				if (this.dry) {
+					return this.tryfile(response, pathinfo);
+				}
+				const [fn, ...args] = pathinfo.split('/').filter(item => item);
+				if (!fn) {
+					return this.noIndex(request, response, pathinfo, query);
+				}
 				const router = route.getRouter(request.method);
 				if (router) {
-					const [pathinfo, qs] = decodeURI(request.url).split('?');
-					const query = querystring.parse(qs);
-					const [fn, ...args] = pathinfo.split('/').filter(item => item);
-					if (!fn) {
-						return this.noIndex(request, response, pathinfo, query);
-					}
 					const m = router[fn];
 					if (utiljs.isFunction(m)) {
 						// 优先级1 预定义函数
