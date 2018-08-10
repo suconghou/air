@@ -1,19 +1,21 @@
 import path from 'path';
 import util from 'util';
 import fs from 'fs';
+import utiljs from './utiljs.js';
 
 const readFile = util.promisify(fs.readFile);
 
 const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+\/\.]{3,50})"\s{1,5}-->/g;
 
 export default {
-	load(response, matches, query, cwd, config) {
+	load(response, matches, query, cwd, config, params) {
 		const file = matches[0];
-		return this.loadHtml(response, file, query, cwd, config);
+		return this.loadHtml(response, file, query, cwd, config, params);
 	},
-	loadHtml(response, file, query, cwd, config) {
-		console.info(matches, cwd, config);
-
+	loadHtml(response, file, query, cwd, config, params) {
+		if (params.art) {
+			return this.artHtml(response, file, query, cwd, config, params);
+		}
 		return new Promise((resolve, reject) => {
 			(async () => {
 				try {
@@ -30,6 +32,46 @@ export default {
 					reject(e);
 				}
 			})();
+		});
+	},
+	artHtml(response, file, query, cwd, config, params) {
+		if (file.charAt(0) == '/') {
+			file = file.substr(1);
+		}
+		const template = require('art-template');
+		const debug = !!params.debug;
+		const escape = !!params.escape;
+		const options = {
+			debug: debug,
+			minimize: !debug,
+			compileDebug: debug,
+			escape: escape,
+			root: cwd,
+			cache: false
+		};
+		Object.assign(template.defaults, options);
+		const dstfile = path.join(cwd, file);
+		return new Promise((resolve, reject) => {
+			try {
+				let data = query;
+				if (config.template && config.template[file]) {
+					const v = config.template[file];
+					let r = {};
+					if (utiljs.isObject(v)) {
+						r = v;
+					} else {
+						const datafile = path.join(cwd, config.template[file]);
+						r = require(datafile);
+					}
+					data = Object.assign({}, data, r);
+				}
+				const html = template(dstfile, data);
+				response.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'public,max-age=5' });
+				response.end(html);
+				resolve(true);
+			} catch (e) {
+				reject(e);
+			}
 		});
 	},
 	async parseHtml(file, query, cwd) {

@@ -38,7 +38,8 @@ export default class server {
 					debug: params.debug,
 					minimize: !params.debug,
 					compileDebug: !!params.debug,
-					escape: !!params.escape
+					escape: !!params.escape,
+					root: this.cwd
 				};
 				const res = template.template(path.join(this.cwd, file), data, options);
 				if (params.output) {

@@ -2,6 +2,9 @@ export default {
 	isFunction(value) {
 		return typeof value === 'function';
 	},
+	isObject(value) {
+		return value && typeof value === 'object' && value.constructor === Object;
+	},
 	unique(arr) {
 		return Array.from(new Set(arr));
 	},

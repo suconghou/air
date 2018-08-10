@@ -16,11 +16,11 @@ const defaultRoot = process.cwd();
 const index = 'index.html';
 
 export default class {
-	constructor(cfg) {
-		const { port, root, dry } = cfg;
+	constructor(params) {
+		const { port, root } = params;
 		this.port = port || process.env.PORT || defaultPort;
 		this.root = root || defaultRoot;
-		this.dry = dry;
+		this.params = params;
 		if (!(this.port > 1 && this.port < 65535)) {
 			console.error('port %s error,should be 1-65535', this.port);
 			process.exit(1);
@@ -31,7 +31,7 @@ export default class {
 			try {
 				const [pathinfo, qs] = decodeURI(request.url).split('?');
 				const query = querystring.parse(qs);
-				if (this.dry) {
+				if (this.params.dry) {
 					return this.tryfile(response, pathinfo);
 				}
 				const [fn, ...args] = pathinfo.split('/').filter(item => item);
@@ -49,7 +49,7 @@ export default class {
 						const regRouter = route.getRegxpRouter(request.method, pathinfo);
 						if (regRouter) {
 							return regRouter
-								.handler(response, regRouter.matches, query, this.root, config)
+								.handler(response, regRouter.matches, query, this.root, config, this.params)
 								.then(res => {
 									if (!res) {
 										this.tryfile(response, pathinfo);
@@ -89,7 +89,7 @@ export default class {
 			}
 			(async () => {
 				try {
-					await ssi.loadHtml(response, index, query, this.root, config).then(res => {
+					await ssi.loadHtml(response, index, query, this.root, config, this.params).then(res => {
 						if (!res) {
 							return sendFile(response, stat, file);
 						}
