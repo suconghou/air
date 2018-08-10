@@ -4,9 +4,12 @@ import util from 'util';
 import path from 'path';
 import os from 'os';
 
-export const stat = util.promisify(fs.stat);
-export const access = util.promisify(fs.access);
-export const writeFile = util.promisify(fs.writeFile);
+const fsStat = util.promisify(fs.stat);
+const fsAccess = util.promisify(fs.access);
+
+const fsWriteFile = util.promisify(fs.writeFile);
+
+export { fsStat, fsWriteFile, fsAccess };
 
 export default {
 	resolveLookupPaths(pathstr, file) {
@@ -52,7 +55,7 @@ export default {
 				for (let i = 0, j = paths.length; i < j; i++) {
 					const file = paths[i];
 					try {
-						await access(file, fs.constants.R_OK);
+						await fsAccess(file, fs.constants.R_OK);
 						resolve(file);
 						return;
 					} catch (e) {

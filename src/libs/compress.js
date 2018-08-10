@@ -1,6 +1,6 @@
 import fs from 'fs';
 import os from 'os';
-import util, { writeFile } from './util.js';
+import util, { fsWriteFile } from './util.js';
 import path from 'path';
 import tool from './tool.js';
 import utiljs from './utiljs.js';
@@ -232,7 +232,7 @@ export default {
 					const dst = path.join(config.path, item);
 					const lessOps = Object.assign({ compress: params.debug ? false : true }, params);
 					const res = await this.compressLess(files, lessOps);
-					await writeFile(dst, res.css);
+					await fsWriteFile(dst, res.css);
 				});
 			}
 			if (js) {
@@ -240,7 +240,7 @@ export default {
 					const files = js[item].map(item => path.join(config.path, item));
 					const dst = path.join(config.path, item);
 					const res = await this.compressJs(files, params);
-					await writeFile(dst, res.code);
+					await fsWriteFile(dst, res.code);
 				});
 			}
 		}

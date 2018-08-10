@@ -70,6 +70,7 @@ export default {
 				response.end(html);
 				resolve(true);
 			} catch (e) {
+				console.error(e);
 				reject(e);
 			}
 		});

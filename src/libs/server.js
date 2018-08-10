@@ -5,7 +5,7 @@ import process from 'process';
 import os from 'os';
 import compress from './compress.js';
 import utiljs from './utiljs.js';
-import utilnode, { writeFile } from './util.js';
+import utilnode, { fsWriteFile } from './util.js';
 import httpserver from './httpserver.js';
 import lint from './lint.js';
 import template from './template.js';
@@ -51,7 +51,7 @@ export default class server {
 							} else {
 								dstfile = path.join(this.cwd, params.output);
 							}
-							await writeFile(dstfile, res);
+							await fsWriteFile(dstfile, res);
 						} catch (e) {
 							utilnode.exit(e, 1);
 						}
@@ -105,12 +105,12 @@ export default class server {
 					const lessOps = Object.assign({ compress: params.debug ? false : true }, params);
 					const res = await compress.compressLess(less, lessOps);
 					const file = utilnode.getName(this.cwd, less, '.less');
-					await writeFile(`${file}.min.css`, res.css);
+					await fsWriteFile(`${file}.min.css`, res.css);
 				}
 				if (js.length) {
 					const res = await compress.compressJs(js, params);
 					const file = utilnode.getName(this.cwd, js, '.js');
-					await writeFile(`${file}.min.js`, res.code);
+					await fsWriteFile(`${file}.min.js`, res.code);
 				}
 			} else {
 				compress.compressByConfig(config, params);
