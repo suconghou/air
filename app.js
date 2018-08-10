@@ -1264,6 +1264,8 @@ Commands:
 	lint			eslint js
 	compress		compress less or javascript files
 	install			install git hooks
+	template 		use art-template render html
+    
 Flags:
 	-v     			show air version
 	-h      		show this help information
@@ -1273,10 +1275,10 @@ Flags:
 	--clean			compress with clean mode,remove console debugger
 	--escape		escape when use template
 	--dry  			just run as a static server
-	--art  			use art template egin not ssi
+	--art  			use art-template not ssi
 `;
 
-const version = '0.6.16';
+const version = '0.6.17';
 
 class cli {
 	constructor(server) {
