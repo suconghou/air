@@ -20,4 +20,4 @@ Flags:
 	--art  			use art-template not ssi
 `;
 
-export const version = '0.6.17';
+export const version = '0.6.19';
