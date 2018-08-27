@@ -9,7 +9,11 @@ const fsAccess = util.promisify(fs.access);
 
 const fsWriteFile = util.promisify(fs.writeFile);
 
-export { fsStat, fsWriteFile, fsAccess };
+const fsCopyFile = util.promisify(fs.copyFile);
+
+const fsChmod = util.promisify(fs.chmod);
+
+export { fsStat, fsAccess, fsChmod, fsWriteFile, fsCopyFile };
 
 export default {
 	resolveLookupPaths(pathstr, file) {

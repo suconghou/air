@@ -1,23 +1,48 @@
 import process from 'process';
 import path from 'path';
+import util from 'util';
 import child_process from 'child_process';
 import fs from 'fs';
+import utilnode, { fsAccess, fsCopyFile, fsChmod } from './util.js';
+import utiljs from './utiljs.js';
 
-const spawnSync = child_process.spawnSync;
+const spawn = util.promisify(child_process.spawn);
+
 const prettyTypes = ['js', 'vue', 'jsx', 'json', 'css', 'less', 'ts', 'md'];
 const esTypes = ['js', 'jsx', 'vue'];
 
 const configDir = 'config';
-const spawnOps = { stdio: 'inherit', shell: true };
+const defDir = 'config';
+
+const options = {
+	dir: 'config',
+	git: '.git',
+	hooks: 'hooks',
+	precommit: 'pre-commit',
+	postcommit: 'post-commit',
+	prettierrc: '.prettierrc',
+	eslintrc: '.eslintrc.js'
+};
+const stat = fs.constants.R_OK | fs.constants.W_OK;
+
+const spawnOps = { stdio: 'ignore', shell: true, detached: true };
 
 const exit = code => process.exit(code);
 
 export default class lint {
 	constructor(cwd, files) {
 		this.cwd = cwd;
+		this.args = [...files];
 		if (Array.isArray(files) && files.length > 0) {
-			this.prettierrc = path.join(this.cwd, configDir, '.prettierrc');
-			this.eslintrc = path.join(this.cwd, configDir, '.eslintrc.js');
+			const opts = utiljs.params(this.args, { '-dir': 'dir' });
+			const { dir, prettierrc, eslintrc } = Object.assign({}, options, opts);
+			this.prettierrc = path.join(this.cwd, dir, prettierrc);
+			this.eslintrc = path.join(this.cwd, dir, eslintrc);
+			const index = files.findIndex(item => item == '-dir');
+			if (index >= 0) {
+				const len = opts.dir ? 2 : 1;
+				files.splice(index, len);
+			}
 			this.files = this.parse(files);
 		}
 	}
@@ -32,89 +57,89 @@ export default class lint {
 			return { name, path: p, type };
 		});
 	}
-	lint() {
+	async lint() {
 		if (!(this.prettierrc && this.eslintrc)) {
 			return;
 		}
-		try {
-			fs.accessSync(this.prettierrc, fs.constants.R_OK | fs.constants.W_OK);
-		} catch (err) {
-			console.error(err.toString());
-			exit(1);
-		}
-		try {
-			fs.accessSync(this.eslintrc, fs.constants.R_OK | fs.constants.W_OK);
-		} catch (err) {
-			console.error(err.toString());
-			exit(1);
-		}
-		for (let i = 0, j = this.files.length; i < j; i++) {
-			const { path, type, name } = this.files[i];
 
-			fs.access(path, fs.constants.R_OK | fs.constants.W_OK, err => {
-				if (err) {
-					console.error(err.toString());
-					exit(1);
-					return;
+		try {
+			await Promise.all([fsAccess(this.prettierrc, stat), fsAccess(this.eslintrc, stat)]);
+		} catch (err) {
+			console.error(err.toString());
+			exit(1);
+		}
+
+		const tasks = this.files.map(item => {
+			const { path, type, name } = item;
+			return new Promise(async (resolve, reject) => {
+				try {
+					await fsAccess(path, stat);
+					const [r1, r2] = await this.dolint(path, type, name);
+					console.info(r1, r2);
+					// resolve([r1, r2]);
+				} catch (e) {
+					reject(e);
 				}
-				this.dolint(path, type.toLowerCase(), name);
 			});
+		});
+
+		try {
+			// const res = await Promise.all(tasks);
+			// console.info(res);
+		} catch (err) {
+			console.error(err.toString());
+			exit(1);
 		}
 	}
 
-	dolint(path, type, name) {
+	sleep() {
+		return new Promise((resolve, reject) => {
+			setTimeout(() => {
+				resolve();
+			}, 1200);
+		});
+	}
+
+	async dolint(path, type, name) {
+		let r1, r2;
 		if (prettyTypes.includes(type)) {
-			const r1 = this.prettier(path);
-			if (r1.status !== 0) {
-				exit(r1.status);
-			}
+			r1 = await this.prettier(path);
 		}
 
 		if (esTypes.includes(type)) {
-			const r2 = this.eslint(path);
-			if (r2.status !== 0) {
-				exit(r2.status);
-			}
+			r2 = await this.eslint(path);
 		}
-		this.gitadd(path);
+		await this.gitadd(path);
+		return [r1, r2];
 	}
 
 	eslint(f) {
-		return spawnSync('eslint', ['-c', this.eslintrc, '--fix', f], spawnOps);
+		return spawn('eslint', ['-c', this.eslintrc, '--fix', f], spawnOps);
 	}
 	prettier(f) {
-		return spawnSync('prettier', ['-c', this.prettierrc, '--write', f], spawnOps);
+		return spawn('prettier', ['-c', this.prettierrc, '--write', f], spawnOps);
 	}
 	gitadd(f) {
-		return spawnSync('git', ['add', f], spawnOps);
+		return spawn('git', ['add', f], spawnOps);
 	}
-	install() {
-		const git = '.git';
-		const hooks = 'hooks';
-		const precommit = 'pre-commit';
-		const postcommit = 'post-commit';
-		const prehook = path.join(this.cwd, configDir, precommit);
-		const posthook = path.join(this.cwd, configDir, postcommit);
+	async install() {
+		const opts = utiljs.params(this.args, { '-dir': 'dir' });
+		const { dir, git, hooks, precommit, postcommit } = Object.assign({}, options, opts);
 
-		const dst = path.join(this.cwd, git, hooks, precommit);
+		const prehook = path.join(this.cwd, dir, precommit);
+		const posthook = path.join(this.cwd, dir, postcommit);
+
+		const predst = path.join(this.cwd, git, hooks, precommit);
 		const postdst = path.join(this.cwd, git, hooks, postcommit);
 
-		try {
-			fs.accessSync(prehook, fs.constants.R_OK | fs.constants.W_OK);
-		} catch (err) {
-			console.error(err.toString());
-			exit(1);
-		}
-		fs.copyFileSync(prehook, dst);
-		try {
-			fs.accessSync(posthook, fs.constants.R_OK | fs.constants.W_OK);
-		} catch (err) {
-			console.error(err.toString());
-			exit(1);
-		}
-		fs.copyFileSync(posthook, postdst);
 		const mode = 0o755;
-		fs.chmodSync(dst, mode);
-		fs.chmodSync(postdst, mode);
+		try {
+			await Promise.all([fsAccess(prehook, stat), fsAccess(posthook, stat)]);
+			await Promise.all([fsCopyFile(prehook, predst), fsCopyFile(posthook, postdst)]);
+			await Promise.all([fsChmod(predst, mode), fsChmod(postdst, mode)]);
+		} catch (err) {
+			console.error(err.toString());
+			exit(1);
+		}
 	}
 }

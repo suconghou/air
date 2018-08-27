@@ -5,9 +5,7 @@ export default class {
 		this.server = server;
 	}
 	run(argv) {
-		const [node, cfile, ...args] = argv;
-		this.node = node;
-		this.cfile = cfile;
+		const [, , ...args] = argv;
 		this.args = args;
 		if (args.length > 0) {
 			this.runArgs();

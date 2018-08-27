@@ -19,6 +19,9 @@ export default {
 			'--dry': 'dry',
 			'--art': 'art'
 		};
+		return this.params(args, kMap);
+	},
+	params(args, kMap) {
 		const ret = {};
 		const keys = Object.keys(kMap);
 		let key;
