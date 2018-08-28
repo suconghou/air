@@ -5,7 +5,7 @@ import utiljs from './utiljs.js';
 
 const readFile = util.promisify(fs.readFile);
 
-const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+\/\.]{3,50})"\s{1,5}-->/g;
+const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.]{3,50})"\s{1,5}-->/g;
 
 export default {
 	load(response, matches, query, cwd, config, params) {
@@ -89,7 +89,7 @@ export default {
 			filesMap = {},
 			matches = {};
 
-		while (true) {
+		while (i < 6) {
 			while ((res = includefile.exec(html))) {
 				const [holder, file] = res;
 				matches[holder] = file;

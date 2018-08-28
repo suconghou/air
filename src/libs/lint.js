@@ -3,16 +3,14 @@ import path from 'path';
 import util from 'util';
 import child_process from 'child_process';
 import fs from 'fs';
-import utilnode, { fsAccess, fsCopyFile, fsChmod } from './util.js';
+import { fsAccess, fsCopyFile, fsChmod } from './util.js';
 import utiljs from './utiljs.js';
 
 const spawn = util.promisify(child_process.spawn);
+const spawnSync = child_process.spawnSync;
 
 const prettyTypes = ['js', 'vue', 'jsx', 'json', 'css', 'less', 'ts', 'md'];
 const esTypes = ['js', 'jsx', 'vue'];
-
-const configDir = 'config';
-const defDir = 'config';
 
 const options = {
 	dir: 'config',
@@ -25,7 +23,7 @@ const options = {
 };
 const stat = fs.constants.R_OK | fs.constants.W_OK;
 
-const spawnOps = { stdio: 'ignore', shell: true };
+const spawnOps = { stdio: 'inherit', shell: true };
 
 const exit = code => process.exit(code);
 
@@ -80,32 +78,32 @@ export default class lint {
 					return fsAccess(path, stat);
 				})
 			);
-			await this.dolint(esfiles, prefiles);
-			await this.gitadd(gitfiles);
+			this.dolint(esfiles, prefiles);
 		} catch (err) {
-			console.error(err.toString());
+			const str = err.toString();
+			if (str.length > 5) {
+				console.error(str);
+			}
 			exit(1);
 		}
 	}
 
-	async dolint(esfiles, prefiles) {
-		await this.prettier(prefiles);
-		await this.eslint(esfiles);
-		return [r1, r2];
+	dolint(esfiles, prefiles) {
+		const r1 = this.prettier(prefiles);
+		if (r1.status !== 0) {
+			throw new Error();
+		}
+		const r2 = this.eslint(esfiles);
+		if (r2.status !== 0) {
+			throw new Error();
+		}
 	}
 
 	eslint(f) {
-		return spawn('eslint', ['-c', this.eslintrc, '--fix', f.join(' ')], spawnOps);
+		return spawnSync('eslint', ['-c', this.eslintrc, f.join(' ')], spawnOps);
 	}
 	prettier(f) {
-		return spawn('prettier', ['-c', this.prettierrc, '--write', f.join(' ')], spawnOps);
-	}
-	gitadd(f) {
-		return Promise.all(
-			f.map(item => {
-				return spawn('git', ['add', item], spawnOps);
-			})
-		);
+		return spawnSync('prettier', ['-c', this.prettierrc, '--write', f.join(' ')], { stdio: 'inherit', shell: true });
 	}
 	async install() {
 		const opts = utiljs.params(this.args, { '-dir': 'dir' });

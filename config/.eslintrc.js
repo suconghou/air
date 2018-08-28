@@ -4,14 +4,11 @@ module.exports = {
 		browser: true,
 		es6: true
 	},
-	extends: ['plugin:vue/recommended'],
-	parser: 'vue-eslint-parser',
+	extends: 'eslint:recommended',
 	parserOptions: {
-		parser: 'babel-eslint',
 		ecmaVersion: 2018,
 		sourceType: 'module'
 	},
-	plugins: ['vue'],
 	globals: {
 		require: false,
 		module: false
