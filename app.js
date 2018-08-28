@@ -16,6 +16,10 @@ const fsAccess = util.promisify(fs.access);
 
 const fsWriteFile = util.promisify(fs.writeFile);
 
+const fsCopyFile = util.promisify(fs.copyFile);
+
+const fsChmod = util.promisify(fs.chmod);
+
 var utilnode = {
 	resolveLookupPaths(pathstr, file) {
 		const arr = [];
@@ -41,7 +45,9 @@ var utilnode = {
 					json = {};
 				try {
 					f = await this.tryFiles(paths);
-				} catch (e) {}
+				} catch (e) {
+					// no config found
+				}
 				if (f) {
 					try {
 						json = require(f);
@@ -55,20 +61,18 @@ var utilnode = {
 		});
 	},
 	tryFiles(paths) {
-		return new Promise((resolve, reject) => {
-			(async () => {
-				for (let i = 0, j = paths.length; i < j; i++) {
-					const file = paths[i];
-					try {
-						await fsAccess(file, fs.constants.R_OK);
-						resolve(file);
-						return;
-					} catch (e) {
-						// not exist try next
-					}
+		return new Promise(async (resolve, reject) => {
+			for (let i = 0, j = paths.length; i < j; i++) {
+				const file = paths[i];
+				try {
+					await fsAccess(file, fs.constants.R_OK);
+					resolve(file);
+					return;
+				} catch (e) {
+					// not exist try next
 				}
-				reject('not exist');
-			})();
+			}
+			reject('not exist');
 		});
 	},
 	async getUpdateTime(files) {
@@ -150,6 +154,9 @@ var utiljs = {
 			'--dry': 'dry',
 			'--art': 'art'
 		};
+		return this.params(args, kMap);
+	},
+	params(args, kMap) {
 		const ret = {};
 		const keys = Object.keys(kMap);
 		let key;
@@ -440,7 +447,7 @@ var compress = {
 
 const readFile = util.promisify(fs.readFile);
 
-const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+\/\.]{3,50})"\s{1,5}-->/g;
+const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.]{3,50})"\s{1,5}-->/g;
 
 var ssi = {
 	load(response, matches, query, cwd, config, params) {
@@ -524,7 +531,7 @@ var ssi = {
 			filesMap = {},
 			matches = {};
 
-		while (true) {
+		while (i < 6) {
 			while ((res = includefile.exec(html))) {
 				const [holder, file] = res;
 				matches[holder] = file;
@@ -1023,11 +1030,23 @@ class httpserver {
 	}
 }
 
+const spawn = util.promisify(child_process.spawn);
 const spawnSync = child_process.spawnSync;
+
 const prettyTypes = ['js', 'vue', 'jsx', 'json', 'css', 'less', 'ts', 'md'];
 const esTypes = ['js', 'jsx', 'vue'];
 
-const configDir = 'config';
+const options = {
+	dir: 'config',
+	git: '.git',
+	hooks: 'hooks',
+	precommit: 'pre-commit',
+	postcommit: 'post-commit',
+	prettierrc: '.prettierrc',
+	eslintrc: '.eslintrc.js'
+};
+const stat = fs.constants.R_OK | fs.constants.W_OK;
+
 const spawnOps = { stdio: 'inherit', shell: true };
 
 const exit = code => process.exit(code);
@@ -1035,9 +1054,18 @@ const exit = code => process.exit(code);
 class lint {
 	constructor(cwd, files) {
 		this.cwd = cwd;
+		this.args = [...files];
 		if (Array.isArray(files) && files.length > 0) {
-			this.prettierrc = path.join(this.cwd, configDir, '.prettierrc');
-			this.eslintrc = path.join(this.cwd, configDir, '.eslintrc.js');
+			const opts = utiljs.params(this.args, { '-dir': 'dir' });
+			const { dir, prettierrc, eslintrc } = Object.assign({}, options, opts);
+			const cwd = path.isAbsolute(dir) ? '' : this.cwd;
+			this.prettierrc = path.join(cwd, dir, prettierrc);
+			this.eslintrc = path.join(cwd, dir, eslintrc);
+			const index = files.findIndex(item => item == '-dir');
+			if (index >= 0) {
+				const len = opts.dir ? 2 : 1;
+				files.splice(index, len);
+			}
 			this.files = this.parse(files);
 		}
 	}
@@ -1052,90 +1080,74 @@ class lint {
 			return { name, path: p, type };
 		});
 	}
-	lint() {
+	async lint() {
 		if (!(this.prettierrc && this.eslintrc)) {
 			return;
 		}
-		try {
-			fs.accessSync(this.prettierrc, fs.constants.R_OK | fs.constants.W_OK);
-		} catch (err) {
-			console.error(err.toString());
-			exit(1);
-		}
-		try {
-			fs.accessSync(this.eslintrc, fs.constants.R_OK | fs.constants.W_OK);
-		} catch (err) {
-			console.error(err.toString());
-			exit(1);
-		}
-		for (let i = 0, j = this.files.length; i < j; i++) {
-			const { path: path$$1, type, name } = this.files[i];
 
-			fs.access(path$$1, fs.constants.R_OK | fs.constants.W_OK, err => {
-				if (err) {
-					console.error(err.toString());
-					exit(1);
-					return;
-				}
-				this.dolint(path$$1, type.toLowerCase(), name);
-			});
+		try {
+			let esfiles = [],
+				prefiles = [];
+			await Promise.all([fsAccess(this.prettierrc, stat), fsAccess(this.eslintrc, stat)]);
+			await Promise.all(
+				this.files.map(item => {
+					const { path: path$$1, type, name } = item;
+					if (prettyTypes.includes(type)) {
+						prefiles.push(path$$1);
+					}
+					if (esTypes.includes(type)) {
+						esfiles.push(path$$1);
+					}
+					return fsAccess(path$$1, stat);
+				})
+			);
+			this.dolint(esfiles, prefiles);
+		} catch (err) {
+			const str = err.toString();
+			if (str.length > 5) {
+				console.error(str);
+			}
+			exit(1);
 		}
 	}
 
-	dolint(path$$1, type, name) {
-		if (prettyTypes.includes(type)) {
-			const r1 = this.prettier(path$$1);
-			if (r1.status !== 0) {
-				exit(r1.status);
-			}
+	dolint(esfiles, prefiles) {
+		const r1 = this.prettier(prefiles);
+		if (r1.status !== 0) {
+			throw new Error();
 		}
-
-		if (esTypes.includes(type)) {
-			const r2 = this.eslint(path$$1);
-			if (r2.status !== 0) {
-				exit(r2.status);
-			}
+		const r2 = this.eslint(esfiles);
+		if (r2.status !== 0) {
+			throw new Error();
 		}
-		this.gitadd(path$$1);
 	}
 
 	eslint(f) {
-		return spawnSync('eslint', ['-c', this.eslintrc, '--fix', f], spawnOps);
+		return spawnSync('eslint', ['-c', this.eslintrc, '--fix', f.join(' ')], spawnOps);
 	}
 	prettier(f) {
-		return spawnSync('prettier', ['-c', this.prettierrc, '--write', f], spawnOps);
+		return spawnSync('prettier', ['-c', this.prettierrc, '--write', f.join(' ')], { stdio: 'inherit', shell: true });
 	}
-	gitadd(f) {
-		return spawnSync('git', ['add', f], spawnOps);
-	}
-	install() {
-		const git = '.git';
-		const hooks = 'hooks';
-		const precommit = 'pre-commit';
-		const postcommit = 'post-commit';
-		const prehook = path.join(this.cwd, configDir, precommit);
-		const posthook = path.join(this.cwd, configDir, postcommit);
+	async install() {
+		const opts = utiljs.params(this.args, { '-dir': 'dir' });
+		const { dir, git, hooks, precommit, postcommit } = Object.assign({}, options, opts);
+		const cwd = path.isAbsolute(dir) ? '' : this.cwd;
 
-		const dst = path.join(this.cwd, git, hooks, precommit);
+		const prehook = path.join(cwd, dir, precommit);
+		const posthook = path.join(cwd, dir, postcommit);
+
+		const predst = path.join(this.cwd, git, hooks, precommit);
 		const postdst = path.join(this.cwd, git, hooks, postcommit);
 
-		try {
-			fs.accessSync(prehook, fs.constants.R_OK | fs.constants.W_OK);
-		} catch (err) {
-			console.error(err.toString());
-			exit(1);
-		}
-		fs.copyFileSync(prehook, dst);
-		try {
-			fs.accessSync(posthook, fs.constants.R_OK | fs.constants.W_OK);
-		} catch (err) {
-			console.error(err.toString());
-			exit(1);
-		}
-		fs.copyFileSync(posthook, postdst);
 		const mode = 0o755;
-		fs.chmodSync(dst, mode);
-		fs.chmodSync(postdst, mode);
+		try {
+			await Promise.all([fsAccess(prehook, stat), fsAccess(posthook, stat)]);
+			await Promise.all([fsCopyFile(prehook, predst), fsCopyFile(posthook, postdst)]);
+			await Promise.all([fsChmod(predst, mode), fsChmod(postdst, mode)]);
+		} catch (err) {
+			console.error(err.toString());
+			exit(1);
+		}
 	}
 }
 
@@ -1280,16 +1292,14 @@ Flags:
 	--art  			use art-template not ssi
 `;
 
-const version = '0.6.18';
+const version = '0.6.21';
 
 class cli {
 	constructor(server) {
 		this.server = server;
 	}
 	run(argv) {
-		const [node, cfile, ...args] = argv;
-		this.node = node;
-		this.cfile = cfile;
+		const [, , ...args] = argv;
 		this.args = args;
 		if (args.length > 0) {
 			this.runArgs();
