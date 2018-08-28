@@ -40,7 +40,9 @@ export default {
 					json = {};
 				try {
 					f = await this.tryFiles(paths);
-				} catch (e) {}
+				} catch (e) {
+					// no config found
+				}
 				if (f) {
 					try {
 						json = require(f);
@@ -54,20 +56,18 @@ export default {
 		});
 	},
 	tryFiles(paths) {
-		return new Promise((resolve, reject) => {
-			(async () => {
-				for (let i = 0, j = paths.length; i < j; i++) {
-					const file = paths[i];
-					try {
-						await fsAccess(file, fs.constants.R_OK);
-						resolve(file);
-						return;
-					} catch (e) {
-						// not exist try next
-					}
+		return new Promise(async (resolve, reject) => {
+			for (let i = 0, j = paths.length; i < j; i++) {
+				const file = paths[i];
+				try {
+					await fsAccess(file, fs.constants.R_OK);
+					resolve(file);
+					return;
+				} catch (e) {
+					// not exist try next
 				}
-				reject('not exist');
-			})();
+			}
+			reject('not exist');
 		});
 	},
 	async getUpdateTime(files) {
