@@ -101,7 +101,7 @@ export default class lint {
 	}
 
 	eslint(f) {
-		return spawnSync('eslint', ['-c', this.eslintrc, f.join(' ')], spawnOps);
+		return spawnSync('eslint', ['-c', this.eslintrc, '--fix', f.join(' ')], spawnOps);
 	}
 	prettier(f) {
 		return spawnSync('prettier', ['-c', this.prettierrc, '--write', f.join(' ')], { stdio: 'inherit', shell: true });
