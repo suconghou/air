@@ -34,8 +34,9 @@ export default class lint {
 		if (Array.isArray(files) && files.length > 0) {
 			const opts = utiljs.params(this.args, { '-dir': 'dir' });
 			const { dir, prettierrc, eslintrc } = Object.assign({}, options, opts);
-			this.prettierrc = path.join(this.cwd, dir, prettierrc);
-			this.eslintrc = path.join(this.cwd, dir, eslintrc);
+			const cwd = path.isAbsolute(dir) ? '' : this.cwd;
+			this.prettierrc = path.join(cwd, dir, prettierrc);
+			this.eslintrc = path.join(cwd, dir, eslintrc);
 			const index = files.findIndex(item => item == '-dir');
 			if (index >= 0) {
 				const len = opts.dir ? 2 : 1;
@@ -108,9 +109,10 @@ export default class lint {
 	async install() {
 		const opts = utiljs.params(this.args, { '-dir': 'dir' });
 		const { dir, git, hooks, precommit, postcommit } = Object.assign({}, options, opts);
+		const cwd = path.isAbsolute(dir) ? '' : this.cwd;
 
-		const prehook = path.join(this.cwd, dir, precommit);
-		const posthook = path.join(this.cwd, dir, postcommit);
+		const prehook = path.join(cwd, dir, precommit);
+		const posthook = path.join(cwd, dir, postcommit);
 
 		const predst = path.join(this.cwd, git, hooks, precommit);
 		const postdst = path.join(this.cwd, git, hooks, postcommit);
