@@ -25,7 +25,7 @@ const options = {
 };
 const stat = fs.constants.R_OK | fs.constants.W_OK;
 
-const spawnOps = { stdio: 'ignore', shell: true, detached: true };
+const spawnOps = { stdio: 'ignore', shell: true };
 
 const exit = code => process.exit(code);
 
@@ -63,64 +63,49 @@ export default class lint {
 		}
 
 		try {
+			let esfiles = [],
+				prefiles = [],
+				gitfiles = [];
 			await Promise.all([fsAccess(this.prettierrc, stat), fsAccess(this.eslintrc, stat)]);
-		} catch (err) {
-			console.error(err.toString());
-			exit(1);
-		}
-
-		const tasks = this.files.map(item => {
-			const { path, type, name } = item;
-			return new Promise(async (resolve, reject) => {
-				try {
-					await fsAccess(path, stat);
-					const [r1, r2] = await this.dolint(path, type, name);
-					console.info(r1, r2);
-					// resolve([r1, r2]);
-				} catch (e) {
-					reject(e);
-				}
-			});
-		});
-
-		try {
-			// const res = await Promise.all(tasks);
-			// console.info(res);
+			await Promise.all(
+				this.files.map(item => {
+					const { path, type, name } = item;
+					if (prettyTypes.includes(type)) {
+						prefiles.push(path);
+					}
+					if (esTypes.includes(type)) {
+						esfiles.push(path);
+					}
+					gitfiles.push(path);
+					return fsAccess(path, stat);
+				})
+			);
+			await this.dolint(esfiles, prefiles);
+			await this.gitadd(gitfiles);
 		} catch (err) {
 			console.error(err.toString());
 			exit(1);
 		}
 	}
 
-	sleep() {
-		return new Promise((resolve, reject) => {
-			setTimeout(() => {
-				resolve();
-			}, 1200);
-		});
-	}
-
-	async dolint(path, type, name) {
-		let r1, r2;
-		if (prettyTypes.includes(type)) {
-			r1 = await this.prettier(path);
-		}
-
-		if (esTypes.includes(type)) {
-			r2 = await this.eslint(path);
-		}
-		await this.gitadd(path);
+	async dolint(esfiles, prefiles) {
+		await this.prettier(prefiles);
+		await this.eslint(esfiles);
 		return [r1, r2];
 	}
 
 	eslint(f) {
-		return spawn('eslint', ['-c', this.eslintrc, '--fix', f], spawnOps);
+		return spawn('eslint', ['-c', this.eslintrc, '--fix', f.join(' ')], spawnOps);
 	}
 	prettier(f) {
-		return spawn('prettier', ['-c', this.prettierrc, '--write', f], spawnOps);
+		return spawn('prettier', ['-c', this.prettierrc, '--write', f.join(' ')], spawnOps);
 	}
 	gitadd(f) {
-		return spawn('git', ['add', f], spawnOps);
+		return Promise.all(
+			f.map(item => {
+				return spawn('git', ['add', item], spawnOps);
+			})
+		);
 	}
 	async install() {
 		const opts = utiljs.params(this.args, { '-dir': 'dir' });
