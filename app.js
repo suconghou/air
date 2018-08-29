@@ -1056,16 +1056,21 @@ class lint {
 		this.cwd = cwd;
 		this.args = [...files];
 		if (Array.isArray(files) && files.length > 0) {
-			const opts = utiljs.params(this.args, { '-dir': 'dir' });
-			const { dir, prettierrc, eslintrc } = Object.assign({}, options, opts);
+			const opts = utiljs.params(this.args, { '-dir': 'dir', '--lint': 'lintonly' });
+			const { dir, prettierrc, eslintrc, lintonly } = Object.assign({}, options, opts);
 			const cwd = path.isAbsolute(dir) ? '' : this.cwd;
 			this.prettierrc = path.join(cwd, dir, prettierrc);
 			this.eslintrc = path.join(cwd, dir, eslintrc);
-			const index = files.findIndex(item => item == '-dir');
-			if (index >= 0) {
+			const index1 = files.findIndex(item => item == '-dir');
+			if (index1 >= 0) {
 				const len = opts.dir ? 2 : 1;
-				files.splice(index, len);
+				files.splice(index1, len);
 			}
+			const index2 = files.findIndex(item => item == '--lint');
+			if (index2 >= 0) {
+				files.splice(index2, 1);
+			}
+			this.lintonly = lintonly;
 			this.files = this.parse(files);
 		}
 	}
@@ -1087,7 +1092,8 @@ class lint {
 
 		try {
 			let esfiles = [],
-				prefiles = [];
+				prefiles = [],
+				gitfiles = [];
 			await Promise.all([fsAccess(this.prettierrc, stat), fsAccess(this.eslintrc, stat)]);
 			await Promise.all(
 				this.files.map(item => {
@@ -1098,10 +1104,14 @@ class lint {
 					if (esTypes.includes(type)) {
 						esfiles.push(path$$1);
 					}
+					gitfiles.push(path$$1);
 					return fsAccess(path$$1, stat);
 				})
 			);
 			this.dolint(esfiles, prefiles);
+			if (!this.lintonly) {
+				await this.gitadd(gitfiles);
+			}
 		} catch (err) {
 			const str = err.toString();
 			if (str.length > 5) {
@@ -1113,20 +1123,30 @@ class lint {
 
 	dolint(esfiles, prefiles) {
 		const r1 = this.prettier(prefiles);
-		if (r1.status !== 0) {
+		if (r1 && r1.status !== 0) {
 			throw new Error();
 		}
 		const r2 = this.eslint(esfiles);
-		if (r2.status !== 0) {
+		if (r2 && r2.status !== 0) {
 			throw new Error();
 		}
 	}
 
 	eslint(f) {
-		return spawnSync('eslint', ['-c', this.eslintrc, '--fix', f.join(' ')], spawnOps);
+		if (f && f.length) {
+			return spawnSync('eslint', ['-c', this.eslintrc, '--fix', f.join(' ')], spawnOps);
+		}
 	}
 	prettier(f) {
-		return spawnSync('prettier', ['-c', this.prettierrc, '--write', f.join(' ')], { stdio: 'inherit', shell: true });
+		if (f && f.length) {
+			return spawnSync('prettier', ['-c', this.prettierrc, '--write', f.join(' ')], spawnOps);
+		}
+	}
+	gitadd(f) {
+		if (f && f.length) {
+			return spawn('git', ['add', '-u', f.join(' ')], spawnOps);
+		}
+		return Promise.resolve();
 	}
 	async install() {
 		const opts = utiljs.params(this.args, { '-dir': 'dir' });
@@ -1285,14 +1305,16 @@ Flags:
 	-h      		show this help information
 	-p     			set server listen port
 	-d     			set server document root
+	-dir  			set lint or install config path
 	--debug			compress with debug mode
 	--clean			compress with clean mode,remove console debugger
 	--escape		escape when use template
 	--dry  			just run as a static server
 	--art  			use art-template not ssi
+	--lint  		lint only,useful for air lint
 `;
 
-const version = '0.6.21';
+const version = '0.6.22';
 
 class cli {
 	constructor(server) {

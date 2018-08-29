@@ -63,7 +63,7 @@
 
 ### air install
 
-安装git hooks
+安装git hooks, 会将指定目录的git钩子安装到当前仓库, 当前位置必须是仓库根目录
 
 要使用格式化和lint,需要全局安装`prettier`,`eslint`
 
@@ -85,6 +85,10 @@ yarn global add prettier eslint babel-eslint vue-eslint-parser eslint-plugin-vue
 或者
 
 `git commit --no-verify`
+
+**参数**
+
+> -dir somedir  可以指定配置文件的目录
 
 
 
@@ -112,7 +116,11 @@ yarn global add prettier eslint babel-eslint vue-eslint-parser eslint-plugin-vue
 
 `/* eslint-enable */`开启eslint
 
+**参数**
 
+> -dir somedir 执行lint和格式化时可以指定配置文件所在目录
+> 
+> --lint 默认执行完毕后会使用`git add -u`再次添加此文件,此参数可以阻止该行为
 
 ### air template
 
