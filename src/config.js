@@ -13,11 +13,13 @@ Flags:
 	-h      		show this help information
 	-p     			set server listen port
 	-d     			set server document root
+	-dir  			set lint or install config path
 	--debug			compress with debug mode
 	--clean			compress with clean mode,remove console debugger
 	--escape		escape when use template
 	--dry  			just run as a static server
 	--art  			use art-template not ssi
+	--lint  		lint only,useful for air lint
 `;
 
-export const version = '0.6.21';
+export const version = '0.6.22';
