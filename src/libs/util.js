@@ -34,25 +34,23 @@ export default {
 			cwd = path.join(cwd, 'static');
 		}
 		const paths = this.resolveLookupPaths(cwd, name);
-		return new Promise((resolve, reject) => {
-			(async () => {
-				let f,
-					json = {};
+		return new Promise(async (resolve, reject) => {
+			let f,
+				json = {};
+			try {
+				f = await this.tryFiles(paths);
+			} catch (e) {
+				// no config found
+			}
+			if (f) {
 				try {
-					f = await this.tryFiles(paths);
+					json = require(f);
+					json.path = path.dirname(f);
 				} catch (e) {
-					// no config found
+					reject(e);
 				}
-				if (f) {
-					try {
-						json = require(f);
-						json.path = path.dirname(f);
-					} catch (e) {
-						reject(e);
-					}
-				}
-				resolve(json);
-			})();
+			}
+			resolve(json);
 		});
 	},
 	tryFiles(paths) {

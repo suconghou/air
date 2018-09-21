@@ -20,46 +20,44 @@ export default {
 		);
 		const options = { urlArgs: query.ver ? `ver=${query.ver}` : null, env: 'development', useFileCache: false };
 
-		return new Promise((resolve, reject) => {
-			(async () => {
+		return new Promise(async (resolve, reject) => {
+			try {
+				const maxtime = await util.getUpdateTime(files);
 				try {
-					const maxtime = await util.getUpdateTime(files);
-					try {
-						const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
-						response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
-						response.end(css);
-						resolve(true);
-					} catch (e) {
-						reject(e);
-					}
+					const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
+					response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
+					response.end(css);
+					resolve(true);
 				} catch (e) {
-					if (e.syscall !== 'stat') {
-						return reject(e);
-					}
-					const k = matches[0].replace(/\/static\//, '');
-					if (!config.static) {
-						return resolve(false);
-					}
-					const { css } = config.static;
-					if (css) {
-						const entry = Object.keys(css);
-						if (entry.includes(k)) {
-							const hotfiles = css[k].map(item => path.join(config.path, item));
-							try {
-								const mtime = await util.getUpdateTime(hotfiles);
-								const { css, hit } = await this.compressLessCache(mtime, k, hotfiles, options);
-								response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
-								response.end(css);
-								resolve(true);
-							} catch (e) {
-								reject(e);
-							}
-						} else {
-							resolve(false);
+					reject(e);
+				}
+			} catch (e) {
+				if (e.syscall !== 'stat') {
+					return reject(e);
+				}
+				const k = matches[0].replace(/\/static\//, '');
+				if (!config.static) {
+					return resolve(false);
+				}
+				const { css } = config.static;
+				if (css) {
+					const entry = Object.keys(css);
+					if (entry.includes(k)) {
+						const hotfiles = css[k].map(item => path.join(config.path, item));
+						try {
+							const mtime = await util.getUpdateTime(hotfiles);
+							const { css, hit } = await this.compressLessCache(mtime, k, hotfiles, options);
+							response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
+							response.end(css);
+							resolve(true);
+						} catch (e) {
+							reject(e);
 						}
+					} else {
+						resolve(false);
 					}
 				}
-			})();
+			}
 		});
 	},
 
@@ -119,43 +117,41 @@ export default {
 		);
 		const options = { debug: true };
 
-		return new Promise((resolve, reject) => {
-			(async () => {
-				try {
-					const maxtime = await util.getUpdateTime(files);
-					if (files.length === 1) {
-						// 直接请求一个js文件并且存在,让他直接使用静态文件
-						return resolve(false);
-					}
-					const { js, hit } = await this.compressJsCache(maxtime, key, files, options);
-					response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
-					response.end(js);
-					resolve(true);
-				} catch (e) {
-					const k = matches[0].replace(/\/static\//, '');
-					if (!config.static) {
-						return resolve(false);
-					}
-					const { js } = config.static;
-					if (js) {
-						const entry = Object.keys(js);
-						if (entry.includes(k)) {
-							const hotfiles = js[k].map(item => path.join(config.path, item));
-							try {
-								const mtime = await util.getUpdateTime(hotfiles);
-								const { js, hit } = await this.compressJsCache(mtime, k, hotfiles, options);
-								response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
-								response.end(js);
-								resolve(true);
-							} catch (e) {
-								reject(e);
-							}
-						} else {
-							resolve(false);
+		return new Promise(async (resolve, reject) => {
+			try {
+				const maxtime = await util.getUpdateTime(files);
+				if (files.length === 1) {
+					// 直接请求一个js文件并且存在,让他直接使用静态文件
+					return resolve(false);
+				}
+				const { js, hit } = await this.compressJsCache(maxtime, key, files, options);
+				response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
+				response.end(js);
+				resolve(true);
+			} catch (e) {
+				const k = matches[0].replace(/\/static\//, '');
+				if (!config.static) {
+					return resolve(false);
+				}
+				const { js } = config.static;
+				if (js) {
+					const entry = Object.keys(js);
+					if (entry.includes(k)) {
+						const hotfiles = js[k].map(item => path.join(config.path, item));
+						try {
+							const mtime = await util.getUpdateTime(hotfiles);
+							const { js, hit } = await this.compressJsCache(mtime, k, hotfiles, options);
+							response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
+							response.end(js);
+							resolve(true);
+						} catch (e) {
+							reject(e);
 						}
+					} else {
+						resolve(false);
 					}
 				}
-			})();
+			}
 		});
 	},
 
@@ -228,19 +224,27 @@ export default {
 			const { css, js } = config.static;
 			if (css) {
 				Object.keys(css).forEach(async item => {
-					const files = css[item].map(item => path.join(config.path, item));
-					const dst = path.join(config.path, item);
-					const lessOps = Object.assign({ compress: params.debug ? false : true }, params);
-					const res = await this.compressLess(files, lessOps);
-					await fsWriteFile(dst, res.css);
+					try {
+						const files = css[item].map(item => path.join(config.path, item));
+						const dst = path.join(config.path, item);
+						const lessOps = Object.assign({ compress: params.debug ? false : true }, params);
+						const res = await this.compressLess(files, lessOps);
+						await fsWriteFile(dst, res.css);
+					} catch (e) {
+						console.error(e.toString());
+					}
 				});
 			}
 			if (js) {
 				Object.keys(js).forEach(async item => {
-					const files = js[item].map(item => path.join(config.path, item));
-					const dst = path.join(config.path, item);
-					const res = await this.compressJs(files, params);
-					await fsWriteFile(dst, res.code);
+					try {
+						const files = js[item].map(item => path.join(config.path, item));
+						const dst = path.join(config.path, item);
+						const res = await this.compressJs(files, params);
+						await fsWriteFile(dst, res.code);
+					} catch (e) {
+						console.info(e.toString());
+					}
 				});
 			}
 		}

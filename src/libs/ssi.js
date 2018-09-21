@@ -16,22 +16,20 @@ export default {
 		if (params.art) {
 			return this.artHtml(response, file, query, cwd, config, params);
 		}
-		return new Promise((resolve, reject) => {
-			(async () => {
-				try {
-					const main = path.join(cwd, file);
-					const res = await this.parseHtml(main, query, cwd);
-					if (res) {
-						response.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'public,max-age=5' });
-						response.end(res);
-						resolve(true);
-					} else {
-						resolve(false);
-					}
-				} catch (e) {
-					reject(e);
+		return new Promise(async (resolve, reject) => {
+			try {
+				const main = path.join(cwd, file);
+				const res = await this.parseHtml(main, query, cwd);
+				if (res) {
+					response.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'public,max-age=5' });
+					response.end(res);
+					resolve(true);
+				} else {
+					resolve(false);
 				}
-			})();
+			} catch (e) {
+				reject(e);
+			}
 		});
 	},
 	artHtml(response, file, query, cwd, config, params) {
