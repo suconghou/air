@@ -107,13 +107,21 @@ export default class {
 			if (err) {
 				return this.err404(response);
 			}
-			sendFile(response, stat, file);
+			if (stat.isFile()) {
+				return sendFile(response, stat, file);
+			}
+			return this.err403(response);
 		});
 	}
 
 	err404(response) {
 		response.writeHead(404, { 'Content-Type': 'text/plain' });
 		response.end('Not Found\n');
+	}
+
+	err403(response) {
+		response.writeHead(403, { 'Content-Type': 'text/plain' });
+		response.end('Forbidden\n');
 	}
 
 	err500(response, err) {
