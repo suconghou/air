@@ -45,6 +45,7 @@ export default {
 			if (f) {
 				try {
 					json = require(f);
+					json.configfile = f;
 					json.path = path.dirname(f);
 				} catch (e) {
 					reject(e);

@@ -15,16 +15,38 @@ const configName = 'static.json';
 export default class server {
 	constructor(cwd) {
 		this.cwd = cwd;
+		this.globalConfig = { config: {} };
 	}
 
 	async serve(args) {
 		try {
 			const params = utiljs.getParams(args);
 			const cwd = params.root ? params.root : this.cwd;
-			const config = await utilnode.getConfig(cwd, configName);
-			new httpserver(params).start(config);
+			this.globalConfig.config = await utilnode.getConfig(cwd, configName);
+			new httpserver(params).start(this.globalConfig);
+			this.watchConfig();
 		} catch (e) {
 			utilnode.exit(e, 1);
+		}
+	}
+
+	watchConfig() {
+		const configfile = this.globalConfig.config.configfile;
+		if (configfile) {
+			fs.watchFile(configfile, async () => {
+				var json = {};
+				try {
+					delete require.cache[configfile];
+					json = require(configfile);
+					json.configfile = configfile;
+					json.path = path.dirname(configfile);
+					this.globalConfig.config = json;
+					console.info('config reload ' + configfile);
+				} catch (e) {
+					console.info(e);
+				}
+			});
+			console.info('load config ' + configfile);
 		}
 	}
 

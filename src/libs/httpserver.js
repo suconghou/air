@@ -26,7 +26,7 @@ export default class {
 			process.exit(1);
 		}
 	}
-	start(config) {
+	start(globalConfig) {
 		http.createServer((request, response) => {
 			try {
 				const [pathinfo, qs] = decodeURI(request.url).split('?');
@@ -36,7 +36,7 @@ export default class {
 				}
 				const [fn, ...args] = pathinfo.split('/').filter(item => item);
 				if (!fn) {
-					return this.noIndex(request, response, pathinfo, query, config);
+					return this.noIndex(request, response, pathinfo, query, globalConfig.config);
 				}
 				const router = route.getRouter(request.method);
 				if (router) {
@@ -49,7 +49,7 @@ export default class {
 						const regRouter = route.getRegxpRouter(request.method, pathinfo);
 						if (regRouter) {
 							return regRouter
-								.handler(response, regRouter.matches, query, this.root, config, this.params)
+								.handler(response, regRouter.matches, query, this.root, globalConfig.config, this.params)
 								.then(res => {
 									if (!res) {
 										this.tryfile(response, pathinfo);
@@ -75,6 +75,7 @@ export default class {
 			.listen(this.port)
 			.on('error', err => {
 				console.info(err.toString());
+				process.exit(1);
 			});
 		console.log('Server running at http://127.0.0.1:%s', this.port);
 	}
@@ -109,8 +110,21 @@ export default class {
 			}
 			if (stat.isFile()) {
 				return sendFile(response, stat, file);
+			} else if (stat.isDirectory()) {
+				const dstfile = path.join(file, 'index.html');
+				fs.stat(dstfile, (err, stat) => {
+					if (err) {
+						return this.err404(response);
+					}
+					if (stat.isFile()) {
+						return sendFile(response, stat, dstfile);
+					} else {
+						return this.err403(response);
+					}
+				});
+			} else {
+				return this.err403(response);
 			}
-			return this.err403(response);
 		});
 	}
 

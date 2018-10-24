@@ -116,13 +116,13 @@ export default {
 				})
 		);
 		const options = { debug: true };
-
+		// 优先级 连字符>配置文件>静态文件
 		return new Promise(async (resolve, reject) => {
 			try {
 				const maxtime = await util.getUpdateTime(files);
 				if (files.length === 1) {
-					// 直接请求一个js文件并且存在,让他直接使用静态文件
-					return resolve(false);
+					// 请求的不包含连字符,且文件真实存在,先不加载,先尝试配置文件
+					throw new Error('先尝试配置文件');
 				}
 				const { js, hit } = await this.compressJsCache(maxtime, key, files, options);
 				response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
