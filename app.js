@@ -50,6 +50,7 @@ var utilnode = {
 			if (f) {
 				try {
 					json = require(f);
+					json.configfile = f;
 					json.path = path.dirname(f);
 				} catch (e) {
 					reject(e);
@@ -287,13 +288,13 @@ var compress = {
 				})
 		);
 		const options = { debug: true };
-
+		// 优先级 连字符>配置文件>静态文件
 		return new Promise(async (resolve, reject) => {
 			try {
 				const maxtime = await utilnode.getUpdateTime(files);
 				if (files.length === 1) {
-					// 直接请求一个js文件并且存在,让他直接使用静态文件
-					return resolve(false);
+					// 请求的不包含连字符,且文件真实存在,先不加载,先尝试配置文件
+					throw new Error('先尝试配置文件');
 				}
 				const { js, hit } = await this.compressJsCache(maxtime, key, files, options);
 				response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
@@ -594,15 +595,15 @@ const routers = {
 
 const regxpPath = [
 	{
-		reg: /[\w\-/]+\.css$/,
+		reg: /[\w\-/.]+\.css$/,
 		handler: compress.compressLessReq.bind(compress)
 	},
 	{
-		reg: /[\w\-/]+\.js$/,
+		reg: /[\w\-/.]+\.js$/,
 		handler: compress.compressJsReg.bind(compress)
 	},
 	{
-		reg: /[\w\-/]+\.html$/,
+		reg: /[\w\-/.]+\.html$/,
 		handler: ssi.load.bind(ssi)
 	}
 ];
@@ -934,7 +935,7 @@ class httpserver {
 			process.exit(1);
 		}
 	}
-	start(config) {
+	start(globalConfig) {
 		http.createServer((request, response) => {
 			try {
 				const [pathinfo, qs] = decodeURI(request.url).split('?');
@@ -944,7 +945,7 @@ class httpserver {
 				}
 				const [fn, ...args] = pathinfo.split('/').filter(item => item);
 				if (!fn) {
-					return this.noIndex(request, response, pathinfo, query, config);
+					return this.noIndex(request, response, pathinfo, query, globalConfig.config);
 				}
 				const router = route.getRouter(request.method);
 				if (router) {
@@ -957,7 +958,7 @@ class httpserver {
 						const regRouter = route.getRegxpRouter(request.method, pathinfo);
 						if (regRouter) {
 							return regRouter
-								.handler(response, regRouter.matches, query, this.root, config, this.params)
+								.handler(response, regRouter.matches, query, this.root, globalConfig.config, this.params)
 								.then(res => {
 									if (!res) {
 										this.tryfile(response, pathinfo);
@@ -983,6 +984,7 @@ class httpserver {
 			.listen(this.port)
 			.on('error', err => {
 				console.info(err.toString());
+				process.exit(1);
 			});
 		console.log('Server running at http://127.0.0.1:%s', this.port);
 	}
@@ -1017,8 +1019,21 @@ class httpserver {
 			}
 			if (stat.isFile()) {
 				return sendFile(response, stat, file);
+			} else if (stat.isDirectory()) {
+				const dstfile = path.join(file, 'index.html');
+				fs.stat(dstfile, (err, stat) => {
+					if (err) {
+						return this.err404(response);
+					}
+					if (stat.isFile()) {
+						return sendFile(response, stat, dstfile);
+					} else {
+						return this.err403(response);
+					}
+				});
+			} else {
+				return this.err403(response);
 			}
-			return this.err403(response);
 		});
 	}
 
@@ -1192,16 +1207,38 @@ const configName = 'static.json';
 class server {
 	constructor(cwd) {
 		this.cwd = cwd;
+		this.globalConfig = { config: {} };
 	}
 
 	async serve(args) {
 		try {
 			const params = utiljs.getParams(args);
 			const cwd = params.root ? params.root : this.cwd;
-			const config = await utilnode.getConfig(cwd, configName);
-			new httpserver(params).start(config);
+			this.globalConfig.config = await utilnode.getConfig(cwd, configName);
+			new httpserver(params).start(this.globalConfig);
+			this.watchConfig();
 		} catch (e) {
 			utilnode.exit(e, 1);
+		}
+	}
+
+	watchConfig() {
+		const configfile = this.globalConfig.config.configfile;
+		if (configfile) {
+			fs.watchFile(configfile, async () => {
+				var json = {};
+				try {
+					delete require.cache[configfile];
+					json = require(configfile);
+					json.configfile = configfile;
+					json.path = path.dirname(configfile);
+					this.globalConfig.config = json;
+					console.info('config reload ' + configfile);
+				} catch (e) {
+					console.info(e);
+				}
+			});
+			console.info('load config ' + configfile);
 		}
 	}
 
@@ -1322,7 +1359,7 @@ Flags:
 	--lint  		lint only,useful for air lint
 `;
 
-const version = '0.6.24';
+const version = '0.6.25';
 
 class cli {
 	constructor(server) {
