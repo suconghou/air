@@ -1078,12 +1078,14 @@ class lint {
 	constructor(cwd, files) {
 		this.cwd = cwd;
 		this.args = [...files];
+		const opts = utiljs.params(this.args, { '-dir': 'dir', '--lint': 'lintonly' });
+		const { dir, prettierrc, eslintrc, lintonly } = Object.assign({}, options, opts);
+		const distcwd = path.isAbsolute(dir) ? '' : this.cwd;
+		this.prettierrc = path.join(distcwd, dir, prettierrc);
+		this.eslintrc = path.join(distcwd, dir, eslintrc);
+		this.lintonly = lintonly;
+
 		if (Array.isArray(files) && files.length > 0) {
-			const opts = utiljs.params(this.args, { '-dir': 'dir', '--lint': 'lintonly' });
-			const { dir, prettierrc, eslintrc, lintonly } = Object.assign({}, options, opts);
-			const cwd = path.isAbsolute(dir) ? '' : this.cwd;
-			this.prettierrc = path.join(cwd, dir, prettierrc);
-			this.eslintrc = path.join(cwd, dir, eslintrc);
 			const index1 = files.findIndex(item => item == '-dir');
 			if (index1 >= 0) {
 				const len = opts.dir ? 2 : 1;
@@ -1093,8 +1095,25 @@ class lint {
 			if (index2 >= 0) {
 				files.splice(index2, 1);
 			}
-			this.lintonly = lintonly;
 			this.files = this.parse(files);
+		} else {
+			this.lintonly = true;
+			this.doautoLint();
+		}
+	}
+	async doautoLint() {
+		try {
+			const res = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACM']);
+			const arrs = res.stdout
+				.toString()
+				.split(os.EOL)
+				.filter(v => v);
+			if (arrs.length) {
+				this.files = this.parse(arrs);
+			}
+		} catch (err) {
+			console.error(err.toString());
+			exit(1);
 		}
 	}
 	parse(files) {
@@ -1110,6 +1129,9 @@ class lint {
 	}
 	async lint() {
 		if (!(this.prettierrc && this.eslintrc)) {
+			return;
+		}
+		if (!this.files || !this.files.length) {
 			return;
 		}
 
@@ -1162,7 +1184,7 @@ class lint {
 	}
 	prettier(f) {
 		if (f && f.length) {
-			return spawnSync('prettier', ['-c', this.prettierrc, '--write', f.join(' ')], spawnOps);
+			return spawnSync('prettier', ['--config', this.prettierrc, '--write', f.join(' ')], spawnOps);
 		}
 	}
 	gitadd(f) {
@@ -1359,7 +1381,7 @@ Flags:
 	--lint  		lint only,useful for air lint
 `;
 
-const version = '0.6.25';
+const version = '0.6.27';
 
 class cli {
 	constructor(server) {
