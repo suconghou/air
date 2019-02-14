@@ -141,4 +141,8 @@ export default class server {
 			utilnode.exit(e, 1);
 		}
 	}
+
+	commitlint(args) {
+		new lint(this.cwd, args).commitlint();
+	}
 }
