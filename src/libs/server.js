@@ -5,7 +5,7 @@ import process from 'process';
 import os from 'os';
 import compress from './compress.js';
 import utiljs from './utiljs.js';
-import utilnode, { fsWriteFile } from './util.js';
+import utilnode, { fsWriteFile, fsReadFile } from './util.js';
 import httpserver from './httpserver.js';
 import lint from './lint.js';
 import template from './template.js';
@@ -142,7 +142,21 @@ export default class server {
 		}
 	}
 
-	commitlint(args) {
-		new lint(this.cwd, args).commitlint();
+	async commitlint(args) {
+		try {
+			const str = await fsReadFile(args[0]);
+			const msg = str.toString();
+			if (
+				!/(build|ci|docs|feat|fix|perf|refactor|style|test|revert|chore).{0,2}(\(.{1,100}\))?.{0,2}:.{1,200}/.test(
+					msg
+				)
+			) {
+				console.info('commit message should be format like <type>(optional scope): <description>');
+				process.exit(1);
+			}
+		} catch (e) {
+			console.info(e);
+			process.exit(1);
+		}
 	}
 }

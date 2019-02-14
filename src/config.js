@@ -22,4 +22,4 @@ Flags:
 	--lint  		lint only,useful for air lint
 `;
 
-export const version = '0.6.27';
+export const version = '0.6.28';

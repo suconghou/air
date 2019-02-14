@@ -1,19 +1,21 @@
 import process from 'process';
 import fs from 'fs';
-import util from 'util';
+import { promisify } from 'util';
 import path from 'path';
 import os from 'os';
 
-const fsStat = util.promisify(fs.stat);
-const fsAccess = util.promisify(fs.access);
+const fsStat = promisify(fs.stat);
+const fsAccess = promisify(fs.access);
 
-const fsWriteFile = util.promisify(fs.writeFile);
+const fsWriteFile = promisify(fs.writeFile);
 
-const fsCopyFile = util.promisify(fs.copyFile);
+const fsReadFile = promisify(fs.readFile);
 
-const fsChmod = util.promisify(fs.chmod);
+const fsCopyFile = promisify(fs.copyFile);
 
-export { fsStat, fsAccess, fsChmod, fsWriteFile, fsCopyFile };
+const fsChmod = promisify(fs.chmod);
+
+export { fsStat, fsAccess, fsChmod, fsWriteFile, fsCopyFile, fsReadFile };
 
 export default {
 	resolveLookupPaths(pathstr, file) {

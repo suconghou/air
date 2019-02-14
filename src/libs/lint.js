@@ -4,7 +4,7 @@ import path from 'path';
 import util from 'util';
 import child_process from 'child_process';
 import fs from 'fs';
-import { fsAccess, fsCopyFile, fsChmod } from './util.js';
+import { fsAccess, fsCopyFile, fsChmod, fsReadFile } from './util.js';
 import utiljs from './utiljs.js';
 
 const spawn = util.promisify(child_process.spawn);
@@ -19,6 +19,7 @@ const options = {
 	hooks: 'hooks',
 	precommit: 'pre-commit',
 	postcommit: 'post-commit',
+	commitmsg: 'commit-msg',
 	prettierrc: '.prettierrc',
 	eslintrc: '.eslintrc.js'
 };
@@ -149,20 +150,26 @@ export default class lint {
 	}
 	async install() {
 		const opts = utiljs.params(this.args, { '-dir': 'dir' });
-		const { dir, git, hooks, precommit, postcommit } = Object.assign({}, options, opts);
+		const { dir, git, hooks, precommit, postcommit, commitmsg } = Object.assign({}, options, opts);
 		const cwd = path.isAbsolute(dir) ? '' : this.cwd;
 
 		const prehook = path.join(cwd, dir, precommit);
 		const posthook = path.join(cwd, dir, postcommit);
+		const msghook = path.join(cwd, dir, commitmsg);
 
 		const predst = path.join(this.cwd, git, hooks, precommit);
 		const postdst = path.join(this.cwd, git, hooks, postcommit);
+		const msgdst = path.join(this.cwd, git, hooks, commitmsg);
 
 		const mode = 0o755;
 		try {
-			await Promise.all([fsAccess(prehook, stat), fsAccess(posthook, stat)]);
-			await Promise.all([fsCopyFile(prehook, predst), fsCopyFile(posthook, postdst)]);
-			await Promise.all([fsChmod(predst, mode), fsChmod(postdst, mode)]);
+			await Promise.all([fsAccess(prehook, stat), fsAccess(posthook, stat), fsAccess(msghook, stat)]);
+			await Promise.all([
+				fsCopyFile(prehook, predst),
+				fsCopyFile(posthook, postdst),
+				fsCopyFile(msghook, msgdst)
+			]);
+			await Promise.all([fsChmod(predst, mode), fsChmod(postdst, mode), fsChmod(msgdst, mode)]);
 		} catch (err) {
 			console.error(err.toString());
 			exit(1);
