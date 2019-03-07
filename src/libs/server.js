@@ -146,6 +146,9 @@ export default class server {
 		try {
 			const str = await fsReadFile(args[0]);
 			const msg = str.toString();
+			if (/Merge\s+branch/i.test(msg)) {
+				return;
+			}
 			if (
 				!/(build|ci|docs|feat|fix|perf|refactor|style|test|revert|chore).{0,2}(\(.{1,100}\))?.{0,2}:.{1,200}/.test(
 					msg
