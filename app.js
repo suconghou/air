@@ -4,7 +4,8 @@ function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'defau
 
 var process = _interopDefault(require('process'));
 var fs = _interopDefault(require('fs'));
-var util = _interopDefault(require('util'));
+var util = require('util');
+var util__default = _interopDefault(util);
 var path = _interopDefault(require('path'));
 var os = _interopDefault(require('os'));
 var http = _interopDefault(require('http'));
@@ -15,6 +16,8 @@ const fsStat = util.promisify(fs.stat);
 const fsAccess = util.promisify(fs.access);
 
 const fsWriteFile = util.promisify(fs.writeFile);
+
+const fsReadFile = util.promisify(fs.readFile);
 
 const fsCopyFile = util.promisify(fs.copyFile);
 
@@ -448,7 +451,7 @@ var compress = {
 	}
 };
 
-const readFile = util.promisify(fs.readFile);
+const readFile = util__default.promisify(fs.readFile);
 
 const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.]{3,50})"\s{1,5}-->/g;
 
@@ -1053,7 +1056,7 @@ class httpserver {
 	}
 }
 
-const spawn = util.promisify(child_process.spawn);
+const spawn = util__default.promisify(child_process.spawn);
 const spawnSync = child_process.spawnSync;
 
 const prettyTypes = ['js', 'vue', 'jsx', 'json', 'css', 'less', 'ts', 'md'];
@@ -1065,6 +1068,7 @@ const options = {
 	hooks: 'hooks',
 	precommit: 'pre-commit',
 	postcommit: 'post-commit',
+	commitmsg: 'commit-msg',
 	prettierrc: '.prettierrc',
 	eslintrc: '.eslintrc.js'
 };
@@ -1195,20 +1199,26 @@ class lint {
 	}
 	async install() {
 		const opts = utiljs.params(this.args, { '-dir': 'dir' });
-		const { dir, git, hooks, precommit, postcommit } = Object.assign({}, options, opts);
+		const { dir, git, hooks, precommit, postcommit, commitmsg } = Object.assign({}, options, opts);
 		const cwd = path.isAbsolute(dir) ? '' : this.cwd;
 
 		const prehook = path.join(cwd, dir, precommit);
 		const posthook = path.join(cwd, dir, postcommit);
+		const msghook = path.join(cwd, dir, commitmsg);
 
 		const predst = path.join(this.cwd, git, hooks, precommit);
 		const postdst = path.join(this.cwd, git, hooks, postcommit);
+		const msgdst = path.join(this.cwd, git, hooks, commitmsg);
 
 		const mode = 0o755;
 		try {
-			await Promise.all([fsAccess(prehook, stat), fsAccess(posthook, stat)]);
-			await Promise.all([fsCopyFile(prehook, predst), fsCopyFile(posthook, postdst)]);
-			await Promise.all([fsChmod(predst, mode), fsChmod(postdst, mode)]);
+			await Promise.all([fsAccess(prehook, stat), fsAccess(posthook, stat), fsAccess(msghook, stat)]);
+			await Promise.all([
+				fsCopyFile(prehook, predst),
+				fsCopyFile(posthook, postdst),
+				fsCopyFile(msghook, msgdst)
+			]);
+			await Promise.all([fsChmod(predst, mode), fsChmod(postdst, mode), fsChmod(msgdst, mode)]);
 		} catch (err) {
 			console.error(err.toString());
 			exit(1);
@@ -1355,6 +1365,27 @@ class server {
 			utilnode.exit(e, 1);
 		}
 	}
+
+	async commitlint(args) {
+		try {
+			const str = await fsReadFile(args[0]);
+			const msg = str.toString();
+			if (/Merge\s+branch/i.test(msg)) {
+				return;
+			}
+			if (
+				!/(build|ci|docs|feat|fix|perf|refactor|style|test|revert|chore).{0,2}(\(.{1,100}\))?.{0,2}:.{1,200}/.test(
+					msg
+				)
+			) {
+				console.info('commit message should be format like <type>(optional scope): <description>');
+				process.exit(1);
+			}
+		} catch (e) {
+			console.info(e);
+			process.exit(1);
+		}
+	}
 }
 
 var help = `
@@ -1381,7 +1412,7 @@ Flags:
 	--lint  		lint only,useful for air lint
 `;
 
-const version = '0.6.27';
+const version = '0.6.29';
 
 class cli {
 	constructor(server) {
