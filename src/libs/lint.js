@@ -31,14 +31,19 @@ const exit = code => process.exit(code);
 
 export default class lint {
 	constructor(cwd, files) {
+		console.info(cwd, files);
 		this.cwd = cwd;
-		this.args = [...files];
-		const opts = utiljs.params(this.args, { '-dir': 'dir', '--lint': 'lintonly' });
-		const { dir, prettierrc, eslintrc, lintonly } = Object.assign({}, options, opts);
+		const opts = utiljs.params(files, {
+			'-dir': 'dir',
+			'--lint': 'lintonly',
+			'--noprettier': 'noprettier',
+			'--noeslint': 'noeslint'
+		});
+		this.opts = Object.assign({}, options, opts);
+		const { dir, prettierrc, eslintrc } = this.opts;
 		const distcwd = path.isAbsolute(dir) ? '' : this.cwd;
 		this.prettierrc = path.join(distcwd, dir, prettierrc);
 		this.eslintrc = path.join(distcwd, dir, eslintrc);
-		this.lintonly = lintonly;
 
 		if (Array.isArray(files) && files.length > 0) {
 			const index1 = files.findIndex(item => item == '-dir');
@@ -46,13 +51,16 @@ export default class lint {
 				const len = opts.dir ? 2 : 1;
 				files.splice(index1, len);
 			}
-			const index2 = files.findIndex(item => item == '--lint');
-			if (index2 >= 0) {
-				files.splice(index2, 1);
+			files = files.filter(item => {
+				return item.substr(0, 2) !== '--';
+			});
+			if (!files.length) {
+				this.doautoLint();
+				return;
 			}
 			this.files = this.parse(files);
 		} else {
-			this.lintonly = true;
+			this.opts.lintonly = true;
 			this.doautoLint();
 		}
 	}
@@ -109,7 +117,7 @@ export default class lint {
 				})
 			);
 			this.dolint(esfiles, prefiles);
-			if (!this.lintonly) {
+			if (!this.opts.lintonly) {
 				await this.gitadd(gitfiles);
 			}
 		} catch (err) {
@@ -122,13 +130,17 @@ export default class lint {
 	}
 
 	dolint(esfiles, prefiles) {
-		const r1 = this.prettier(prefiles);
-		if (r1 && r1.status !== 0) {
-			throw new Error();
+		if (this.opts.noprettier !== true) {
+			const r1 = this.prettier(prefiles);
+			if (r1 && r1.status !== 0) {
+				throw new Error(r1);
+			}
 		}
-		const r2 = this.eslint(esfiles);
-		if (r2 && r2.status !== 0) {
-			throw new Error();
+		if (this.opts.noeslint !== true) {
+			const r2 = this.eslint(esfiles);
+			if (r2 && r2.status !== 0) {
+				throw new Error(r2);
+			}
 		}
 	}
 
@@ -149,8 +161,7 @@ export default class lint {
 		return Promise.resolve();
 	}
 	async install() {
-		const opts = utiljs.params(this.args, { '-dir': 'dir' });
-		const { dir, git, hooks, precommit, postcommit, commitmsg } = Object.assign({}, options, opts);
+		const { dir, git, hooks, precommit, postcommit, commitmsg } = Object.assign({}, options, this.opts);
 		const cwd = path.isAbsolute(dir) ? '' : this.cwd;
 
 		const prehook = path.join(cwd, dir, precommit);

@@ -49,7 +49,14 @@ export default class {
 						const regRouter = route.getRegxpRouter(request.method, pathinfo);
 						if (regRouter) {
 							return regRouter
-								.handler(response, regRouter.matches, query, this.root, globalConfig.config, this.params)
+								.handler(
+									response,
+									regRouter.matches,
+									query,
+									this.root,
+									globalConfig.config,
+									this.params
+								)
 								.then(res => {
 									if (!res) {
 										this.tryfile(response, pathinfo);

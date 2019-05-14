@@ -25,7 +25,11 @@ export default {
 				const maxtime = await util.getUpdateTime(files);
 				try {
 					const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
-					response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
+					response.writeHead(200, {
+						'Content-Type': 'text/css',
+						'Cache-Control': 'public,max-age=5',
+						'X-Cache': hit ? 'hit' : 'miss'
+					});
 					response.end(css);
 					resolve(true);
 				} catch (e) {
@@ -47,7 +51,11 @@ export default {
 						try {
 							const mtime = await util.getUpdateTime(hotfiles);
 							const { css, hit } = await this.compressLessCache(mtime, k, hotfiles, options);
-							response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
+							response.writeHead(200, {
+								'Content-Type': 'text/css',
+								'Cache-Control': 'public,max-age=5',
+								'X-Cache': hit ? 'hit' : 'miss'
+							});
 							response.end(css);
 							resolve(true);
 						} catch (e) {
@@ -81,7 +89,14 @@ export default {
 			.join('\r\n');
 		const less = require('less');
 		const autoprefix = require('less-plugin-autoprefix');
-		const option = { plugins: [new autoprefix({ browsers: ['last 5 versions', 'ie > 8', 'Firefox ESR'] })], paths, urlArgs, compress, useFileCache, env };
+		const option = {
+			plugins: [new autoprefix({ browsers: ['last 5 versions', 'ie > 8', 'Firefox ESR'] })],
+			paths,
+			urlArgs,
+			compress,
+			useFileCache,
+			env
+		};
 		this.cleanLessCache(less, lessfiles);
 		return new Promise((resolve, reject) => {
 			less.render(lessInput, option)
@@ -125,7 +140,11 @@ export default {
 					throw new Error('先尝试配置文件');
 				}
 				const { js, hit } = await this.compressJsCache(maxtime, key, files, options);
-				response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
+				response.writeHead(200, {
+					'Content-Type': 'application/javascript',
+					'Cache-Control': 'public,max-age=5',
+					'X-Cache': hit ? 'hit' : 'miss'
+				});
 				response.end(js);
 				resolve(true);
 			} catch (e) {
@@ -141,7 +160,11 @@ export default {
 						try {
 							const mtime = await util.getUpdateTime(hotfiles);
 							const { js, hit } = await this.compressJsCache(mtime, k, hotfiles, options);
-							response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
+							response.writeHead(200, {
+								'Content-Type': 'application/javascript',
+								'Cache-Control': 'public,max-age=5',
+								'X-Cache': hit ? 'hit' : 'miss'
+							});
 							response.end(js);
 							resolve(true);
 						} catch (e) {
@@ -189,7 +212,16 @@ export default {
 		} else {
 			options = {
 				mangle: true,
-				compress: { sequences: true, properties: true, dead_code: true, unused: true, booleans: true, join_vars: true, if_return: true, conditionals: true }
+				compress: {
+					sequences: true,
+					properties: true,
+					dead_code: true,
+					unused: true,
+					booleans: true,
+					join_vars: true,
+					if_return: true,
+					conditionals: true
+				}
 			};
 			if (ops.clean) {
 				options.compress.drop_console = true;
