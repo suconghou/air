@@ -10,7 +10,7 @@
     "uglify-js": "^3.4.8"
   },
   "engines": {
-    "node": ">=8.10"
+    "node": ">=10.0"
   },
   "bin": {
     "air": "./cli.js"
