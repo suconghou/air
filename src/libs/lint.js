@@ -31,7 +31,6 @@ const exit = code => process.exit(code);
 
 export default class lint {
 	constructor(cwd, files) {
-		console.info(cwd, files);
 		this.cwd = cwd;
 		const opts = utiljs.params(files, {
 			'-dir': 'dir',
