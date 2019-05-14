@@ -2,11 +2,11 @@
 
 function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
 
-var process = _interopDefault(require('process'));
+var path = _interopDefault(require('path'));
 var fs = _interopDefault(require('fs'));
 var util = require('util');
 var util__default = _interopDefault(util);
-var path = _interopDefault(require('path'));
+var process = _interopDefault(require('process'));
 var os = _interopDefault(require('os'));
 var http = _interopDefault(require('http'));
 var querystring = _interopDefault(require('querystring'));
@@ -200,7 +200,11 @@ var compress = {
 				const maxtime = await utilnode.getUpdateTime(files);
 				try {
 					const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
-					response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
+					response.writeHead(200, {
+						'Content-Type': 'text/css',
+						'Cache-Control': 'public,max-age=5',
+						'X-Cache': hit ? 'hit' : 'miss'
+					});
 					response.end(css);
 					resolve(true);
 				} catch (e) {
@@ -222,7 +226,11 @@ var compress = {
 						try {
 							const mtime = await utilnode.getUpdateTime(hotfiles);
 							const { css, hit } = await this.compressLessCache(mtime, k, hotfiles, options);
-							response.writeHead(200, { 'Content-Type': 'text/css', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
+							response.writeHead(200, {
+								'Content-Type': 'text/css',
+								'Cache-Control': 'public,max-age=5',
+								'X-Cache': hit ? 'hit' : 'miss'
+							});
 							response.end(css);
 							resolve(true);
 						} catch (e) {
@@ -256,7 +264,14 @@ var compress = {
 			.join('\r\n');
 		const less = require('less');
 		const autoprefix = require('less-plugin-autoprefix');
-		const option = { plugins: [new autoprefix({ browsers: ['last 5 versions', 'ie > 8', 'Firefox ESR'] })], paths, urlArgs, compress, useFileCache, env };
+		const option = {
+			plugins: [new autoprefix({ browsers: ['last 5 versions', 'ie > 8', 'Firefox ESR'] })],
+			paths,
+			urlArgs,
+			compress,
+			useFileCache,
+			env
+		};
 		this.cleanLessCache(less, lessfiles);
 		return new Promise((resolve, reject) => {
 			less.render(lessInput, option)
@@ -300,7 +315,11 @@ var compress = {
 					throw new Error('先尝试配置文件');
 				}
 				const { js, hit } = await this.compressJsCache(maxtime, key, files, options);
-				response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
+				response.writeHead(200, {
+					'Content-Type': 'application/javascript',
+					'Cache-Control': 'public,max-age=5',
+					'X-Cache': hit ? 'hit' : 'miss'
+				});
 				response.end(js);
 				resolve(true);
 			} catch (e) {
@@ -316,7 +335,11 @@ var compress = {
 						try {
 							const mtime = await utilnode.getUpdateTime(hotfiles);
 							const { js, hit } = await this.compressJsCache(mtime, k, hotfiles, options);
-							response.writeHead(200, { 'Content-Type': 'application/javascript', 'Cache-Control': 'public,max-age=5', 'X-Cache': hit ? 'hit' : 'miss' });
+							response.writeHead(200, {
+								'Content-Type': 'application/javascript',
+								'Cache-Control': 'public,max-age=5',
+								'X-Cache': hit ? 'hit' : 'miss'
+							});
 							response.end(js);
 							resolve(true);
 						} catch (e) {
@@ -364,7 +387,16 @@ var compress = {
 		} else {
 			options = {
 				mangle: true,
-				compress: { sequences: true, properties: true, dead_code: true, unused: true, booleans: true, join_vars: true, if_return: true, conditionals: true }
+				compress: {
+					sequences: true,
+					properties: true,
+					dead_code: true,
+					unused: true,
+					booleans: true,
+					join_vars: true,
+					if_return: true,
+					conditionals: true
+				}
 			};
 			if (ops.clean) {
 				options.compress.drop_console = true;
@@ -961,7 +993,14 @@ class httpserver {
 						const regRouter = route.getRegxpRouter(request.method, pathinfo);
 						if (regRouter) {
 							return regRouter
-								.handler(response, regRouter.matches, query, this.root, globalConfig.config, this.params)
+								.handler(
+									response,
+									regRouter.matches,
+									query,
+									this.root,
+									globalConfig.config,
+									this.params
+								)
 								.then(res => {
 									if (!res) {
 										this.tryfile(response, pathinfo);
@@ -1081,13 +1120,17 @@ const exit = code => process.exit(code);
 class lint {
 	constructor(cwd, files) {
 		this.cwd = cwd;
-		this.args = [...files];
-		const opts = utiljs.params(this.args, { '-dir': 'dir', '--lint': 'lintonly' });
-		const { dir, prettierrc, eslintrc, lintonly } = Object.assign({}, options, opts);
+		const opts = utiljs.params(files, {
+			'-dir': 'dir',
+			'--lint': 'lintonly',
+			'--noprettier': 'noprettier',
+			'--noeslint': 'noeslint'
+		});
+		this.opts = Object.assign({}, options, opts);
+		const { dir, prettierrc, eslintrc } = this.opts;
 		const distcwd = path.isAbsolute(dir) ? '' : this.cwd;
 		this.prettierrc = path.join(distcwd, dir, prettierrc);
 		this.eslintrc = path.join(distcwd, dir, eslintrc);
-		this.lintonly = lintonly;
 
 		if (Array.isArray(files) && files.length > 0) {
 			const index1 = files.findIndex(item => item == '-dir');
@@ -1095,13 +1138,16 @@ class lint {
 				const len = opts.dir ? 2 : 1;
 				files.splice(index1, len);
 			}
-			const index2 = files.findIndex(item => item == '--lint');
-			if (index2 >= 0) {
-				files.splice(index2, 1);
+			files = files.filter(item => {
+				return item.substr(0, 2) !== '--';
+			});
+			if (!files.length) {
+				this.doautoLint();
+				return;
 			}
 			this.files = this.parse(files);
 		} else {
-			this.lintonly = true;
+			this.opts.lintonly = true;
 			this.doautoLint();
 		}
 	}
@@ -1146,19 +1192,19 @@ class lint {
 			await Promise.all([fsAccess(this.prettierrc, stat), fsAccess(this.eslintrc, stat)]);
 			await Promise.all(
 				this.files.map(item => {
-					const { path: path$$1, type, name } = item;
+					const { path, type, name } = item;
 					if (prettyTypes.includes(type)) {
-						prefiles.push(path$$1);
+						prefiles.push(path);
 					}
 					if (esTypes.includes(type)) {
-						esfiles.push(path$$1);
+						esfiles.push(path);
 					}
-					gitfiles.push(path$$1);
-					return fsAccess(path$$1, stat);
+					gitfiles.push(path);
+					return fsAccess(path, stat);
 				})
 			);
 			this.dolint(esfiles, prefiles);
-			if (!this.lintonly) {
+			if (!this.opts.lintonly) {
 				await this.gitadd(gitfiles);
 			}
 		} catch (err) {
@@ -1171,13 +1217,17 @@ class lint {
 	}
 
 	dolint(esfiles, prefiles) {
-		const r1 = this.prettier(prefiles);
-		if (r1 && r1.status !== 0) {
-			throw new Error();
+		if (this.opts.noprettier !== true) {
+			const r1 = this.prettier(prefiles);
+			if (r1 && r1.status !== 0) {
+				throw new Error(r1);
+			}
 		}
-		const r2 = this.eslint(esfiles);
-		if (r2 && r2.status !== 0) {
-			throw new Error();
+		if (this.opts.noeslint !== true) {
+			const r2 = this.eslint(esfiles);
+			if (r2 && r2.status !== 0) {
+				throw new Error(r2);
+			}
 		}
 	}
 
@@ -1198,8 +1248,7 @@ class lint {
 		return Promise.resolve();
 	}
 	async install() {
-		const opts = utiljs.params(this.args, { '-dir': 'dir' });
-		const { dir, git, hooks, precommit, postcommit, commitmsg } = Object.assign({}, options, opts);
+		const { dir, git, hooks, precommit, postcommit, commitmsg } = Object.assign({}, options, this.opts);
 		const cwd = path.isAbsolute(dir) ? '' : this.cwd;
 
 		const prehook = path.join(cwd, dir, precommit);
@@ -1390,29 +1439,31 @@ class server {
 
 var help = `
 Usage:
-	air [command] [flag]
+    air [command] [flag]
 Commands:
-	serve		  	start air http server
-	lint			eslint js
-	compress		compress less or javascript files
-	install			install git hooks
-	template 		use art-template render html
+    serve           start air http server
+    lint            eslint js
+    compress        compress less or javascript files
+    install         install git hooks
+    template        use art-template render html
     
 Flags:
-	-v     			show air version
-	-h      		show this help information
-	-p     			set server listen port
-	-d     			set server document root
-	-dir  			set lint or install config path
-	--debug			compress with debug mode
-	--clean			compress with clean mode,remove console debugger
-	--escape		escape when use template
-	--dry  			just run as a static server
-	--art  			use art-template not ssi
-	--lint  		lint only,useful for air lint
+    -v              show air version
+    -h              show this help information
+    -p              set server listen port
+    -d              set server document root
+    -dir            set lint or install config path
+    --debug         compress with debug mode
+    --clean         compress with clean mode,remove console debugger
+    --escape        escape when use template
+    --dry           just run as a static server
+    --art           use art-template not ssi
+    --lint          lint only,useful for air lint
+    --noprettier    for air lint & air gitlint , do not run prettier task
+    --noeslint      for air lint & air gitlint , do not run eslint task
 `;
 
-const version = '0.6.29';
+const version = '0.6.30';
 
 class cli {
 	constructor(server) {
