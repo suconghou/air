@@ -1,35 +1,35 @@
 {
-  "name": "airs",
-  "version": "0.6.30",
-  "description": "serve static files in the air",
-  "main": "index.js",
-  "dependencies": {
-    "art-template": "^4.13.0",
-    "less": "3.7.1",
-    "less-plugin-autoprefix": "^2.0.0",
-    "uglify-js": "^3.4.8"
-  },
-  "engines": {
-    "node": ">=10.0"
-  },
-  "bin": {
-    "air": "./cli.js"
-  },
-  "scripts": {
-    "start": "node app.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/suconghou/air.git"
-  },
-  "keywords": [
-    "fed",
-    "development"
-  ],
-  "author": "suconghou",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/suconghou/air/issues"
-  },
-  "homepage": "https://github.com/suconghou/air#readme"
+    "name": "airs",
+    "version": "0.6.32",
+    "description": "serve static files in the air",
+    "main": "index.js",
+    "dependencies": {
+        "art-template": "^4.13.0",
+        "less": "3.7.1",
+        "less-plugin-autoprefix": "^2.0.0",
+        "uglify-js": "^3.4.8"
+    },
+    "engines": {
+        "node": ">=10.0"
+    },
+    "bin": {
+        "air": "./cli.js"
+    },
+    "scripts": {
+        "start": "node app.js"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/suconghou/air.git"
+    },
+    "keywords": [
+        "fed",
+        "development"
+    ],
+    "author": "suconghou",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/suconghou/air/issues"
+    },
+    "homepage": "https://github.com/suconghou/air#readme"
 }
