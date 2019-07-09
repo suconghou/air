@@ -70,7 +70,7 @@ export default class lint {
             const res = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACM']);
             const arrs = res.stdout
                 .toString()
-                .split(os.EOL)
+                .split('\n')
                 .filter(v => v);
             if (arrs.length) {
                 this.files = this.parse(arrs);
