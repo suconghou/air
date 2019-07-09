@@ -24,4 +24,4 @@ Flags:
     --noeslint      for air lint & air gitlint , do not run eslint task
 `;
 
-export const version = '0.6.30';
+export const version = '0.6.31';
