@@ -37,45 +37,36 @@ var utilnode = {
 		});
 		return arr.reverse();
 	},
-	getConfig(cwd, name) {
+	async getConfig(cwd, name) {
 		if (!/static$/.test(cwd)) {
 			cwd = path.join(cwd, 'static');
 		}
 		const paths = this.resolveLookupPaths(cwd, name);
-		return new Promise(async (resolve, reject) => {
-			let f,
-				json = {};
-			try {
-				f = await this.tryFiles(paths);
-			} catch (e) {
-				// no config found
-			}
-			if (f) {
-				try {
-					json = require(f);
-					json.configfile = f;
-					json.path = path.dirname(f);
-				} catch (e) {
-					reject(e);
-				}
-			}
-			resolve(json);
-		});
+		let f,
+			json = {};
+		try {
+			f = await this.tryFiles(paths);
+		} catch (e) {
+			// no config found
+		}
+		if (f) {
+			json = require(f);
+			json.configfile = f;
+			json.path = path.dirname(f);
+		}
+		return json;
 	},
-	tryFiles(paths) {
-		return new Promise(async (resolve, reject) => {
-			for (let i = 0, j = paths.length; i < j; i++) {
-				const file = paths[i];
-				try {
-					await fsAccess(file, fs.constants.R_OK);
-					resolve(file);
-					return;
-				} catch (e) {
-					// not exist try next
-				}
+	async tryFiles(paths) {
+		for (let i = 0, j = paths.length; i < j; i++) {
+			const file = paths[i];
+			try {
+				await fsAccess(file, fs.constants.R_OK);
+				return file;
+			} catch (e) {
+				// not exist try next
 			}
-			reject('not exist');
-		});
+		}
+		throw new Error('not exist');
 	},
 	async getUpdateTime(files) {
 		const mtimes = [];
@@ -181,7 +172,7 @@ var utiljs = {
 };
 
 var compress = {
-	compressLessReq(response, matches, query, cwd, config) {
+	async compressLessReq(response, matches, query, cwd, config) {
 		const key = matches[0].replace('.css', '');
 		const dirs = key.split('/');
 		const segment = dirs.pop();
@@ -195,53 +186,43 @@ var compress = {
 		);
 		const options = { urlArgs: query.ver ? `ver=${query.ver}` : null, env: 'development', useFileCache: false };
 
-		return new Promise(async (resolve, reject) => {
-			try {
-				const maxtime = await utilnode.getUpdateTime(files);
-				try {
-					const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
+		try {
+			const maxtime = await utilnode.getUpdateTime(files);
+			const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
+			response.writeHead(200, {
+				'Content-Type': 'text/css',
+				'Cache-Control': 'public,max-age=5',
+				'X-Cache': hit ? 'hit' : 'miss'
+			});
+			response.end(css);
+			return true;
+		} catch (e) {
+			if (e.syscall !== 'stat') {
+				throw e;
+			}
+			const k = matches[0].replace(/\/static\//, '');
+			if (!config.static) {
+				return false;
+			}
+			const { css } = config.static;
+			if (css) {
+				const entry = Object.keys(css);
+				if (entry.includes(k)) {
+					const hotfiles = css[k].map(item => path.join(config.path, item));
+					const mtime = await utilnode.getUpdateTime(hotfiles);
+					const { css, hit } = await this.compressLessCache(mtime, k, hotfiles, options);
 					response.writeHead(200, {
 						'Content-Type': 'text/css',
 						'Cache-Control': 'public,max-age=5',
 						'X-Cache': hit ? 'hit' : 'miss'
 					});
 					response.end(css);
-					resolve(true);
-				} catch (e) {
-					reject(e);
-				}
-			} catch (e) {
-				if (e.syscall !== 'stat') {
-					return reject(e);
-				}
-				const k = matches[0].replace(/\/static\//, '');
-				if (!config.static) {
-					return resolve(false);
-				}
-				const { css } = config.static;
-				if (css) {
-					const entry = Object.keys(css);
-					if (entry.includes(k)) {
-						const hotfiles = css[k].map(item => path.join(config.path, item));
-						try {
-							const mtime = await utilnode.getUpdateTime(hotfiles);
-							const { css, hit } = await this.compressLessCache(mtime, k, hotfiles, options);
-							response.writeHead(200, {
-								'Content-Type': 'text/css',
-								'Cache-Control': 'public,max-age=5',
-								'X-Cache': hit ? 'hit' : 'miss'
-							});
-							response.end(css);
-							resolve(true);
-						} catch (e) {
-							reject(e);
-						}
-					} else {
-						resolve(false);
-					}
+					return true;
+				} else {
+					return false;
 				}
 			}
-		});
+		}
 	},
 
 	async compressLessCache(mtime, key, files, options) {
@@ -293,7 +274,7 @@ var compress = {
 		});
 	},
 
-	compressJsReg(response, matches, query, cwd, config) {
+	async compressJsReg(response, matches, query, cwd, config) {
 		const key = matches[0].replace('.js', '');
 		const dirs = key.split('/');
 		const segment = dirs.pop();
@@ -307,50 +288,44 @@ var compress = {
 		);
 		const options = { debug: true };
 		// 优先级 连字符>配置文件>静态文件
-		return new Promise(async (resolve, reject) => {
-			try {
-				const maxtime = await utilnode.getUpdateTime(files);
-				if (files.length === 1) {
-					// 请求的不包含连字符,且文件真实存在,先不加载,先尝试配置文件
-					throw new Error('先尝试配置文件');
-				}
-				const { js, hit } = await this.compressJsCache(maxtime, key, files, options);
-				response.writeHead(200, {
-					'Content-Type': 'application/javascript',
-					'Cache-Control': 'public,max-age=5',
-					'X-Cache': hit ? 'hit' : 'miss'
-				});
-				response.end(js);
-				resolve(true);
-			} catch (e) {
-				const k = matches[0].replace(/\/static\//, '');
-				if (!config.static) {
-					return resolve(false);
-				}
-				const { js } = config.static;
-				if (js) {
-					const entry = Object.keys(js);
-					if (entry.includes(k)) {
-						const hotfiles = js[k].map(item => path.join(config.path, item));
-						try {
-							const mtime = await utilnode.getUpdateTime(hotfiles);
-							const { js, hit } = await this.compressJsCache(mtime, k, hotfiles, options);
-							response.writeHead(200, {
-								'Content-Type': 'application/javascript',
-								'Cache-Control': 'public,max-age=5',
-								'X-Cache': hit ? 'hit' : 'miss'
-							});
-							response.end(js);
-							resolve(true);
-						} catch (e) {
-							reject(e);
-						}
-					} else {
-						resolve(false);
-					}
+		try {
+			const maxtime = await utilnode.getUpdateTime(files);
+			if (files.length === 1) {
+				// 请求的不包含连字符,且文件真实存在,先不加载,先尝试配置文件
+				throw new Error('先尝试配置文件');
+			}
+			const { js, hit } = await this.compressJsCache(maxtime, key, files, options);
+			response.writeHead(200, {
+				'Content-Type': 'application/javascript',
+				'Cache-Control': 'public,max-age=5',
+				'X-Cache': hit ? 'hit' : 'miss'
+			});
+			response.end(js);
+			return true;
+		} catch (e) {
+			const k = matches[0].replace(/\/static\//, '');
+			if (!config.static) {
+				return false;
+			}
+			const { js } = config.static;
+			if (js) {
+				const entry = Object.keys(js);
+				if (entry.includes(k)) {
+					const hotfiles = js[k].map(item => path.join(config.path, item));
+					const mtime = await utilnode.getUpdateTime(hotfiles);
+					const { js, hit } = await this.compressJsCache(mtime, k, hotfiles, options);
+					response.writeHead(200, {
+						'Content-Type': 'application/javascript',
+						'Cache-Control': 'public,max-age=5',
+						'X-Cache': hit ? 'hit' : 'miss'
+					});
+					response.end(js);
+					return true;
+				} else {
+					return false;
 				}
 			}
-		});
+		}
 	},
 
 	async compressJsCache(mtime, key, files, options) {
@@ -492,27 +467,21 @@ var ssi = {
 		const file = matches[0];
 		return this.loadHtml(response, file, query, cwd, config, params);
 	},
-	loadHtml(response, file, query, cwd, config, params) {
+	async loadHtml(response, file, query, cwd, config, params) {
 		if (params.art) {
 			return this.artHtml(response, file, query, cwd, config, params);
 		}
-		return new Promise(async (resolve, reject) => {
-			try {
-				const main = path.join(cwd, file);
-				const res = await this.parseHtml(main, query, cwd);
-				if (res) {
-					response.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'public,max-age=5' });
-					response.end(res);
-					resolve(true);
-				} else {
-					resolve(false);
-				}
-			} catch (e) {
-				reject(e);
-			}
-		});
+		const main = path.join(cwd, file);
+		const res = await this.parseHtml(main, query, cwd);
+		if (res) {
+			response.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'public,max-age=5' });
+			response.end(res);
+			return true;
+		} else {
+			return false;
+		}
 	},
-	artHtml(response, file, query, cwd, config, params) {
+	async artHtml(response, file, query, cwd, config, params) {
 		if (file.charAt(0) == '/') {
 			file = file.substr(1);
 		}
@@ -529,29 +498,22 @@ var ssi = {
 		};
 		Object.assign(template.defaults, options);
 		const dstfile = path.join(cwd, file);
-		return new Promise((resolve, reject) => {
-			try {
-				let data = query;
-				if (config.template && config.template[file]) {
-					const v = config.template[file];
-					let r = {};
-					if (utiljs.isObject(v)) {
-						r = v;
-					} else {
-						const datafile = path.join(cwd, config.template[file]);
-						r = require(datafile);
-					}
-					data = Object.assign({}, data, r);
-				}
-				const html = template(dstfile, data);
-				response.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'public,max-age=5' });
-				response.end(html);
-				resolve(true);
-			} catch (e) {
-				console.error(e);
-				reject(e);
+		let data = query;
+		if (config.template && config.template[file]) {
+			const v = config.template[file];
+			let r = {};
+			if (utiljs.isObject(v)) {
+				r = v;
+			} else {
+				const datafile = path.join(cwd, config.template[file]);
+				r = require(datafile);
 			}
-		});
+			data = Object.assign({}, data, r);
+		}
+		const html = template(dstfile, data);
+		response.writeHead(200, { 'Content-Type': 'text/html', 'Cache-Control': 'public,max-age=5' });
+		response.end(html);
+		return true;
 	},
 	async parseHtml(file, query, cwd) {
 		let html;
@@ -564,10 +526,25 @@ var ssi = {
 
 		let res,
 			i = 0,
-			filesMap = {},
-			matches = {};
+			filesMap = {};
+
+		const fillContents = async () => {
+			let res;
+			let fileList = Object.keys(filesMap).filter(item => {
+				return !filesMap[item];
+			});
+			res = await Promise.all(
+				fileList.map(item => {
+					return readFile(path.join(cwd, item));
+				})
+			);
+			res.forEach((item, i) => {
+				filesMap[fileList[i]] = item.toString();
+			});
+		};
 
 		while (i < 6) {
+			let matches = {};
 			while ((res = includefile.exec(html))) {
 				const [holder, file] = res;
 				matches[holder] = file;
@@ -575,43 +552,21 @@ var ssi = {
 					filesMap[file] = '';
 				}
 			}
-			if (i == 0 && Object.keys(filesMap).length == 0) {
-				return false;
-			}
-			i++;
 			if (Object.keys(matches).length === 0) {
-				// 已找到最后
+				// // 主html文件内,没有include语法,模板引擎不用处理了,直接返回
 				return html;
 			}
+			i++;
 			if (i > 5) {
 				throw new Error('include file too deep');
 			}
-			await this.fillContents(query, cwd, filesMap);
+			await fillContents();
 			Object.keys(matches).forEach(item => {
 				const file = matches[item];
 				const content = filesMap[file];
 				html = html.replace(item, content);
 			});
-			matches = {};
 		}
-	},
-	async fillContents(query, cwd, filesMap) {
-		let res;
-		let fileList = Object.keys(filesMap).filter(item => {
-			return !filesMap[item];
-		});
-		try {
-			res = await Promise.all(
-				fileList.map(item => {
-					return readFile(path.join(cwd, item));
-				})
-			);
-		} catch (e) {
-			throw e;
-		}
-		res.forEach((item, i) => {
-			filesMap[fileList[i]] = item.toString();
-		});
 	}
 };
 
@@ -1101,17 +1056,17 @@ const spawnSync = child_process.spawnSync;
 const prettyTypes = ['js', 'vue', 'jsx', 'json', 'css', 'less', 'ts', 'md'];
 const esTypes = ['js', 'jsx', 'vue'];
 
-const defaultFormat = `--no-config --tab-width 4 --use-tabs true --print-width 120 --single-quote true --write`;
+const defaultFormat = '--no-config --tab-width 4 --use-tabs true --print-width 120 --single-quote true --write';
 
 const options = {
-    dir: 'config',
-    git: '.git',
-    hooks: 'hooks',
-    precommit: 'pre-commit',
-    postcommit: 'post-commit',
-    commitmsg: 'commit-msg',
-    prettierrc: '.prettierrc',
-    eslintrc: '.eslintrc.js'
+	dir: 'config',
+	git: '.git',
+	hooks: 'hooks',
+	precommit: 'pre-commit',
+	postcommit: 'post-commit',
+	commitmsg: 'commit-msg',
+	prettierrc: '.prettierrc',
+	eslintrc: '.eslintrc.js'
 };
 const stat = fs.constants.R_OK | fs.constants.W_OK;
 
@@ -1120,170 +1075,189 @@ const spawnOps = { stdio: 'inherit', shell: true };
 const exit = code => process.exit(code);
 
 class lint {
-    constructor(cwd, files) {
-        this.cwd = cwd;
-        const opts = utiljs.params(files, {
-            '-dir': 'dir',
-            '--lint': 'lintonly',
-            '--noprettier': 'noprettier',
-            '--noeslint': 'noeslint'
-        });
-        this.opts = Object.assign({}, options, opts);
-        const { dir, prettierrc, eslintrc } = this.opts;
-        const distcwd = path.isAbsolute(dir) ? '' : this.cwd;
-        this.prettierrc = path.join(distcwd, dir, prettierrc);
-        this.eslintrc = path.join(distcwd, dir, eslintrc);
+	constructor(cwd, files) {
+		this.cwd = cwd;
+		const opts = utiljs.params(files, {
+			'-dir': 'dir',
+			'--lint': 'lintonly',
+			'--noprettier': 'noprettier',
+			'--noeslint': 'noeslint'
+		});
+		this.opts = Object.assign({}, options, opts);
+		const { dir, prettierrc, eslintrc } = this.opts;
+		const distcwd = path.isAbsolute(dir) ? '' : this.cwd;
+		this.prettierrc = path.join(distcwd, dir, prettierrc);
+		this.eslintrc = path.join(distcwd, dir, eslintrc);
 
-        if (Array.isArray(files) && files.length > 0) {
-            const index1 = files.findIndex(item => item == '-dir');
-            if (index1 >= 0) {
-                const len = opts.dir ? 2 : 1;
-                files.splice(index1, len);
-            }
-            files = files.filter(item => {
-                return item.substr(0, 2) !== '--';
-            });
-            if (!files.length) {
-                this.doautoLint();
-                return;
-            }
-            this.files = this.parse(files);
-        } else {
-            this.opts.lintonly = true;
-            this.doautoLint();
-        }
-    }
-    async doautoLint() {
-        try {
-            const res = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACM']);
-            const arrs = res.stdout
-                .toString()
-                .split('\n')
-                .filter(v => v);
-            if (arrs.length) {
-                this.files = this.parse(arrs);
-            }
-        } catch (err) {
-            console.error(err.toString());
-            exit(1);
-        }
-    }
-    parse(files) {
-        return files.map(item => {
-            const name = item.trim();
-            const type = item.split('.').pop();
-            let p = name;
-            if (!path.isAbsolute(name)) {
-                p = path.join(this.cwd, name);
-            }
-            return { name, path: p, type };
-        });
-    }
-    async lint() {
-        if (!(this.prettierrc && this.eslintrc)) {
-            return;
-        }
-        if (!this.files || !this.files.length) {
-            return;
-        }
+		if (Array.isArray(files) && files.length > 0) {
+			const index1 = files.findIndex(item => item == '-dir');
+			if (index1 >= 0) {
+				const len = opts.dir ? 2 : 1;
+				files.splice(index1, len);
+			}
+			files = files.filter(item => {
+				return item.substr(0, 2) !== '--';
+			});
+			if (!files.length) {
+				this.doautoLint();
+				return;
+			}
+			this.files = this.parse(files);
+		} else {
+			this.opts.lintonly = true;
+			this.doautoLint();
+		}
+	}
+	async doautoLint() {
+		try {
+			const res = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACM']);
+			const arrs = res.stdout
+				.toString()
+				.split('\n')
+				.filter(v => v);
+			if (arrs.length) {
+				this.files = this.parse(arrs);
+			}
+		} catch (err) {
+			console.error(err.toString());
+			exit(1);
+		}
+	}
+	parse(files) {
+		return files.map(item => {
+			const name = item.trim();
+			const type = item.split('.').pop();
+			let p = name;
+			if (!path.isAbsolute(name)) {
+				p = path.join(this.cwd, name);
+			}
+			return { name, path: p, type };
+		});
+	}
+	async lint() {
+		if (!(this.prettierrc && this.eslintrc)) {
+			return;
+		}
+		if (!this.files || !this.files.length) {
+			return;
+		}
 
-        try {
-            let esfiles = [],
-                prefiles = [],
-                gitfiles = [];
+		try {
+			let esfiles = [],
+				prefiles = [],
+				gitfiles = [];
 
-            try {
-                await fsAccess(this.prettierrc, stat);
-            } catch{
-                // 不使用配置文件,使用內建配置
-                this.prettierrc = '';
-            }
+			await this.checkfiles();
 
-            await fsAccess(this.eslintrc, stat);
-            await Promise.all(
-                this.files.map(item => {
-                    const { path, type, name } = item;
-                    if (prettyTypes.includes(type)) {
-                        prefiles.push(path);
-                    }
-                    if (esTypes.includes(type)) {
-                        esfiles.push(path);
-                    }
-                    gitfiles.push(path);
-                    return fsAccess(path, stat);
-                })
-            );
-            this.dolint(esfiles, prefiles);
-            if (!this.opts.lintonly) {
-                await this.gitadd(gitfiles);
-            }
-        } catch (err) {
-            const str = err.toString();
-            if (str.length > 5) {
-                console.error(str);
-            }
-            exit(1);
-        }
-    }
+			try {
+				await fsAccess(this.prettierrc, stat);
+			} catch (e) {
+				// 不使用配置文件,使用內建配置
+				this.prettierrc = '';
+			}
+			await fsAccess(this.eslintrc, stat);
+			await Promise.all(
+				this.files.map(item => {
+					const { path, type, name } = item;
+					if (prettyTypes.includes(type)) {
+						prefiles.push(path);
+					}
+					if (esTypes.includes(type)) {
+						esfiles.push(path);
+					}
+					gitfiles.push(path);
+					return fsAccess(path, stat);
+				})
+			);
+			this.dolint(esfiles, prefiles);
+			if (!this.opts.lintonly) {
+				await this.gitadd(gitfiles);
+			}
+		} catch (err) {
+			const str = err.message || err.toString();
+			if (str.length > 5) {
+				console.error(str);
+			}
+			exit(1);
+		}
+	}
 
-    dolint(esfiles, prefiles) {
-        if (this.opts.noprettier !== true) {
-            const r1 = this.prettier(prefiles);
-            if (r1 && r1.status !== 0) {
-                throw new Error(r1);
-            }
-        }
-        if (this.opts.noeslint !== true) {
-            const r2 = this.eslint(esfiles);
-            if (r2 && r2.status !== 0) {
-                throw new Error(r2);
-            }
-        }
-    }
+	dolint(esfiles, prefiles) {
+		if (this.opts.noprettier !== true) {
+			const r1 = this.prettier(prefiles);
+			if (r1 && r1.status !== 0) {
+				throw new Error(r1);
+			}
+		}
+		if (this.opts.noeslint !== true) {
+			const r2 = this.eslint(esfiles);
+			if (r2 && r2.status !== 0) {
+				throw new Error(r2);
+			}
+		}
+	}
 
-    eslint(f) {
-        if (f && f.length) {
-            return spawnSync('eslint', ['-c', this.eslintrc, '--fix', f.join(' ')], spawnOps);
-        }
-    }
-    prettier(f) {
-        if (f && f.length) {
-            const config = this.prettierrc ? ['--config', this.prettierrc, '--write', f.join(' ')] : [defaultFormat, f.join(' ')];
-            return spawnSync('prettier', config, spawnOps);
-        }
-    }
-    gitadd(f) {
-        if (f && f.length) {
-            return spawn('git', ['add', '-u', f.join(' ')], spawnOps);
-        }
-        return Promise.resolve();
-    }
-    async install() {
-        const { dir, git, hooks, precommit, postcommit, commitmsg } = Object.assign({}, options, this.opts);
-        const cwd = path.isAbsolute(dir) ? '' : this.cwd;
+	eslint(f) {
+		if (f && f.length) {
+			return spawnSync('eslint', ['-c', this.eslintrc, '--fix', f.join(' ')], spawnOps);
+		}
+	}
+	prettier(f) {
+		if (f && f.length) {
+			const config = this.prettierrc
+				? ['--config', this.prettierrc, '--write', f.join(' ')]
+				: [defaultFormat, f.join(' ')];
+			return spawnSync('prettier', config, spawnOps);
+		}
+	}
+	gitadd(f) {
+		if (f && f.length) {
+			return spawn('git', ['add', '-u', f.join(' ')], spawnOps);
+		}
+		return Promise.resolve();
+	}
+	async install() {
+		const { dir, git, hooks, precommit, postcommit, commitmsg } = Object.assign({}, options, this.opts);
+		const cwd = path.isAbsolute(dir) ? '' : this.cwd;
 
-        const prehook = path.join(cwd, dir, precommit);
-        const posthook = path.join(cwd, dir, postcommit);
-        const msghook = path.join(cwd, dir, commitmsg);
+		const prehook = path.join(cwd, dir, precommit);
+		const posthook = path.join(cwd, dir, postcommit);
+		const msghook = path.join(cwd, dir, commitmsg);
 
-        const predst = path.join(this.cwd, git, hooks, precommit);
-        const postdst = path.join(this.cwd, git, hooks, postcommit);
-        const msgdst = path.join(this.cwd, git, hooks, commitmsg);
+		const predst = path.join(this.cwd, git, hooks, precommit);
+		const postdst = path.join(this.cwd, git, hooks, postcommit);
+		const msgdst = path.join(this.cwd, git, hooks, commitmsg);
 
-        const mode = 0o755;
-        try {
-            await Promise.all([fsAccess(prehook, stat), fsAccess(posthook, stat), fsAccess(msghook, stat)]);
-            await Promise.all([
-                fsCopyFile(prehook, predst),
-                fsCopyFile(posthook, postdst),
-                fsCopyFile(msghook, msgdst)
-            ]);
-            await Promise.all([fsChmod(predst, mode), fsChmod(postdst, mode), fsChmod(msgdst, mode)]);
-        } catch (err) {
-            console.error(err.toString());
-            exit(1);
-        }
-    }
+		const mode = 0o755;
+		try {
+			await Promise.all([fsAccess(prehook, stat), fsAccess(posthook, stat), fsAccess(msghook, stat)]);
+			await Promise.all([
+				fsCopyFile(prehook, predst),
+				fsCopyFile(posthook, postdst),
+				fsCopyFile(msghook, msgdst)
+			]);
+			await Promise.all([fsChmod(predst, mode), fsChmod(postdst, mode), fsChmod(msgdst, mode)]);
+		} catch (err) {
+			console.error(err.toString());
+			exit(1);
+		}
+	}
+
+	async checkfiles() {
+		const maxsize = 1048576;
+		// 检查文件大小,超过1MB禁止提交
+		const stats = await Promise.all(
+			this.files.map(item => {
+				return fsStat(item.path);
+			})
+		);
+		return stats.every((item, index) => {
+			if (item.size > maxsize) {
+				throw new Error(`${this.files[index].path} too large,${item.size} exceed ${maxsize}`);
+			}
+			return true;
+		});
+	}
 }
 
 var template = {
@@ -1474,7 +1448,7 @@ Flags:
     --noeslint      for air lint & air gitlint , do not run eslint task
 `;
 
-const version = '0.6.32';
+const version = '0.6.33';
 
 class cli {
 	constructor(server) {
