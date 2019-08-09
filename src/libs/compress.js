@@ -6,7 +6,7 @@ import tool from './tool.js';
 import utiljs from './utiljs.js';
 
 export default {
-	compressLessReq(response, matches, query, cwd, config) {
+	async compressLessReq(response, matches, query, cwd, config) {
 		const key = matches[0].replace('.css', '');
 		const dirs = key.split('/');
 		const segment = dirs.pop();
@@ -20,53 +20,43 @@ export default {
 		);
 		const options = { urlArgs: query.ver ? `ver=${query.ver}` : null, env: 'development', useFileCache: false };
 
-		return new Promise(async (resolve, reject) => {
-			try {
-				const maxtime = await util.getUpdateTime(files);
-				try {
-					const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
+		try {
+			const maxtime = await util.getUpdateTime(files);
+			const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
+			response.writeHead(200, {
+				'Content-Type': 'text/css',
+				'Cache-Control': 'public,max-age=5',
+				'X-Cache': hit ? 'hit' : 'miss'
+			});
+			response.end(css);
+			return true;
+		} catch (e) {
+			if (e.syscall !== 'stat') {
+				throw e;
+			}
+			const k = matches[0].replace(/\/static\//, '');
+			if (!config.static) {
+				return false;
+			}
+			const { css } = config.static;
+			if (css) {
+				const entry = Object.keys(css);
+				if (entry.includes(k)) {
+					const hotfiles = css[k].map(item => path.join(config.path, item));
+					const mtime = await util.getUpdateTime(hotfiles);
+					const { css, hit } = await this.compressLessCache(mtime, k, hotfiles, options);
 					response.writeHead(200, {
 						'Content-Type': 'text/css',
 						'Cache-Control': 'public,max-age=5',
 						'X-Cache': hit ? 'hit' : 'miss'
 					});
 					response.end(css);
-					resolve(true);
-				} catch (e) {
-					reject(e);
-				}
-			} catch (e) {
-				if (e.syscall !== 'stat') {
-					return reject(e);
-				}
-				const k = matches[0].replace(/\/static\//, '');
-				if (!config.static) {
-					return resolve(false);
-				}
-				const { css } = config.static;
-				if (css) {
-					const entry = Object.keys(css);
-					if (entry.includes(k)) {
-						const hotfiles = css[k].map(item => path.join(config.path, item));
-						try {
-							const mtime = await util.getUpdateTime(hotfiles);
-							const { css, hit } = await this.compressLessCache(mtime, k, hotfiles, options);
-							response.writeHead(200, {
-								'Content-Type': 'text/css',
-								'Cache-Control': 'public,max-age=5',
-								'X-Cache': hit ? 'hit' : 'miss'
-							});
-							response.end(css);
-							resolve(true);
-						} catch (e) {
-							reject(e);
-						}
-					} else {
-						resolve(false);
-					}
+					return true;
+				} else {
+					return false;
 				}
 			}
-		});
+		}
 	},
 
 	async compressLessCache(mtime, key, files, options) {
@@ -118,7 +108,7 @@ export default {
 		});
 	},
 
-	compressJsReg(response, matches, query, cwd, config) {
+	async compressJsReg(response, matches, query, cwd, config) {
 		const key = matches[0].replace('.js', '');
 		const dirs = key.split('/');
 		const segment = dirs.pop();
@@ -132,50 +122,44 @@ export default {
 		);
 		const options = { debug: true };
 		// 优先级 连字符>配置文件>静态文件
-		return new Promise(async (resolve, reject) => {
-			try {
-				const maxtime = await util.getUpdateTime(files);
-				if (files.length === 1) {
-					// 请求的不包含连字符,且文件真实存在,先不加载,先尝试配置文件
-					throw new Error('先尝试配置文件');
-				}
-				const { js, hit } = await this.compressJsCache(maxtime, key, files, options);
-				response.writeHead(200, {
-					'Content-Type': 'application/javascript',
-					'Cache-Control': 'public,max-age=5',
-					'X-Cache': hit ? 'hit' : 'miss'
-				});
-				response.end(js);
-				resolve(true);
-			} catch (e) {
-				const k = matches[0].replace(/\/static\//, '');
-				if (!config.static) {
-					return resolve(false);
-				}
-				const { js } = config.static;
-				if (js) {
-					const entry = Object.keys(js);
-					if (entry.includes(k)) {
-						const hotfiles = js[k].map(item => path.join(config.path, item));
-						try {
-							const mtime = await util.getUpdateTime(hotfiles);
-							const { js, hit } = await this.compressJsCache(mtime, k, hotfiles, options);
-							response.writeHead(200, {
-								'Content-Type': 'application/javascript',
-								'Cache-Control': 'public,max-age=5',
-								'X-Cache': hit ? 'hit' : 'miss'
-							});
-							response.end(js);
-							resolve(true);
-						} catch (e) {
-							reject(e);
-						}
-					} else {
-						resolve(false);
-					}
+		try {
+			const maxtime = await util.getUpdateTime(files);
+			if (files.length === 1) {
+				// 请求的不包含连字符,且文件真实存在,先不加载,先尝试配置文件
+				throw new Error('先尝试配置文件');
+			}
+			const { js, hit } = await this.compressJsCache(maxtime, key, files, options);
+			response.writeHead(200, {
+				'Content-Type': 'application/javascript',
+				'Cache-Control': 'public,max-age=5',
+				'X-Cache': hit ? 'hit' : 'miss'
+			});
+			response.end(js);
+			return true;
+		} catch (e) {
+			const k = matches[0].replace(/\/static\//, '');
+			if (!config.static) {
+				return false;
+			}
+			const { js } = config.static;
+			if (js) {
+				const entry = Object.keys(js);
+				if (entry.includes(k)) {
+					const hotfiles = js[k].map(item => path.join(config.path, item));
+					const mtime = await util.getUpdateTime(hotfiles);
+					const { js, hit } = await this.compressJsCache(mtime, k, hotfiles, options);
+					response.writeHead(200, {
+						'Content-Type': 'application/javascript',
+						'Cache-Control': 'public,max-age=5',
+						'X-Cache': hit ? 'hit' : 'miss'
+					});
+					response.end(js);
+					return true;
+				} else {
+					return false;
 				}
 			}
-		});
+		}
 	},
 
 	async compressJsCache(mtime, key, files, options) {
