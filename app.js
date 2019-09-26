@@ -210,13 +210,13 @@ var compress = {
 				if (entry.includes(k)) {
 					const hotfiles = css[k].map(item => path.join(config.path, item));
 					const mtime = await utilnode.getUpdateTime(hotfiles);
-					const { css, hit } = await this.compressLessCache(mtime, k, hotfiles, options);
+					const cssres = await this.compressLessCache(mtime, k, hotfiles, options);
 					response.writeHead(200, {
 						'Content-Type': 'text/css',
 						'Cache-Control': 'public,max-age=5',
-						'X-Cache': hit ? 'hit' : 'miss'
+						'X-Cache': cssres.hit ? 'hit' : 'miss'
 					});
-					response.end(css);
+					response.end(cssres.css);
 					return true;
 				} else {
 					return false;
@@ -313,13 +313,13 @@ var compress = {
 				if (entry.includes(k)) {
 					const hotfiles = js[k].map(item => path.join(config.path, item));
 					const mtime = await utilnode.getUpdateTime(hotfiles);
-					const { js, hit } = await this.compressJsCache(mtime, k, hotfiles, options);
+					const jsres = await this.compressJsCache(mtime, k, hotfiles, options);
 					response.writeHead(200, {
 						'Content-Type': 'application/javascript',
 						'Cache-Control': 'public,max-age=5',
-						'X-Cache': hit ? 'hit' : 'miss'
+						'X-Cache': jsres.hit ? 'hit' : 'miss'
 					});
-					response.end(js);
+					response.end(jsres.js);
 					return true;
 				} else {
 					return false;
@@ -1448,7 +1448,7 @@ Flags:
     --noeslint      for air lint & air gitlint , do not run eslint task
 `;
 
-const version = '0.6.33';
+const version = '0.6.60';
 
 class cli {
 	constructor(server) {
