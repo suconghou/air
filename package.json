@@ -1,22 +1,21 @@
 {
     "name": "airs",
-    "version": "0.6.60",
+    "version": "0.7.0",
     "description": "serve static files in the air",
     "main": "index.js",
     "dependencies": {
-        "art-template": "^4.13.0",
-        "less": "3.7.1",
+        "art-template": "^4.13.2",
+        "core-js": "^3.6.5",
+        "less": "^3.11.2",
         "less-plugin-autoprefix": "^2.0.0",
-        "uglify-js": "^3.4.8"
+        "prettier-eslint": "^10.1.1",
+        "terser": "^4.7.0"
     },
     "engines": {
-        "node": ">=10.0"
+        "node": ">=12.0"
     },
     "bin": {
-        "air": "./cli.js"
-    },
-    "scripts": {
-        "start": "node app.js"
+        "air": "./air"
     },
     "repository": {
         "type": "git",
