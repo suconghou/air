@@ -34,12 +34,12 @@ export interface cliArgs {
 	port: number;
 	root: string;
 	dir: string;
+	output: string;
+	cwd: string;
 	clean: boolean;
 	escape: boolean;
 	art: boolean;
 	dry: boolean;
 	lintonly: boolean;
-	noprettier: boolean;
-	noeslint: boolean;
 	debug: boolean;
 }

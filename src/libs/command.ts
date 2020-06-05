@@ -1,7 +1,9 @@
 import lint from './lint';
 import compress from './compress';
+import template from './template';
 import { cliArgs, staticOpts } from '../types';
-
+import { templatetips } from '../config';
+import { fsWriteFile } from './util';
 export default class {
 	static async lint(args: Array<string>, cwd: string, opts: cliArgs, staticCfg: staticOpts) {
 		await new lint(cwd, args, opts).lint();
@@ -48,9 +50,28 @@ export default class {
 	 * @param data
 	 * @param options
 	 */
-	static template(filename: string, data: object, options: object, staticCfg: staticOpts) {
-		const template = require('art-template');
-		Object.assign(template.defaults, options);
-		return template(filename, data);
+	static async template(args: Array<string>, cwd: string, opts: cliArgs, staticCfg: staticOpts) {
+		const file = args.filter(item => item.charAt(0) !== '-')[0];
+		if (!file) {
+			throw new Error(templatetips);
+		}
+		const query: any = { minimize: true, escape: false };
+		if (opts.debug) {
+			query.minimize = false;
+		}
+		if (opts.escape) {
+			query.escape = true;
+		}
+		const tpl = new template(staticCfg, cwd, file, query);
+		let res: string;
+		if (opts.art) {
+			res = await tpl.art();
+		} else {
+			res = await tpl.ssi();
+		}
+		if (opts.output) {
+			return await fsWriteFile(opts.output, res);
+		}
+		process.stdout.write(res);
 	}
 }

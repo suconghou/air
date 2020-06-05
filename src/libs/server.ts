@@ -70,7 +70,7 @@ export default class server {
 		if (!f) {
 			return;
 		}
-		console.info('load config file ', f);
+		console.info('load config file ' + f);
 		fs.watchFile(f, async () => {
 			try {
 				delete require.cache[f];
