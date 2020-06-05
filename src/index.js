@@ -1,5 +1,3 @@
-import server from './libs/server.js';
-import cli from './libs/cli.js';
-import process from 'process';
-
-new cli(new server(process.cwd())).run(process.argv);
+import * as process from 'process';
+import cli from './libs/cli';
+new cli(process.cwd()).run(process.argv);

@@ -10,14 +10,17 @@ export default {
 	},
 	getParams(args) {
 		const kMap = {
+			'-v': 'version',
 			'-p': 'port',
 			'-d': 'root',
 			'-o': 'output',
+			'-dir': 'dir',
 			'--escape': 'escape',
 			'--debug': 'debug',
 			'--clean': 'clean',
 			'--dry': 'dry',
-			'--art': 'art'
+			'--art': 'art',
+			'--lint': 'lintonly',
 		};
 		return this.params(args, kMap);
 	},
@@ -25,7 +28,7 @@ export default {
 		const ret = {};
 		const keys = Object.keys(kMap);
 		let key;
-		args.forEach(item => {
+		args.forEach((item) => {
 			if (keys.includes(item)) {
 				if (item.substr(0, 2) == '--') {
 					ret[kMap[item]] = true;
@@ -40,5 +43,5 @@ export default {
 			}
 		});
 		return ret;
-	}
+	},
 };

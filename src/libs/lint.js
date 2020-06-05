@@ -1,20 +1,70 @@
-import os from 'os';
-import process from 'process';
-import path from 'path';
-import util from 'util';
-import child_process from 'child_process';
-import fs from 'fs';
-import { fsAccess, fsCopyFile, fsChmod, fsStat } from './util.js';
-import utiljs from './utiljs.js';
-
-const spawn = util.promisify(child_process.spawn);
+import * as process from 'process';
+import * as path from 'path';
+import { promisify } from 'util';
+import * as child_process from 'child_process';
+import * as fs from 'fs';
+import { fsAccess, fsCopyFile, fsChmod, fsStat, fsReadFile, fsWriteFile } from './util';
+const spawn = promisify(child_process.spawn);
 const spawnSync = child_process.spawnSync;
-
-const prettyTypes = ['js', 'vue', 'jsx', 'json', 'css', 'less', 'ts', 'md'];
-const esTypes = ['js', 'jsx', 'vue'];
-
-const defaultFormat = '--no-config --tab-width 4 --use-tabs true --print-width 120 --single-quote true --write';
-
+const prettyTypes = ['js', 'vue', 'jsx', 'ts', 'css', 'less', 'html', 'json', 'scss', 'md'];
+const extParser = {
+	js: 'babel',
+	jsx: 'babel',
+	ts: 'typescript',
+	vue: 'vue',
+	html: 'html',
+	css: 'css',
+	less: 'less',
+	scss: 'scss',
+	json: 'json',
+	md: 'mdx',
+	yaml: 'yaml',
+};
+const config = {
+	eslintConfig: {
+		env: {
+			browser: true,
+			es6: true,
+			node: true,
+		},
+		parserOptions: {
+			ecmaVersion: 7,
+		},
+		rules: {
+			indent: ['error', 'tab'],
+			'linebreak-style': ['error', 'unix'],
+			quotes: ['error', 'single'],
+			semi: ['error', 'always'],
+		},
+	},
+	prettierOptions: {
+		printWidth: 120,
+		tabWidth: 4,
+		singleQuote: true,
+		useTabs: true,
+		semi: true,
+		trailingComma: 'es5',
+		bracketSpacing: true,
+		arrowParens: 'always',
+		endOfLine: 'lf',
+		parser: 'babel',
+		jsxBracketSameLine: false,
+	},
+	fallbackPrettierOptions: {
+		printWidth: 120,
+		tabWidth: 4,
+		singleQuote: true,
+		useTabs: true,
+		semi: true,
+		trailingComma: 'es5',
+		bracketSpacing: true,
+		arrowParens: 'always',
+		endOfLine: 'lf',
+		parser: 'babel',
+		jsxBracketSameLine: false,
+	},
+	prettierLast: true,
+};
 const options = {
 	dir: 'config',
 	git: '.git',
@@ -23,149 +73,102 @@ const options = {
 	postcommit: 'post-commit',
 	commitmsg: 'commit-msg',
 	prettierrc: '.prettierrc',
-	eslintrc: '.eslintrc.js'
+	eslintrc: '.eslintrc.js',
 };
 const stat = fs.constants.R_OK | fs.constants.W_OK;
-
 const spawnOps = { stdio: 'inherit', shell: true };
-
-const exit = code => process.exit(code);
-
 export default class lint {
-	constructor(cwd, files) {
+	constructor(cwd, files, opts) {
 		this.cwd = cwd;
-		const opts = utiljs.params(files, {
-			'-dir': 'dir',
-			'--lint': 'lintonly',
-			'--noprettier': 'noprettier',
-			'--noeslint': 'noeslint'
-		});
-		this.opts = Object.assign({}, options, opts);
-		const { dir, prettierrc, eslintrc } = this.opts;
-		const distcwd = path.isAbsolute(dir) ? '' : this.cwd;
-		this.prettierrc = path.join(distcwd, dir, prettierrc);
-		this.eslintrc = path.join(distcwd, dir, eslintrc);
-
-		if (Array.isArray(files) && files.length > 0) {
-			const index1 = files.findIndex(item => item == '-dir');
-			if (index1 >= 0) {
-				const len = opts.dir ? 2 : 1;
-				files.splice(index1, len);
-			}
-			files = files.filter(item => {
-				return item.substr(0, 2) !== '--';
-			});
-			if (!files.length) {
-				this.doautoLint();
-				return;
-			}
-			this.files = this.parse(files);
-		} else {
-			this.opts.lintonly = true;
-			this.doautoLint();
-		}
+		this.opts = opts;
+		this.files = [];
+		this.files = files.filter((item) => item.charAt(0) != '-');
 	}
-	async doautoLint() {
-		try {
-			const res = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACM']);
-			const arrs = res.stdout
-				.toString()
-				.split('\n')
-				.filter(v => v);
-			if (arrs.length) {
-				this.files = this.parse(arrs);
-			}
-		} catch (err) {
-			console.error(err.toString());
-			exit(1);
+	async gitlint() {
+		const res = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACM']);
+		const arrs = res.stdout
+			.toString()
+			.split('\n')
+			.filter((v) => v);
+		if (!arrs.length) {
+			return;
 		}
+		const { prefiles, gitfiles } = this.parse(arrs);
+		await this.dolint(prefiles, gitfiles);
 	}
 	parse(files) {
-		return files.map(item => {
+		const prefiles = [];
+		const gitfiles = [];
+		const filetypes = files.map((item) => {
 			const name = item.trim();
 			const type = item.split('.').pop();
 			let p = name;
 			if (!path.isAbsolute(name)) {
 				p = path.join(this.cwd, name);
 			}
+			if (prettyTypes.includes(type)) {
+				prefiles.push(p);
+			}
+			gitfiles.push(p);
 			return { name, path: p, type };
 		});
+		return { prefiles, gitfiles, filetypes };
 	}
 	async lint() {
-		if (!(this.prettierrc && this.eslintrc)) {
-			return;
+		if (this.files.length < 1) {
+			return this.gitlint();
 		}
-		if (!this.files || !this.files.length) {
-			return;
+		const { prefiles, gitfiles } = this.parse(this.files);
+		await this.dolint(prefiles, gitfiles);
+		if (!this.opts.lintonly) {
+			await this.gitadd(gitfiles);
 		}
-
-		try {
-			let esfiles = [],
-				prefiles = [],
-				gitfiles = [];
-
-			await this.checkfiles();
-
-			try {
-				await fsAccess(this.prettierrc, stat);
-			} catch (e) {
-				// 不使用配置文件,使用內建配置
-				this.prettierrc = '';
-			}
-			await fsAccess(this.eslintrc, stat);
-			await Promise.all(
-				this.files.map(item => {
-					const { path, type, name } = item;
-					if (prettyTypes.includes(type)) {
-						prefiles.push(path);
+	}
+	async dolint(prefiles, gitfiles) {
+		await this.checkfiles(gitfiles);
+		await Promise.all(this.lintConfig(prefiles));
+	}
+	lintConfig(prefiles) {
+		const format = require('prettier-eslint');
+		return prefiles.map((item) => {
+			return new Promise(async (resolve, reject) => {
+				try {
+					const r = await fsReadFile(item, 'utf-8');
+					if (!r || r.trim().length < 1) {
+						return resolve(true);
 					}
-					if (esTypes.includes(type)) {
-						esfiles.push(path);
+					const options = {
+						...config,
+						...{
+							filePath: item,
+						},
+						...{
+							text: r,
+						},
+					};
+					options.prettierOptions.parser = this.getParser(item);
+					const res = format(options);
+					if (r !== res && res) {
+						if (item.toLowerCase().includes('package.json')) {
+							fs.writeFileSync(item, res);
+						} else {
+							await fsWriteFile(item, res);
+						}
 					}
-					gitfiles.push(path);
-					return fsAccess(path, stat);
-				})
-			);
-			this.dolint(esfiles, prefiles);
-			if (!this.opts.lintonly) {
-				await this.gitadd(gitfiles);
-			}
-		} catch (err) {
-			const str = err.message || err.toString();
-			if (str.length > 5) {
-				console.error(str);
-			}
-			exit(1);
-		}
+					console.log(item.replace(this.cwd + '/', ''));
+					resolve(true);
+				} catch (e) {
+					reject(e);
+				}
+			});
+		});
 	}
-
-	dolint(esfiles, prefiles) {
-		if (this.opts.noprettier !== true) {
-			const r1 = this.prettier(prefiles);
-			if (r1 && r1.status !== 0) {
-				throw new Error(r1);
-			}
-		}
-		if (this.opts.noeslint !== true) {
-			const r2 = this.eslint(esfiles);
-			if (r2 && r2.status !== 0) {
-				throw new Error(r2);
-			}
-		}
-	}
-
-	eslint(f) {
-		if (f && f.length) {
-			return spawnSync('eslint', ['-c', this.eslintrc, '--fix', f.join(' ')], spawnOps);
-		}
-	}
-	prettier(f) {
-		if (f && f.length) {
-			const config = this.prettierrc
-				? ['--config', this.prettierrc, '--write', f.join(' ')]
-				: [defaultFormat, f.join(' ')];
-			return spawnSync('prettier', config, spawnOps);
-		}
+	getParser(file) {
+		const ext = file
+			.split('.')
+			.pop()
+			.toLowerCase();
+		return extParser[ext] ? extParser[ext] : 'babel';
 	}
 	gitadd(f) {
 		if (f && f.length) {
@@ -174,45 +177,43 @@ export default class lint {
 		return Promise.resolve();
 	}
 	async install() {
-		const { dir, git, hooks, precommit, postcommit, commitmsg } = Object.assign({}, options, this.opts);
-		const cwd = path.isAbsolute(dir) ? '' : this.cwd;
-
-		const prehook = path.join(cwd, dir, precommit);
-		const posthook = path.join(cwd, dir, postcommit);
-		const msghook = path.join(cwd, dir, commitmsg);
-
-		const predst = path.join(this.cwd, git, hooks, precommit);
-		const postdst = path.join(this.cwd, git, hooks, postcommit);
-		const msgdst = path.join(this.cwd, git, hooks, commitmsg);
-
+		const { git, cwd, hooks, precommit, postcommit, commitmsg } = Object.assign({}, options, this.opts);
+		const dir = this.opts.dir ? '' : options.dir;
+		const prehook = path.join(this.cwd, dir, precommit);
+		const posthook = path.join(this.cwd, dir, postcommit);
+		const msghook = path.join(this.cwd, dir, commitmsg);
+		const predst = path.join(cwd, git, hooks, precommit);
+		const postdst = path.join(cwd, git, hooks, postcommit);
+		const msgdst = path.join(cwd, git, hooks, commitmsg);
 		const mode = 0o755;
-		try {
-			await Promise.all([fsAccess(prehook, stat), fsAccess(posthook, stat), fsAccess(msghook, stat)]);
-			await Promise.all([
-				fsCopyFile(prehook, predst),
-				fsCopyFile(posthook, postdst),
-				fsCopyFile(msghook, msgdst)
-			]);
-			await Promise.all([fsChmod(predst, mode), fsChmod(postdst, mode), fsChmod(msgdst, mode)]);
-		} catch (err) {
-			console.error(err.toString());
-			exit(1);
-		}
+		await Promise.all([fsAccess(prehook, stat), fsAccess(posthook, stat), fsAccess(msghook, stat)]);
+		await Promise.all([fsCopyFile(prehook, predst), fsCopyFile(posthook, postdst), fsCopyFile(msghook, msgdst)]);
+		await Promise.all([fsChmod(predst, mode), fsChmod(postdst, mode), fsChmod(msgdst, mode)]);
 	}
-
-	async checkfiles() {
+	async checkfiles(files) {
 		const maxsize = 1048576;
 		// 检查文件大小,超过1MB禁止提交
-		const stats = await Promise.all(
-			this.files.map(item => {
-				return fsStat(item.path);
-			})
-		);
+		const stats = await Promise.all(files.map((item) => fsStat(item)));
 		return stats.every((item, index) => {
 			if (item.size > maxsize) {
-				throw new Error(`${this.files[index].path} too large,${item.size} exceed ${maxsize}`);
+				throw new Error(`${files[index]} too large,${item.size} exceed ${maxsize}`);
 			}
 			return true;
 		});
+	}
+	static async commitlint(commitfile) {
+		const str = await fsReadFile(commitfile);
+		const msg = str.toString();
+		if (/Merge\s+branch/i.test(msg)) {
+			return;
+		}
+		if (
+			!/(build|ci|docs|feat|fix|perf|refactor|style|test|revert|chore).{0,2}(\(.{1,100}\))?.{0,2}:.{1,200}/.test(
+				msg
+			)
+		) {
+			console.info('commit message should be format like <type>(optional scope): <description>');
+			process.exit(1);
+		}
 	}
 }

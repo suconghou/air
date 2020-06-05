@@ -1,165 +1,70 @@
-import path from 'path';
-import fs from 'fs';
-import util from 'util';
-import process from 'process';
-import os from 'os';
-import compress from './compress.js';
-import utiljs from './utiljs.js';
-import utilnode, { fsWriteFile, fsReadFile } from './util.js';
-import httpserver from './httpserver.js';
-import lint from './lint.js';
-import template from './template.js';
-
-const configName = 'static.json';
-
+import * as fs from 'fs';
+import nodeserve from '../nodeserve/index';
+import compress from './compress';
+import template from './template';
 export default class server {
-	constructor(cwd) {
+	constructor(args, cliargs, cwd) {
+		this.args = args;
+		this.cliargs = cliargs;
 		this.cwd = cwd;
-		this.globalConfig = { config: {} };
+		this.app = new nodeserve();
 	}
-
-	async serve(args) {
+	async serve() {
 		try {
-			const params = utiljs.getParams(args);
-			const cwd = params.root ? params.root : this.cwd;
-			this.globalConfig.config = await utilnode.getConfig(cwd, configName);
-			new httpserver(params).start(this.globalConfig);
-			this.watchConfig();
+			this.route();
+			this.app
+				.listen(this.args.port, this.args.host, () => {
+					console.info('Server listening on port %d', this.args.port);
+				})
+				.on('error', (err) => {
+					console.error(err.toString());
+				});
+			this.watch();
 		} catch (e) {
-			utilnode.exit(e, 1);
+			console.error(e);
 		}
 	}
-
-	watchConfig() {
-		const configfile = this.globalConfig.config.configfile;
-		if (configfile) {
-			fs.watchFile(configfile, async () => {
-				var json = {};
-				try {
-					delete require.cache[configfile];
-					json = require(configfile);
-					json.configfile = configfile;
-					json.path = path.dirname(configfile);
-					this.globalConfig.config = json;
-					console.info('config reload ' + configfile);
-				} catch (e) {
-					console.info(e);
-				}
-			});
-			console.info('load config ' + configfile);
+	route() {
+		if (this.cliargs.dry) {
+			return;
 		}
-	}
-
-	template(args) {
-		const params = utiljs.getParams(args);
-		const [file, datafile] = args;
-		if (file && datafile) {
-			try {
-				const data = require(path.join(this.cwd, datafile));
-				let options = {
-					debug: params.debug,
-					minimize: !params.debug,
-					compileDebug: !!params.debug,
-					escape: !!params.escape,
-					root: this.cwd
-				};
-				const res = template.template(path.join(this.cwd, file), data, options);
-				if (params.output) {
-					(async () => {
-						try {
-							let dstfile;
-							if (path.isAbsolute(params.output)) {
-								dstfile = params.output;
-							} else {
-								dstfile = path.join(this.cwd, params.output);
-							}
-							await fsWriteFile(dstfile, res);
-						} catch (e) {
-							utilnode.exit(e, 1);
-						}
-					})();
-				} else {
-					process.stdout.write(res + os.EOL);
-				}
-			} catch (e) {
-				utilnode.exit(e, 1);
-			}
-		} else {
-			utilnode.exit('file and filedata must be set', 1);
-		}
-	}
-
-	run(args) {}
-
-	lint(args) {
-		new lint(this.cwd, args).lint();
-	}
-
-	gitlint(args) {
-		new lint(this.cwd, args).lint();
-	}
-
-	install(args) {
-		new lint(this.cwd, args).install();
-	}
-
-	async compress(args) {
-		try {
-			const config = await utilnode.getConfig(this.cwd, configName);
-			const params = utiljs.getParams(args);
-			const filed = args.filter(item => item.charAt(0) !== '-').length;
-			if (args && args.length > 0 && filed) {
-				const less = args
-					.filter(item => {
-						return item.split('.').pop() == 'less';
-					})
-					.map(item => {
-						return path.join(this.cwd, item);
-					});
-				const js = args
-					.filter(item => {
-						return item.split('.').pop() == 'js';
-					})
-					.map(item => {
-						return path.join(this.cwd, item);
-					});
-				if (less.length) {
-					const lessOps = Object.assign({ compress: params.debug ? false : true }, params);
-					const res = await compress.compressLess(less, lessOps);
-					const file = utilnode.getName(this.cwd, less, '.less');
-					await fsWriteFile(`${file}.min.css`, res.css);
-				}
-				if (js.length) {
-					const res = await compress.compressJs(js, params);
-					const file = utilnode.getName(this.cwd, js, '.js');
-					await fsWriteFile(`${file}.min.js`, res.code);
-				}
+		this.app.get(/^[\w\-/.]+\.css$/, async (req, res, pathname, query) => {
+			const ret = await new compress(this.args.staticCfg, pathname, query).less();
+			res.setHeader('x-hit', ret.hit ? 1 : 0);
+			res.send(ret.ret.css, 'text/css');
+		});
+		this.app.get(/^[\w\-/.]+\.js$/, async (req, res, pathname, query) => {
+			const ret = await new compress(this.args.staticCfg, pathname, query).Js();
+			res.setHeader('x-hit', ret.hit ? 1 : 0);
+			res.send(ret.ret.js, 'text/javascript');
+		});
+		this.app.get(/^[\w\-/.]+\.html$/, async (req, res, pathname, query) => {
+			const tpl = new template(this.args.staticCfg, this.cwd, pathname, query);
+			let ret;
+			if (this.cliargs.art) {
+				ret = await tpl.art();
 			} else {
-				compress.compressByConfig(config, params);
+				ret = await tpl.ssi();
 			}
-		} catch (e) {
-			utilnode.exit(e, 1);
-		}
+			res.send(ret);
+		});
 	}
-
-	async commitlint(args) {
-		try {
-			const str = await fsReadFile(args[0]);
-			const msg = str.toString();
-			if (/Merge\s+branch/i.test(msg)) {
-				return;
-			}
-			if (
-				!/(build|ci|docs|feat|fix|perf|refactor|style|test|revert|chore).{0,2}(\(.{1,100}\))?.{0,2}:.{1,200}/.test(
-					msg
-				)
-			) {
-				console.info('commit message should be format like <type>(optional scope): <description>');
-				process.exit(1);
-			}
-		} catch (e) {
-			console.info(e);
-			process.exit(1);
+	watch() {
+		const f = this.args.staticCfg.fpath;
+		if (!f) {
+			return;
 		}
+		console.info('load config file ' + f);
+		fs.watchFile(f, async () => {
+			try {
+				delete require.cache[f];
+				const c = require(f);
+				const newcfg = Object.assign({}, c);
+				this.args.staticCfg.opts = newcfg;
+				console.info('config reload success ', f);
+			} catch (e) {
+				console.error('config relaod error ', f, e);
+			}
+		});
 	}
 }

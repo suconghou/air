@@ -20,9 +20,9 @@ const extParser = {
 	css: 'css',
 	less: 'less',
 	scss: 'scss',
-	json: 'json-stringify',
+	json: 'json',
 	md: 'mdx',
-	yaml: 'yaml'
+	yaml: 'yaml',
 };
 
 const config = {
@@ -30,17 +30,17 @@ const config = {
 		env: {
 			browser: true,
 			es6: true,
-			node: true
+			node: true,
 		},
 		parserOptions: {
-			ecmaVersion: 7
+			ecmaVersion: 7,
 		},
 		rules: {
 			indent: ['error', 'tab'],
 			'linebreak-style': ['error', 'unix'],
 			quotes: ['error', 'single'],
-			semi: ['error', 'always']
-		}
+			semi: ['error', 'always'],
+		},
 	},
 	prettierOptions: {
 		printWidth: 120,
@@ -49,9 +49,11 @@ const config = {
 		useTabs: true,
 		semi: true,
 		trailingComma: 'es5',
+		bracketSpacing: true,
 		arrowParens: 'always',
 		endOfLine: 'lf',
-		parser: 'babel'
+		parser: 'babel',
+		jsxBracketSameLine: false,
 	},
 	fallbackPrettierOptions: {
 		printWidth: 120,
@@ -60,11 +62,13 @@ const config = {
 		useTabs: true,
 		semi: true,
 		trailingComma: 'es5',
+		bracketSpacing: true,
 		arrowParens: 'always',
 		endOfLine: 'lf',
-		parser: 'babel'
+		parser: 'babel',
+		jsxBracketSameLine: false,
 	},
-	prettierLast: true
+	prettierLast: true,
 };
 
 const options = {
@@ -75,7 +79,7 @@ const options = {
 	postcommit: 'post-commit',
 	commitmsg: 'commit-msg',
 	prettierrc: '.prettierrc',
-	eslintrc: '.eslintrc.js'
+	eslintrc: '.eslintrc.js',
 };
 const stat = fs.constants.R_OK | fs.constants.W_OK;
 
@@ -85,7 +89,7 @@ export default class lint {
 	private files = [];
 
 	constructor(private cwd: string, files: Array<string>, private opts: cliArgs) {
-		this.files = files.filter(item => item.charAt(0) != '-');
+		this.files = files.filter((item) => item.charAt(0) != '-');
 	}
 
 	async gitlint() {
@@ -93,7 +97,7 @@ export default class lint {
 		const arrs = res.stdout
 			.toString()
 			.split('\n')
-			.filter(v => v);
+			.filter((v) => v);
 
 		if (!arrs.length) {
 			return;
@@ -105,7 +109,7 @@ export default class lint {
 	private parse(files: Array<string>) {
 		const prefiles = [];
 		const gitfiles = [];
-		const filetypes = files.map(item => {
+		const filetypes = files.map((item) => {
 			const name = item.trim();
 			const type = item.split('.').pop();
 			let p = name;
@@ -140,20 +144,30 @@ export default class lint {
 
 	private lintConfig(prefiles: Array<string>) {
 		const format = require('prettier-eslint');
-		return prefiles.map(item => {
+		return prefiles.map((item) => {
 			return new Promise(async (resolve, reject) => {
 				try {
 					const r = await fsReadFile(item, 'utf-8');
+					if (!r || r.trim().length < 1) {
+						return resolve(true);
+					}
 					const options = {
 						...config,
 						...{
-							text: r
-						}
+							filePath: item,
+						},
+						...{
+							text: r,
+						},
 					};
 					options.prettierOptions.parser = this.getParser(item);
 					const res = format(options);
 					if (r !== res && res) {
-						await fsWriteFile(item, res);
+						if (item.toLowerCase().includes('package.json')) {
+							fs.writeFileSync(item, res);
+						} else {
+							await fsWriteFile(item, res);
+						}
 					}
 					console.log(item.replace(this.cwd + '/', ''));
 					resolve(true);
@@ -199,7 +213,7 @@ export default class lint {
 	private async checkfiles(files: Array<string>) {
 		const maxsize = 1048576;
 		// 检查文件大小,超过1MB禁止提交
-		const stats = await Promise.all(files.map(item => fsStat(item)));
+		const stats = await Promise.all(files.map((item) => fsStat(item)));
 		return stats.every((item, index) => {
 			if (item.size > maxsize) {
 				throw new Error(`${files[index]} too large,${item.size} exceed ${maxsize}`);

@@ -1,181 +1,99 @@
-import fs from 'fs';
-import os from 'os';
-import util, { fsWriteFile } from './util.js';
-import path from 'path';
-import tool from './tool.js';
-import utiljs from './utiljs.js';
-
-export default {
-	async compressLessReq(response, matches, query, cwd, config) {
-		const key = matches[0].replace('.css', '');
-		const dirs = key.split('/');
-		const segment = dirs.pop();
-		const files = utiljs.unique(
-			segment
+import util, { fsWriteFile } from './util';
+import * as path from 'path';
+import tool from './tool';
+export default class {
+	constructor(opts, pathname, query) {
+		this.opts = opts;
+		this.pathname = pathname;
+		this.query = query;
+		this.options = { ver: '', compress: false, env: 'development' };
+		this.jopts = { debug: true, clean: false };
+	}
+	// 解析优先级, 配置文件>连字符>less文件查找>静态文件
+	async resolveLess() {
+		const pathname = this.pathname.replace('.css', '');
+		const css = Object.keys(this.opts.opts.static.css) || [];
+		const curr = pathname.replace(/.*\/static\//, '');
+		if (css.includes(curr)) {
+			return css[curr].map((item) => path.join(this.opts.dirname, item));
+		}
+		if (/-/.test(curr)) {
+			const dirs = pathname.split('/');
+			const segment = dirs.pop();
+			return segment
 				.split('-')
-				.filter(item => item)
-				.map(item => {
-					return path.join(cwd, ...dirs, item) + '.less';
-				})
-		);
-		const options = { urlArgs: query.ver ? `ver=${query.ver}` : null, env: 'development', useFileCache: false };
-
-		try {
-			const maxtime = await util.getUpdateTime(files);
-			const { css, hit } = await this.compressLessCache(maxtime, key, files, options);
-			response.writeHead(200, {
-				'Content-Type': 'text/css',
-				'Cache-Control': 'public,max-age=5',
-				'X-Cache': hit ? 'hit' : 'miss'
-			});
-			response.end(css);
-			return true;
-		} catch (e) {
-			if (e.syscall !== 'stat') {
-				throw e;
-			}
-			const k = matches[0].replace(/\/static\//, '');
-			if (!config.static) {
-				return false;
-			}
-			const { css } = config.static;
-			if (css) {
-				const entry = Object.keys(css);
-				if (entry.includes(k)) {
-					const hotfiles = css[k].map(item => path.join(config.path, item));
-					const mtime = await util.getUpdateTime(hotfiles);
-					const { css, hit } = await this.compressLessCache(mtime, k, hotfiles, options);
-					response.writeHead(200, {
-						'Content-Type': 'text/css',
-						'Cache-Control': 'public,max-age=5',
-						'X-Cache': hit ? 'hit' : 'miss'
-					});
-					response.end(css);
-					return true;
-				} else {
-					return false;
-				}
-			}
+				.filter((item) => item)
+				.map((item) => {
+					return path.join(this.opts.dirname, ...dirs, item) + '.less';
+				});
 		}
-	},
-
-	async compressLessCache(mtime, key, files, options) {
-		const cache = tool.get(key);
-		if (cache && cache.maxTime == mtime && options.urlArgs == cache.urlArgs) {
-			return { css: cache.css, hit: true };
+		return [path.join(this.opts.dirname, curr) + '.less'];
+	}
+	async resolveJs() {
+		const pathname = this.pathname.replace('.js', '');
+		const js = Object.keys(this.opts.opts.static.js) || [];
+		const curr = pathname.replace(/.*\/static\//, '');
+		if (js.includes(curr)) {
+			return js[curr].map((item) => path.join(this.opts.dirname, item));
 		}
-		const ret = await this.compressLess(files, options);
-		tool.set(key, { css: ret.css, urlArgs: options.urlArgs, maxTime: mtime });
-		return { css: ret.css, hit: false };
-	},
-
-	compressLess(files, options) {
-		let { paths, urlArgs, compress, useFileCache, env } = options || {};
-		const lessfiles = utiljs.unique(files);
-		var lessInput = lessfiles
-			.map(function(item) {
+		if (/-/.test(curr)) {
+			const dirs = curr.split('/');
+			const segment = dirs.pop();
+			return segment
+				.split('-')
+				.filter((item) => item)
+				.map((item) => {
+					return path.join(this.opts.dirname, ...dirs, item) + '.js';
+				});
+		}
+		return [path.join(this.opts.dirname, curr) + '.js'];
+	}
+	async less() {
+		const files = await this.resolveLess();
+		const time = await util.getUpdateTime(files);
+		const ret = tool.get(this.pathname);
+		if (ret && ret.time == time && ret.ver == this.options.ver) {
+			return { ret, hit: true };
+		}
+		const r = await this.compileLess(files);
+		const res = { css: r, time, ver: this.options.ver };
+		tool.set(this.pathname, res);
+		return { ret: res, hit: false };
+	}
+	async compileLess(files) {
+		const lessInput = files
+			.map((item) => {
 				return '@import "' + item + '";';
 			})
 			.join('\r\n');
+		let { urlArgs, compress, env } = this.options;
 		const less = require('less');
 		const autoprefix = require('less-plugin-autoprefix');
 		const option = {
-			plugins: [new autoprefix({ browsers: ['last 5 versions', 'ie > 8', 'Firefox ESR'] })],
-			paths,
+			plugins: [new autoprefix({ browsers: ['last 5 versions', 'ie > 9', 'Firefox ESR'] })],
+			paths: this.opts.dirname,
 			urlArgs,
 			compress,
-			useFileCache,
-			env
+			env,
 		};
-		this.cleanLessCache(less, lessfiles);
-		return new Promise((resolve, reject) => {
-			less.render(lessInput, option)
-				.then(resolve, reject)
-				.catch(reject);
-		});
-	},
-
-	cleanLessCache(less, files) {
-		const fileManagers = (less.environment && less.environment.fileManagers) || [];
-		fileManagers.forEach(fileManager => {
-			if (fileManager.contents) {
-				Object.keys(fileManager.contents).forEach(k => {
-					if (files.includes(k)) {
-						delete fileManager.contents[k];
-					}
-				});
-			}
-		});
-	},
-
-	async compressJsReg(response, matches, query, cwd, config) {
-		const key = matches[0].replace('.js', '');
-		const dirs = key.split('/');
-		const segment = dirs.pop();
-		const files = utiljs.unique(
-			segment
-				.split('-')
-				.filter(item => item)
-				.map(item => {
-					return path.join(cwd, ...dirs, item) + '.js';
-				})
-		);
-		const options = { debug: true };
-		// 优先级 连字符>配置文件>静态文件
-		try {
-			const maxtime = await util.getUpdateTime(files);
-			if (files.length === 1) {
-				// 请求的不包含连字符,且文件真实存在,先不加载,先尝试配置文件
-				throw new Error('先尝试配置文件');
-			}
-			const { js, hit } = await this.compressJsCache(maxtime, key, files, options);
-			response.writeHead(200, {
-				'Content-Type': 'application/javascript',
-				'Cache-Control': 'public,max-age=5',
-				'X-Cache': hit ? 'hit' : 'miss'
-			});
-			response.end(js);
-			return true;
-		} catch (e) {
-			const k = matches[0].replace(/\/static\//, '');
-			if (!config.static) {
-				return false;
-			}
-			const { js } = config.static;
-			if (js) {
-				const entry = Object.keys(js);
-				if (entry.includes(k)) {
-					const hotfiles = js[k].map(item => path.join(config.path, item));
-					const mtime = await util.getUpdateTime(hotfiles);
-					const { js, hit } = await this.compressJsCache(mtime, k, hotfiles, options);
-					response.writeHead(200, {
-						'Content-Type': 'application/javascript',
-						'Cache-Control': 'public,max-age=5',
-						'X-Cache': hit ? 'hit' : 'miss'
-					});
-					response.end(js);
-					return true;
-				} else {
-					return false;
-				}
-			}
+		const ret = await less.render(lessInput, option);
+		return ret.css;
+	}
+	async Js() {
+		const files = await this.resolveJs();
+		const time = await util.getUpdateTime(files);
+		const ret = tool.get(this.pathname);
+		if (ret && ret.time == time && ret.ver == this.options.ver) {
+			return { ret, hit: true };
 		}
-	},
-
-	async compressJsCache(mtime, key, files, options) {
-		const cache = tool.get(key);
-		if (cache && cache.maxTime == mtime) {
-			return { js: cache.js, hit: true };
-		}
-		const ret = await this.compressJs(files, options);
-		tool.set(key, { js: ret.code, maxTime: mtime });
-		return { js: ret.code, hit: false };
-	},
-
-	compressJs(files, ops) {
-		const f = utiljs.unique(files);
+		const r = await this.compileJs(files);
+		const res = { js: r, time, ver: this.options.ver };
+		tool.set(this.pathname, res);
+		return { ret: res, hit: false };
+	}
+	async compileJs(files) {
 		let options;
-		if (ops.debug) {
+		if (this.jopts.debug) {
 			options = {
 				mangle: false,
 				compress: {
@@ -190,8 +108,8 @@ export default {
 					hoist_funs: false,
 					drop_debugger: false,
 					evaluate: false,
-					loops: false
-				}
+					loops: false,
+				},
 			};
 		} else {
 			options = {
@@ -204,90 +122,48 @@ export default {
 					booleans: true,
 					join_vars: true,
 					if_return: true,
-					conditionals: true
-				}
+					conditionals: true,
+				},
 			};
-			if (ops.clean) {
+			if (this.jopts.clean) {
 				options.compress.drop_console = true;
 				options.compress.drop_debugger = true;
 				options.compress.evaluate = true;
 				options.compress.loops = true;
 			}
 		}
-
-		const UglifyJS = require('uglify-js');
-		return new Promise((resolve, reject) => {
-			this.getContent(f)
-				.then(res => {
-					const result = UglifyJS.minify(res, options);
-					const er = result.error;
-					if (er) {
-						const s = er.toString();
-						const { filename, line, col, pos } = er;
-						er.toString = () => {
-							return `${filename}: ${s} on line ${line}, ${col}:${pos}`;
-						};
-						return reject(er);
-					}
-					resolve(result);
-				})
-				.catch(reject);
-		});
-	},
-
-	compressByConfig(config, params) {
-		if (config && config.static) {
-			const { css, js } = config.static;
-			if (css) {
-				Object.keys(css).forEach(async item => {
-					try {
-						const files = css[item].map(item => path.join(config.path, item));
-						const dst = path.join(config.path, item);
-						const lessOps = Object.assign({ compress: params.debug ? false : true }, params);
-						const res = await this.compressLess(files, lessOps);
-						await fsWriteFile(dst, res.css);
-					} catch (e) {
-						console.error(e.toString());
-					}
-				});
+		const filesMap = await util.getContent(files);
+		const terser = require('terser');
+		const ret = await new Promise((resolve, reject) => {
+			const result = terser.minify(filesMap, options);
+			const er = result.error;
+			if (er) {
+				const s = er.toString();
+				const { filename, line, col, pos } = er;
+				er.toString = () => {
+					return `${filename}: ${s} on line ${line}, ${col}:${pos}`;
+				};
+				return reject(er);
 			}
-			if (js) {
-				Object.keys(js).forEach(async item => {
-					try {
-						const files = js[item].map(item => path.join(config.path, item));
-						const dst = path.join(config.path, item);
-						const res = await this.compressJs(files, params);
-						await fsWriteFile(dst, res.code);
-					} catch (e) {
-						console.info(e.toString());
-					}
-				});
-			}
-		}
-	},
-
-	getContent(files) {
-		const arr = files.map(file => {
-			return new Promise((resolve, reject) => {
-				fs.readFile(file, 'utf-8', function(err, data) {
-					if (err) {
-						reject(err);
-					} else {
-						resolve(data);
-					}
-				});
-			});
+			resolve(result);
 		});
-		return new Promise((resolve, reject) => {
-			Promise.all(arr)
-				.then(res => {
-					const objs = {};
-					files.forEach((file, index) => {
-						objs[file] = res[index];
-					});
-					resolve(objs);
-				})
-				.catch(reject);
-		});
+		return ret.code;
 	}
-};
+	async compress(cliargs) {
+		this.options.env = 'production';
+		this.options.compress = !cliargs.debug;
+		this.jopts.debug = cliargs.debug;
+		this.jopts.clean = cliargs.clean;
+		const { css, js } = this.opts.opts.static;
+		for (let item in css) {
+			const source = css[item];
+			const ret = await this.compileLess(source);
+			await fsWriteFile(path.join(this.opts.dirname, item), ret);
+		}
+		for (let item in js) {
+			const source = js[item].map((item) => path.join(this.opts.dirname, item));
+			const ret = await this.compileJs(source);
+			await fsWriteFile(path.join(this.opts.dirname, item), ret);
+		}
+	}
+}

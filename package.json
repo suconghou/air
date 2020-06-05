@@ -1,6 +1,17 @@
 {
 	"dependencies": {
-		"less": "^3.5.3",
-		"less-plugin-autoprefix": "^1.5.1"
+		"@types/node": "^14.0.11",
+		"art-template": "^4.13.2",
+		"core-js": "^3.6.5",
+		"less": "^3.11.2",
+		"less-plugin-autoprefix": "^2.0.0",
+		"prettier-eslint": "^10.1.1",
+		"terser": "^4.7.0"
+	},
+	"eslintConfig": {
+		"extends": ["eslint:recommended"],
+		"rules": {
+			"no-set-state": "off"
+		}
 	}
 }
