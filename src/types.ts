@@ -1,46 +1,45 @@
-
 export interface staticOpts {
-    dirname: string
-    fpath: string
-    opts: {
-        static: {
-            css: Map<string, Array<string>>
-            js: Map<string, Array<string>>
-        },
-        template: {
-        }
-    }
+	dirname: string;
+	fpath: string;
+	opts: {
+		static: {
+			css: Map<string, Array<string>>;
+			js: Map<string, Array<string>>;
+		};
+		template: {};
+	};
 }
 
 export interface serverArgs {
-    host: string
-    port: number
-    staticCfg: staticOpts
+	host: string;
+	port: number;
+	staticCfg: staticOpts;
 }
 
 export interface lessopts {
-    ver?: string,
-    urlArgs?: string,
-    compress?: boolean,
-    env?: string
+	ver?: string;
+	urlArgs?: string;
+	compress?: boolean;
+	env?: string;
 }
 
 export interface jsopts {
-    debug: boolean
-    clean: boolean
+	debug: boolean;
+	clean: boolean;
 }
 
 export interface cliArgs {
-    version: boolean
-    help: boolean
-    port: number
-    root: string
-    dir: string
-    clean: boolean,
-    escape: boolean,
-    art: boolean,
-    lintonly: boolean,
-    noprettier: boolean,
-    noeslint: boolean
-    debug: boolean
+	version: boolean;
+	help: boolean;
+	port: number;
+	root: string;
+	dir: string;
+	clean: boolean;
+	escape: boolean;
+	art: boolean;
+	dry: boolean;
+	lintonly: boolean;
+	noprettier: boolean;
+	noeslint: boolean;
+	debug: boolean;
 }
