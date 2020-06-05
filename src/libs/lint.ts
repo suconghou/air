@@ -34,13 +34,23 @@ const config = {
 		},
 		parserOptions: {
 			ecmaVersion: 7,
+			parser: 'babel-eslint',
+			sourceType: 'module',
 		},
+		extends: ['plugin:vue/recommended', 'eslint:recommended'],
+		parser: 'vue-eslint-parser',
 		rules: {
+			'no-console': 2,
+			'no-unused-vars': 2,
+			'no-mixed-spaces-and-tabs': 2,
+			'no-useless-escape': 2,
 			indent: ['error', 'tab'],
 			'linebreak-style': ['error', 'unix'],
 			quotes: ['error', 'single'],
 			semi: ['error', 'always'],
 		},
+		useEslintrc: true,
+		reportUnusedDisableDirectives: true,
 	},
 	prettierOptions: {
 		printWidth: 120,
