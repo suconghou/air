@@ -12,33 +12,37 @@ const spawnSync = child_process.spawnSync;
 const prettyTypes = ['js', 'vue', 'jsx', 'ts', 'css', 'less', 'html', 'json', 'scss', 'md'];
 
 const extParser = {
-    'js': 'babel',
-    'jsx': 'babel',
-    'ts': 'typescript',
-    'vue': 'vue',
-    'html': 'html',
-    'css': 'css',
-    'less': 'less',
-    'scss': 'scss',
-    'json': 'json',
-    'md': 'mdx',
-    'yaml': 'yaml'
-}
+    js: 'babel',
+    jsx: 'babel',
+    ts: 'typescript',
+    vue: 'vue',
+    html: 'html',
+    css: 'css',
+    less: 'less',
+    scss: 'scss',
+    json: 'json-stringify',
+    md: 'mdx',
+    yaml: 'yaml',
+};
 
 const config = {
     eslintConfig: {
         parserOptions: {
-            ecmaVersion: 7
+            ecmaVersion: 7,
         },
         rules: {
-            semi: ["error", "never"]
-        }
+            semi: ['error', 'never'],
+        },
     },
     prettierOptions: {
         printWidth: 120,
         tabWidth: 4,
         singleQuote: true,
         useTabs: true,
+        semi: true,
+        trailingComma: 'es5',
+        arrowParens: 'always',
+        endOfLine: 'lf',
         parser: 'babel',
     },
     fallbackPrettierOptions: {
@@ -46,11 +50,14 @@ const config = {
         tabWidth: 4,
         singleQuote: true,
         useTabs: true,
+        semi: true,
+        trailingComma: 'es5',
+        arrowParens: 'always',
+        endOfLine: 'lf',
         parser: 'babel',
     },
     prettierLast: true,
-
-}
+};
 
 const options = {
     dir: 'config',
@@ -60,7 +67,7 @@ const options = {
     postcommit: 'post-commit',
     commitmsg: 'commit-msg',
     prettierrc: '.prettierrc',
-    eslintrc: '.eslintrc.js'
+    eslintrc: '.eslintrc.js',
 };
 const stat = fs.constants.R_OK | fs.constants.W_OK;
 
@@ -71,9 +78,8 @@ export default class lint {
     private eslintrc = '';
     private files = [];
 
-
     constructor(private cwd: string, files: Array<string>, private opts: cliArgs) {
-        this.files = files.filter(item => item.charAt(0) != '-');
+        this.files = files.filter((item) => item.charAt(0) != '-');
     }
 
     async gitlint() {
@@ -81,7 +87,7 @@ export default class lint {
         const arrs = res.stdout
             .toString()
             .split('\n')
-            .filter(v => v);
+            .filter((v) => v);
 
         if (!arrs.length) {
             return;
@@ -93,7 +99,7 @@ export default class lint {
     private parse(files: Array<string>) {
         const prefiles = [];
         const gitfiles = [];
-        const filetypes = files.map(item => {
+        const filetypes = files.map((item) => {
             const name = item.trim();
             const type = item.split('.').pop();
             let p = name;
@@ -128,7 +134,7 @@ export default class lint {
         }
         await fsAccess(this.eslintrc, stat);
         await Promise.all(
-            this.files.map(item => {
+            this.files.map((item) => {
                 const { path, type, name } = item;
                 if (prettyTypes.includes(type)) {
                     prefiles.push(path);
@@ -145,38 +151,40 @@ export default class lint {
 
     private async dolint(prefiles: Array<string>, gitfiles: Array<string>) {
         await this.checkfiles(gitfiles);
-        console.info(prefiles)
-        const r = await Promise.all(this.lintConfig(prefiles))
-        console.info(r)
-
+        console.info(prefiles);
+        const r = await Promise.all(this.lintConfig(prefiles));
+        console.info(r);
     }
 
     private lintConfig(prefiles: Array<string>) {
-        const format = require("prettier-eslint");
-        return prefiles.map(item => {
+        const format = require('prettier-eslint');
+        return prefiles.map((item) => {
             return new Promise(async (resolve, reject) => {
                 try {
-                    const r = await fsReadFile(item, 'utf-8')
+                    const r = await fsReadFile(item, 'utf-8');
                     const options = {
                         ...config,
                         ...{
-                            text: r
-                        }
-                    }
+                            text: r,
+                        },
+                    };
                     options.prettierOptions.parser = this.getParser(item);
-                    const res = format(options)
-                    console.info(res)
-                    resolve(res)
-                    await fsWriteFile(item, res)
+                    const res = format(options);
+                    console.info(res);
+                    resolve(res);
+                    await fsWriteFile(item, res);
                 } catch (e) {
-                    reject(e)
+                    reject(e);
                 }
-            })
+            });
         });
     }
 
     private getParser(file: string) {
-        const ext = file.split('.').pop().toLowerCase()
+        const ext = file
+            .split('.')
+            .pop()
+            .toLowerCase();
         return extParser[ext] ? extParser[ext] : 'babel';
     }
 
@@ -214,7 +222,7 @@ export default class lint {
     private async checkfiles(files: Array<string>) {
         const maxsize = 1048576;
         // 检查文件大小,超过1MB禁止提交
-        const stats = await Promise.all(files.map(item => fsStat(item)));
+        const stats = await Promise.all(files.map((item) => fsStat(item)));
         return stats.every((item, index) => {
             if (item.size > maxsize) {
                 throw new Error(`${files[index]} too large,${item.size} exceed ${maxsize}`);
