@@ -18,8 +18,8 @@ export default class {
 
     // 解析优先级, 配置文件>连字符>less文件查找>静态文件
     private async resolveLess(): Promise<Array<string>> {
-        const pathname = this.pathname.replace('.css', '');
-        const css = Object.keys(this.opts.opts.static.css) || [];
+        const pathname = this.pathname.replace('.css', '').replace(/^\//, '');
+        const css = this.opts.opts.static ? (Object.keys(this.opts.opts.static.css) || []):[];
         const curr = pathname.replace(/.*\/static\//, '');
         if (css.includes(curr)) {
             return css[curr].map((item: string) => path.join(this.opts.dirname, item));
@@ -41,8 +41,8 @@ export default class {
 
     async resolveJs(): Promise<Array<string>> {
 
-        const pathname = this.pathname.replace('.js', '');
-        const js = Object.keys(this.opts.opts.static.js) || [];
+        const pathname = this.pathname.replace('.js', '').replace(/^\//, '');
+        const js = this.opts.opts.static ? (Object.keys(this.opts.opts.static.js) || []) : [];
         const curr = pathname.replace(/.*\/static\//, '');
         if (js.includes(curr)) {
             return js[curr].map((item: string) => path.join(this.opts.dirname, item));
@@ -120,40 +120,25 @@ export default class {
         if (this.jopts.debug) {
             options = {
                 mangle: false,
-                compress: {
-                    sequences: false,
-                    properties: false,
-                    dead_code: false,
-                    unused: false,
-                    booleans: false,
-                    join_vars: false,
-                    if_return: false,
-                    conditionals: false,
-                    hoist_funs: false,
-                    drop_debugger: false,
-                    evaluate: false,
-                    loops: false
-                }
+                compress: false,
+                ecma: 5,
+                keep_classnames: true,
+                keep_fnames: true,
             };
         } else {
             options = {
+                ecma: 5,
                 mangle: true,
                 compress: {
-                    sequences: true,
-                    properties: true,
-                    dead_code: true,
-                    unused: true,
-                    booleans: true,
-                    join_vars: true,
-                    if_return: true,
-                    conditionals: true
+                    arguments: true,
+                    booleans_as_integers: true,
+                    drop_debugger: false,
+                    drop_console: false,
                 }
             };
             if (this.jopts.clean) {
                 options.compress.drop_console = true;
                 options.compress.drop_debugger = true;
-                options.compress.evaluate = true;
-                options.compress.loops = true;
             }
         }
         const filesMap = await util.getContent(files)
