@@ -5,10 +5,27 @@ import { cliArgs, staticOpts } from '../types';
 import { templatetips } from '../config';
 import { fsWriteFile } from './util';
 export default class {
+	/**
+	 * air lint --pretty
+	 * air lint --lintlast
+	 * @param args
+	 * @param cwd
+	 * @param opts
+	 * @param staticCfg
+	 */
 	static async lint(args: Array<string>, cwd: string, opts: cliArgs, staticCfg: staticOpts) {
 		await new lint(cwd, args, opts).lint();
 	}
 
+	/**
+	 * air gitlint --pretty
+	 * air gitlint --lintlast
+	 * air gitlint --nogit
+	 * @param args
+	 * @param cwd
+	 * @param opts
+	 * @param staticCfg
+	 */
 	static async gitlint(args: Array<string>, cwd: string, opts: cliArgs, staticCfg: staticOpts) {
 		await new lint(cwd, args, opts).gitlint();
 	}
@@ -51,7 +68,7 @@ export default class {
 	 * @param options
 	 */
 	static async template(args: Array<string>, cwd: string, opts: cliArgs, staticCfg: staticOpts) {
-		const file = args.filter(item => item.charAt(0) !== '-')[0];
+		const file = args.filter((item) => item.charAt(0) !== '-')[0];
 		if (!file) {
 			throw new Error(templatetips);
 		}

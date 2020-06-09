@@ -16,27 +16,27 @@ export default class {
 			opts: {
 				static: {
 					css: null,
-					js: null
+					js: null,
 				},
-				template: {}
-			}
-		}
+				template: {},
+			},
+		},
 	};
 
 	constructor(private cwd: string) {}
 
 	async run(argv: string[]) {
 		try {
-			await this.loadConfig();
 			const [, , ...args] = argv;
 			this.argv = args;
 			this.args = utiljs.getParams(args);
-			this.args.cwd = process.cwd();
+			this.args.cwd = this.cwd;
 			this.opts.port = this.args.port || 8088;
 			if (this.args.dir) {
 				process.chdir(this.args.dir);
 			}
 			this.cwd = process.cwd();
+			await this.loadConfig();
 			if (args.length > 0) {
 				await this.runArgs();
 			} else {
