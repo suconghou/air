@@ -15,6 +15,7 @@ Flags:
     -p              set server listen port
     -d              document root , work dir, install dir
     -o              set output file path for air template
+    -q              urlArgs params in less render
     --debug         compress with debug mode
     --clean         compress with clean mode,remove console debugger
     --escape        escape when use art-template
