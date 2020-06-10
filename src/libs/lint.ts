@@ -13,6 +13,7 @@ const prettyTypes = ['js', 'vue', 'jsx', 'ts', 'css', 'less', 'html', 'json', 's
 
 const extParser = {
 	js: 'babel',
+	mjs: 'babel',
 	jsx: 'babel',
 	ts: 'typescript',
 	vue: 'vue',
@@ -26,7 +27,11 @@ const extParser = {
 };
 
 const lintParser = {
-	js: 'babel-eslint',
+    js: 'babel-eslint',
+    mjs: 'babel-eslint',
+    vue:'vue-eslint-parser',
+    ts:'@typescript-eslint/parser' ,
+    tsx:'@typescript-eslint/parser'
 };
 
 // see https://github.com/eslint/eslint/blob/master/conf/eslint-recommended.js
@@ -81,7 +86,7 @@ const rules = {
 	'no-unsafe-finally': 'error',
 	'no-unsafe-negation': 'error',
 	'no-unused-labels': 'error',
-	'no-unused-vars': 'error',
+	'no-unused-vars': 'warn',
 	'no-useless-catch': 'error',
 	'no-useless-escape': 'error',
 	'no-with': 'error',
@@ -100,8 +105,9 @@ const config = {
 		parserOptions: {
 			ecmaVersion: 7,
 			sourceType: 'module',
-		},
-		extends: ['eslint:recommended'],
+        },
+        extends: ['plugin:vue/recommended','eslint:recommended'],
+        plugins:['vue'],
 		parser: '', // this will be auto babel-eslint / vue-eslint-parser / @typescript-eslint/parser
 		rules,
 		useEslintrc: true,
@@ -231,11 +237,14 @@ export default class lint {
 							text: r,
 						},
 					};
-					const [esparser, preparser] = this.getParser(item);
+					const [esparser, preparser,ext] = this.getParser(item);
 					options.eslintConfig.parser = esparser;
 					options.prettierOptions.parser = preparser;
-					options.fallbackPrettierOptions.parser = preparser;
-					console.info(options);
+                    options.fallbackPrettierOptions.parser = preparser;
+                    if(['ts','tsx'].includes(ext)){
+                        options.eslintConfig.extends = options.eslintConfig.extends.filter(item=>!item.includes('vue') )
+						options.eslintConfig.plugins = options.eslintConfig.plugins.filter(item=>!item.includes('vue'))
+                    }
 					const res = await format(options);
 					if (r !== res && res) {
 						// 异步写文件,其他异步终止进程,容易写出空文件
@@ -255,7 +264,7 @@ export default class lint {
 			.split('.')
 			.pop()
 			.toLowerCase();
-		return [lintParser[ext] ? lintParser[ext] : '', extParser[ext] ? extParser[ext] : 'babel'];
+		return [lintParser[ext] ? lintParser[ext] : '', extParser[ext] ? extParser[ext] : 'babel',ext];
 	}
 
 	private gitadd(f: Array<string>) {
