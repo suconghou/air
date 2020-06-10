@@ -43,7 +43,7 @@ export default class {
 				await this.runInit();
 			}
 		} catch (e) {
-			console.error(e.message || e.stack || e);
+			console.error(e.stack || e.message || e);
 			process.exit(1);
 		}
 	}

@@ -68,7 +68,7 @@ const rules = {
 	'no-invalid-regexp': 'error',
 	'no-irregular-whitespace': 'error',
 	'no-misleading-character-class': 'error',
-	'no-mixed-spaces-and-tabs': 'error',
+	'no-mixed-spaces-and-tabs': 'warn',
 	'no-new-symbol': 'error',
 	'no-obj-calls': 'error',
 	'no-octal': 'error',
@@ -171,16 +171,10 @@ export default class lint {
 	}
 
 	async gitlint() {
-		const res = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACM']);
-		const arrs = res.stdout
-			.toString()
-			.split('\n')
-			.filter((v) => v);
-
-		if (!arrs.length) {
+		if (this.files.length < 1) {
 			return;
 		}
-		const { prefiles, gitfiles } = this.parse(arrs);
+		const { prefiles, gitfiles } = this.parse(this.files);
 		await this.dolint(prefiles, gitfiles);
 		if (!this.opts.nogit) {
 			await this.gitadd(gitfiles);
@@ -206,10 +200,21 @@ export default class lint {
 		return { prefiles, gitfiles, filetypes };
 	}
 
+	private autofiles() {
+		const res = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACM']);
+		const arrs = res.stdout
+			.toString()
+			.split('\n')
+			.filter((v) => v);
+		return arrs;
+	}
+
 	public async lint() {
 		if (this.files.length < 1) {
-			this.opts.nogit = true;
-			return this.gitlint();
+			this.files = this.autofiles();
+		}
+		if (this.files.length < 1) {
+			return;
 		}
 		const { prefiles, gitfiles } = this.parse(this.files);
 		await this.dolint(prefiles, gitfiles);
