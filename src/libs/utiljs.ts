@@ -14,6 +14,7 @@ export default {
 			'-p': 'port',
 			'-o': 'output',
 			'-d': 'dir',
+			'-q': 'query',
 			'--escape': 'escape',
 			'--debug': 'debug',
 			'--clean': 'clean',

@@ -17,7 +17,6 @@ export interface serverArgs {
 }
 
 export interface lessopts {
-	ver?: string;
 	urlArgs?: string;
 	compress?: boolean;
 	env?: string;
@@ -36,6 +35,7 @@ export interface cliArgs {
 	dir: string;
 	output: string;
 	cwd: string;
+	query: string;
 	clean: boolean;
 	escape: boolean;
 	art: boolean;

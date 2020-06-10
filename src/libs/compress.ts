@@ -5,18 +5,20 @@ import { staticOpts, cliArgs, lessopts, jsopts } from '../types';
 import tool from './tool';
 
 export default class {
-	private options: lessopts = { ver: '', compress: false, env: 'development' };
+	private options: lessopts = { urlArgs: '', compress: false, env: 'development' };
 	private jopts: jsopts = { debug: true, clean: false };
 
-	constructor(private opts: staticOpts, private pathname: string, private query: querystring.ParsedUrlQuery) {}
+	constructor(private opts: staticOpts, private pathname: string, private query: querystring.ParsedUrlQuery) {
+		this.options.urlArgs = query.urlArgs ? query.urlArgs.toString() : '';
+	}
 
 	// 解析优先级, 配置文件>连字符>less文件查找>静态文件
 	private async resolveLess(): Promise<Array<string>> {
 		const pathname = this.pathname.replace('.css', '').replace(/^\//, '');
 		const css = this.opts.opts.static ? Object.keys(this.opts.opts.static.css) || [] : [];
-		const curr = pathname.replace(/.*\/static\//, '');
-		if (css.includes(curr)) {
-			return css[curr].map((item: string) => path.join(this.opts.dirname, item));
+		const curr = pathname.replace(/.*static\//, '');
+		if (css.includes(curr + '.css')) {
+			return this.opts.opts.static.css[curr + '.css'].map((item: string) => path.join(this.opts.dirname, item));
 		}
 
 		if (/-/.test(curr)) {
@@ -35,9 +37,9 @@ export default class {
 	async resolveJs(): Promise<Array<string>> {
 		const pathname = this.pathname.replace('.js', '').replace(/^\//, '');
 		const js = this.opts.opts.static ? Object.keys(this.opts.opts.static.js) || [] : [];
-		const curr = pathname.replace(/.*\/static\//, '');
-		if (js.includes(curr)) {
-			return js[curr].map((item: string) => path.join(this.opts.dirname, item));
+		const curr = pathname.replace(/.*static\//, '');
+		if (js.includes(curr + '.js')) {
+			return this.opts.opts.static.js[curr + '.js'].map((item: string) => path.join(this.opts.dirname, item));
 		}
 		if (/-/.test(curr)) {
 			const dirs = curr.split('/');
@@ -59,12 +61,12 @@ export default class {
 		const time = await util.getUpdateTime(files);
 
 		const ret = tool.get(this.pathname);
-		if (ret && ret.time == time && ret.ver == this.options.ver) {
+		if (ret && ret.time == time && ret.urlArgs == this.options.urlArgs) {
 			return { ret, hit: true };
 		}
 
 		const r = await this.compileLess(files);
-		const res = { css: r, time, ver: this.options.ver };
+		const res = { css: r, time, urlArgs: this.options.urlArgs };
 		tool.set(this.pathname, res);
 
 		return { ret: res, hit: false };
@@ -96,11 +98,11 @@ export default class {
 		const files = await this.resolveJs();
 		const time = await util.getUpdateTime(files);
 		const ret = tool.get(this.pathname);
-		if (ret && ret.time == time && ret.ver == this.options.ver) {
+		if (ret && ret.time == time) {
 			return { ret, hit: true };
 		}
 		const r = await this.compileJs(files);
-		const res = { js: r, time, ver: this.options.ver };
+		const res = { js: r, time };
 		tool.set(this.pathname, res);
 		return { ret: res, hit: false };
 	}

@@ -56,7 +56,7 @@ export default class {
 			console.log('no config found');
 			return;
 		}
-		await new compress(staticCfg, '', {}).compress(opts);
+		await new compress(staticCfg, '', { urlArgs: opts.query }).compress(opts);
 	}
 
 	/**
