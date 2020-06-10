@@ -1,9 +1,10 @@
 {
 	"name": "airs",
-	"version": "0.7.2",
+	"version": "0.7.3",
 	"description": "serve static files in the air",
 	"dependencies": {
 		"art-template": "^4.13.2",
+		"babel-eslint": "^10.1.0",
 		"common-tags": "^1.4.0",
 		"core-js": "^3.6.5",
 		"dlv": "^1.1.0",
