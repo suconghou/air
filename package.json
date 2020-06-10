@@ -1,15 +1,13 @@
 {
 	"name": "airs",
-	"version": "0.7.1",
+	"version": "0.7.2",
 	"description": "serve static files in the air",
 	"dependencies": {
-		"@typescript-eslint/parser": "^3.0.0",
 		"art-template": "^4.13.2",
 		"common-tags": "^1.4.0",
 		"core-js": "^3.6.5",
 		"dlv": "^1.1.0",
 		"eslint": "^7.2.0",
-		"eslint-plugin-vue": "^6.2.2",
 		"indent-string": "^4.0.0",
 		"less": "^3.11.2",
 		"less-plugin-autoprefix": "^2.0.0",
@@ -19,7 +17,6 @@
 		"pretty-format": "^23.0.1",
 		"require-relative": "^0.8.7",
 		"terser": "^4.7.0",
-		"typescript": "^3.9.3",
 		"vue-eslint-parser": "~7.1.0"
 	},
 	"engines": {

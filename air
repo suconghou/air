@@ -1,13 +1,26 @@
 #!/usr/bin/env node
 'use strict';
 
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
 var process$1 = require('process');
 var fs = require('fs');
+var fs__default = _interopDefault(fs);
 var path = require('path');
+var path__default = _interopDefault(path);
 var util$1 = require('util');
 var querystring = require('querystring');
 var http = require('http');
 var child_process = require('child_process');
+require('core-js/modules/es.string.trim-start');
+require('core-js/modules/es.string.trim-end');
+var requireRelative = _interopDefault(require('require-relative'));
+var prettyFormat = _interopDefault(require('pretty-format'));
+var commonTags = require('common-tags');
+var indentString = _interopDefault(require('indent-string'));
+var getLogger = _interopDefault(require('loglevel-colored-level-prefix'));
+var merge = _interopDefault(require('lodash.merge'));
+var delve = _interopDefault(require('dlv'));
 
 const fsStat = util$1.promisify(fs.stat);
 const fsAccess = util$1.promisify(fs.access);
@@ -19,7 +32,7 @@ class util {
     static resolveLookupPaths(pathstr, file) {
         const arr = [];
         const tmp = [];
-        pathstr.split(path.sep).forEach(item => {
+        pathstr.split(path.sep).forEach((item) => {
             if (/^[a-zA-Z]:$/.test(item)) {
                 // for windows
                 return;
@@ -754,8 +767,8 @@ class compress {
     }
     // 解析优先级, 配置文件>连字符>less文件查找>静态文件
     async resolveLess() {
-        const pathname = this.pathname.replace('.css', '');
-        const css = Object.keys(this.opts.opts.static.css) || [];
+        const pathname = this.pathname.replace('.css', '').replace(/^\//, '');
+        const css = this.opts.opts.static ? Object.keys(this.opts.opts.static.css) || [] : [];
         const curr = pathname.replace(/.*\/static\//, '');
         if (css.includes(curr)) {
             return css[curr].map((item) => path.join(this.opts.dirname, item));
@@ -765,16 +778,16 @@ class compress {
             const segment = dirs.pop();
             return segment
                 .split('-')
-                .filter(item => item)
-                .map(item => {
+                .filter((item) => item)
+                .map((item) => {
                 return path.join(this.opts.dirname, ...dirs, item) + '.less';
             });
         }
         return [path.join(this.opts.dirname, curr) + '.less'];
     }
     async resolveJs() {
-        const pathname = this.pathname.replace('.js', '');
-        const js = Object.keys(this.opts.opts.static.js) || [];
+        const pathname = this.pathname.replace('.js', '').replace(/^\//, '');
+        const js = this.opts.opts.static ? Object.keys(this.opts.opts.static.js) || [] : [];
         const curr = pathname.replace(/.*\/static\//, '');
         if (js.includes(curr)) {
             return js[curr].map((item) => path.join(this.opts.dirname, item));
@@ -784,8 +797,8 @@ class compress {
             const segment = dirs.pop();
             return segment
                 .split('-')
-                .filter(item => item)
-                .map(item => {
+                .filter((item) => item)
+                .map((item) => {
                 return path.join(this.opts.dirname, ...dirs, item) + '.js';
             });
         }
@@ -817,7 +830,7 @@ class compress {
             paths: this.opts.dirname,
             urlArgs,
             compress,
-            env
+            env,
         };
         const ret = await less.render(lessInput, option);
         return ret.css;
@@ -839,41 +852,26 @@ class compress {
         if (this.jopts.debug) {
             options = {
                 mangle: false,
-                compress: {
-                    sequences: false,
-                    properties: false,
-                    dead_code: false,
-                    unused: false,
-                    booleans: false,
-                    join_vars: false,
-                    if_return: false,
-                    conditionals: false,
-                    hoist_funs: false,
-                    drop_debugger: false,
-                    evaluate: false,
-                    loops: false
-                }
+                compress: false,
+                ecma: 2016,
+                keep_classnames: true,
+                keep_fnames: true,
             };
         }
         else {
             options = {
+                ecma: 5,
                 mangle: true,
                 compress: {
-                    sequences: true,
-                    properties: true,
-                    dead_code: true,
-                    unused: true,
-                    booleans: true,
-                    join_vars: true,
-                    if_return: true,
-                    conditionals: true
-                }
+                    arguments: true,
+                    booleans_as_integers: true,
+                    drop_debugger: false,
+                    drop_console: false,
+                },
             };
             if (this.jopts.clean) {
                 options.compress.drop_console = true;
                 options.compress.drop_debugger = true;
-                options.compress.evaluate = true;
-                options.compress.loops = true;
             }
         }
         const filesMap = await util.getContent(files);
@@ -926,14 +924,16 @@ var utiljs = {
         const kMap = {
             '-v': 'version',
             '-p': 'port',
-            '-d': 'root',
             '-o': 'output',
-            '-dir': 'dir',
+            '-d': 'dir',
             '--escape': 'escape',
             '--debug': 'debug',
             '--clean': 'clean',
             '--dry': 'dry',
             '--art': 'art',
+            '--nogit': 'nogit',
+            '--pretty': 'pretty',
+            '--lintlast': 'lintlast',
         };
         return this.params(args, kMap);
     },
@@ -980,10 +980,10 @@ class ssi {
         let res, i = 0, filesMap = {};
         const fillContents = async () => {
             let res;
-            let fileList = Object.keys(filesMap).filter(item => {
+            let fileList = Object.keys(filesMap).filter((item) => {
                 return !filesMap[item];
             });
-            res = await Promise.all(fileList.map(item => {
+            res = await Promise.all(fileList.map((item) => {
                 return readFile(path.join(cwd, item));
             }));
             res.forEach((item, i) => {
@@ -1008,7 +1008,7 @@ class ssi {
                 throw new Error('include file too deep');
             }
             await fillContents();
-            Object.keys(matches).forEach(item => {
+            Object.keys(matches).forEach((item) => {
                 const file = matches[item];
                 const content = filesMap[file];
                 html = html.replace(item, content);
@@ -1037,7 +1037,7 @@ class template {
             compileDebug: !minimize,
             escape: escape,
             root: this.cwd,
-            cache: false
+            cache: false,
         };
         Object.assign(template.defaults, options);
         const dstfile = path.join(this.cwd, file);
@@ -1078,7 +1078,7 @@ class server {
                 .listen(this.args.port, this.args.host, () => {
                 console.info('Server listening on port %d', this.args.port);
             })
-                .on('error', err => {
+                .on('error', (err) => {
                 console.error(err.toString());
             });
             this.watch();
@@ -1134,11 +1134,715 @@ class server {
     }
 }
 
+/* eslint import/no-dynamic-require:0 */
+
+const logger = getLogger({ prefix: 'prettier-eslint' });
+const RULE_DISABLED = {};
+const RULE_NOT_CONFIGURED = 'RULE_NOT_CONFIGURED';
+const ruleValueExists = prettierRuleValue =>
+  prettierRuleValue !== RULE_NOT_CONFIGURED &&
+  prettierRuleValue !== RULE_DISABLED &&
+  typeof prettierRuleValue !== 'undefined';
+const OPTION_GETTERS = {
+  printWidth: {
+    ruleValue: rules => getRuleValue(rules, 'max-len', 'code'),
+    ruleValueToPrettierOption: getPrintWidth
+  },
+  tabWidth: {
+    ruleValue: rules => {
+      let value = getRuleValue(rules, 'indent');
+      if (value === 'tab') {
+        value = getRuleValue(rules, 'max-len', 'tabWidth');
+      }
+      return value;
+    },
+    ruleValueToPrettierOption: getTabWidth
+  },
+  singleQuote: {
+    ruleValue: rules => getRuleValue(rules, 'quotes'),
+    ruleValueToPrettierOption: getSingleQuote
+  },
+  trailingComma: {
+    ruleValue: rules => getRuleValue(rules, 'comma-dangle', []),
+    ruleValueToPrettierOption: getTrailingComma
+  },
+  bracketSpacing: {
+    ruleValue: rules => getRuleValue(rules, 'object-curly-spacing'),
+    ruleValueToPrettierOption: getBracketSpacing
+  },
+  semi: {
+    ruleValue: rules => getRuleValue(rules, 'semi'),
+    ruleValueToPrettierOption: getSemi
+  },
+  useTabs: {
+    ruleValue: rules => getRuleValue(rules, 'indent'),
+    ruleValueToPrettierOption: getUseTabs
+  },
+  jsxBracketSameLine: {
+    ruleValue: rules =>
+      getRuleValue(rules, 'react/jsx-closing-bracket-location', 'nonEmpty'),
+    ruleValueToPrettierOption: getJsxBracketSameLine
+  },
+  arrowParens: {
+    ruleValue: rules => getRuleValue(rules, 'arrow-parens'),
+    ruleValueToPrettierOption: getArrowParens
+  }
+};
+
+function getOptionsForFormatting(
+  eslintConfig,
+  prettierOptions = {},
+  fallbackPrettierOptions = {},
+  eslintPath,
+  exitOnLintErr
+) {
+  const eslint = getRelevantESLintConfig(eslintConfig, eslintPath,exitOnLintErr);
+  const prettier = getPrettierOptionsFromESLintRules(
+    eslintConfig,
+    prettierOptions,
+    fallbackPrettierOptions
+  );
+  return { eslint, prettier };
+}
+
+function getRelevantESLintConfig(eslintConfig, eslintPath, exitOnLintErr) {
+  const cliEngine = getESLintCLIEngine(eslintPath);
+  // TODO: Actually test this branch
+  // istanbul ignore next
+  const loadedRules =
+    (cliEngine.getRules && cliEngine.getRules()) ||
+    // XXX: Fallback list of unfixable rules, when using and old version of eslint
+    new Map([['global-require', { meta: {} }], ['no-with', { meta: {} }]]);
+
+  const { rules } = eslintConfig;
+
+  logger.debug('turning off unfixable rules');
+
+  const relevantRules = exitOnLintErr ? rules : Object.entries(rules).reduce(
+    (rulesAccumulator, [name, rule]) => {
+      if (loadedRules.has(name)) {
+        const {
+          meta: { fixable }
+        } = loadedRules.get(name);
+
+        if (!fixable) {
+          logger.trace('turing off rule:', JSON.stringify({ [name]: rule }));
+          rule = ['off'];
+        }
+      }
+
+      rulesAccumulator[name] = rule;
+      return rulesAccumulator;
+    },
+    {}
+  );
+
+  return {
+    // defaults
+    useEslintrc: false,
+    baseConfig: {
+      settings: eslintConfig.settings || {}
+    },
+    ...eslintConfig,
+    // overrides
+    rules: relevantRules,
+    fix: true,
+    globals: []
+  };
+}
+
+/**
+ * This accepts an eslintConfig object and converts
+ * it to the `prettier` options object
+ */
+function getPrettierOptionsFromESLintRules(
+  eslintConfig,
+  prettierOptions,
+  fallbackPrettierOptions
+) {
+  const { rules } = eslintConfig;
+
+  const prettierPluginOptions = getRuleValue(rules, 'prettier/prettier', []);
+
+  if (ruleValueExists(prettierPluginOptions)) {
+    prettierOptions = { ...prettierPluginOptions, ...prettierOptions };
+  }
+
+  return Object.keys(OPTION_GETTERS).reduce(
+    (options, key) =>
+      configureOptions(
+        prettierOptions,
+        fallbackPrettierOptions,
+        key,
+        options,
+        rules
+      ),
+    prettierOptions
+  );
+}
+
+// If an ESLint rule that prettier can be configured with is enabled create a
+// prettier configuration object that reflects the ESLint rule configuration.
+function configureOptions(
+  prettierOptions,
+  fallbackPrettierOptions,
+  key,
+  options,
+  rules
+) {
+  const givenOption = prettierOptions[key];
+  const optionIsGiven = givenOption !== undefined;
+
+  if (optionIsGiven) {
+    options[key] = givenOption;
+  } else {
+    const { ruleValue, ruleValueToPrettierOption } = OPTION_GETTERS[key];
+    const eslintRuleValue = ruleValue(rules);
+
+    const option = ruleValueToPrettierOption(
+      eslintRuleValue,
+      fallbackPrettierOptions,
+      rules
+    );
+
+    if (option !== undefined) {
+      options[key] = option;
+    }
+  }
+
+  return options;
+}
+
+function getPrintWidth(eslintValue, fallbacks) {
+  return makePrettierOption('printWidth', eslintValue, fallbacks);
+}
+
+function getTabWidth(eslintValue, fallbacks) {
+  return makePrettierOption('tabWidth', eslintValue, fallbacks);
+}
+
+function getSingleQuote(eslintValue, fallbacks) {
+  let prettierValue;
+
+  if (eslintValue === 'single') {
+    prettierValue = true;
+  } else if (eslintValue === 'double') {
+    prettierValue = false;
+  } else if (eslintValue === 'backtick') {
+    prettierValue = false;
+  } else {
+    prettierValue = eslintValue;
+  }
+
+  return makePrettierOption('singleQuote', prettierValue, fallbacks);
+}
+
+function getTrailingComma(eslintValue, fallbacks) {
+  let prettierValue;
+
+  if (eslintValue === 'never') {
+    prettierValue = 'none';
+  } else if (
+    typeof eslintValue === 'string' &&
+    eslintValue.indexOf('always') === 0
+  ) {
+    prettierValue = 'es5';
+  } else if (typeof eslintValue === 'object') {
+    prettierValue = getValFromTrailingCommaConfig(eslintValue);
+  } else {
+    prettierValue = RULE_NOT_CONFIGURED;
+  }
+
+  return makePrettierOption('trailingComma', prettierValue, fallbacks);
+}
+
+function getValFromTrailingCommaConfig(objectConfig) {
+  const { arrays = '', objects = '', functions = '' } = objectConfig;
+  const fns = isAlways(functions);
+  const es5 = [arrays, objects].some(isAlways);
+
+  if (fns) {
+    return 'all';
+  } else if (es5) {
+    return 'es5';
+  } else {
+    return 'none';
+  }
+}
+
+function getBracketSpacing(eslintValue, fallbacks) {
+  let prettierValue;
+
+  if (eslintValue === 'never') {
+    prettierValue = false;
+  } else if (eslintValue === 'always') {
+    prettierValue = true;
+  } else {
+    prettierValue = eslintValue;
+  }
+
+  return makePrettierOption('bracketSpacing', prettierValue, fallbacks);
+}
+
+function getSemi(eslintValue, fallbacks) {
+  let prettierValue;
+
+  if (eslintValue === 'never') {
+    prettierValue = false;
+  } else if (eslintValue === 'always') {
+    prettierValue = true;
+  } else {
+    prettierValue = eslintValue;
+  }
+
+  return makePrettierOption('semi', prettierValue, fallbacks);
+}
+
+function getUseTabs(eslintValue, fallbacks) {
+  let prettierValue;
+
+  if (eslintValue === 'tab') {
+    prettierValue = true;
+  } else {
+    prettierValue = RULE_NOT_CONFIGURED;
+  }
+
+  return makePrettierOption('useTabs', prettierValue, fallbacks);
+}
+
+function getJsxBracketSameLine(eslintValue, fallbacks) {
+  let prettierValue;
+
+  if (eslintValue === 'after-props') {
+    prettierValue = true;
+  } else if (
+    eslintValue === 'tag-aligned' ||
+    eslintValue === 'line-aligned' ||
+    eslintValue === 'props-aligned'
+  ) {
+    prettierValue = false;
+  } else {
+    prettierValue = eslintValue;
+  }
+
+  return makePrettierOption('jsxBracketSameLine', prettierValue, fallbacks);
+}
+
+function getArrowParens(eslintValue, fallbacks) {
+  let prettierValue;
+
+  if (eslintValue === 'as-needed') {
+    prettierValue = 'avoid';
+  } else {
+    prettierValue = eslintValue;
+  }
+
+  return makePrettierOption('arrowParens', prettierValue, fallbacks);
+}
+
+function extractRuleValue(objPath, name, value) {
+  // XXX: Ignore code coverage for the following else case
+  // There are currently no eslint rules which we can infer prettier
+  // options from, that have an object option which we don't know how
+  // to infer from.
+
+  // istanbul ignore else
+  if (objPath) {
+    logger.trace(
+      commonTags.oneLine`
+        Getting the value from object configuration of ${name}.
+        delving into ${JSON.stringify(value)} with path "${objPath}"
+      `
+    );
+
+    return delve(value, objPath, RULE_NOT_CONFIGURED);
+  }
+
+  // istanbul ignore next
+  logger.debug(
+    commonTags.oneLine`
+      The ${name} rule is using an object configuration
+      of ${JSON.stringify(value)} but prettier-eslint is
+      not currently capable of getting the prettier value
+      based on an object configuration for ${name}.
+      Please file an issue (and make a pull request?)
+    `
+  );
+
+  // istanbul ignore next
+  return undefined;
+}
+
+function getRuleValue(rules, name, objPath) {
+  const ruleConfig = rules[name];
+
+  if (Array.isArray(ruleConfig)) {
+    const [ruleSetting, value] = ruleConfig;
+
+    // If `ruleSetting` is set to disable the ESLint rule don't use `value` as
+    // it might be a value provided by an overriden config package e.g. airbnb
+    // overriden by config-prettier. The airbnb values are provided even though
+    // config-prettier disables the rule. Instead use fallback or prettier
+    // default.
+    if (ruleSetting === 0 || ruleSetting === 'off') {
+      return RULE_DISABLED;
+    }
+
+    if (typeof value === 'object') {
+      return extractRuleValue(objPath, name, value);
+    } else {
+      logger.trace(
+        commonTags.oneLine`
+          The ${name} rule is configured with a
+          non-object value of ${value}. Using that value.
+        `
+      );
+      return value;
+    }
+  }
+
+  return RULE_NOT_CONFIGURED;
+}
+
+function isAlways(val) {
+  return val.indexOf('always') === 0;
+}
+
+function makePrettierOption(prettierRuleName, prettierRuleValue, fallbacks) {
+  if (ruleValueExists(prettierRuleValue)) {
+    return prettierRuleValue;
+  }
+
+  const fallback = fallbacks[prettierRuleName];
+  if (typeof fallback !== 'undefined') {
+    logger.debug(
+      commonTags.oneLine`
+        The ${prettierRuleName} rule is not configured,
+        using provided fallback of ${fallback}
+      `
+    );
+    return fallback;
+  }
+
+  logger.debug(
+    commonTags.oneLine`
+      The ${prettierRuleName} rule is not configured,
+      let prettier decide
+    `
+  );
+  return undefined;
+}
+
+function requireModule(modulePath, name) {
+  try {
+    logger.trace(`requiring "${name}" module at "${modulePath}"`);
+    return require(modulePath);
+  } catch (error) {
+    logger.error(
+      commonTags.oneLine`
+      There was trouble getting "${name}".
+      Is "${modulePath}" a correct path to the "${name}" module?
+    `
+    );
+    throw error;
+  }
+}
+
+function getESLintCLIEngine(eslintPath, eslintOptions) {
+  const { CLIEngine } = requireModule(eslintPath, 'eslint');
+  try {
+    return new CLIEngine(eslintOptions);
+  } catch (error) {
+    logger.error(`There was trouble creating the ESLint CLIEngine.`);
+    throw error;
+  }
+}
+
+/* eslint no-console:0, global-require:0, import/no-dynamic-require:0 */
+const logger$1 = getLogger({ prefix: 'prettier-eslint' });
+
+/**
+ * Formats the text with prettier and then eslint based on the given options
+ * @param {String} options.filePath - the path of the file being formatted
+ *  can be used in leu of `eslintConfig` (eslint will be used to find the
+ *  relevant config for the file). Will also be used to load the `text` if
+ *  `text` is not provided.
+ * @param {String} options.text - the text (JavaScript code) to format
+ * @param {String} options.eslintPath - the path to the eslint module to use.
+ *   Will default to require.resolve('eslint')
+ * @param {String} options.prettierPath - the path to the prettier module.
+ *   Will default to require.resovlve('prettier')
+ * @param {Object} options.eslintConfig - the config to use for formatting
+ *  with ESLint.
+ * @param {Object} options.prettierOptions - the options to pass for
+ *  formatting with `prettier`. If not provided, prettier-eslint will attempt
+ *  to create the options based on the eslintConfig
+ * @param {Object} options.fallbackPrettierOptions - the options to pass for
+ *  formatting with `prettier` if the given option is not inferrable from the
+ *  eslintConfig.
+ * @param {String} options.logLevel - the level for the logs
+ *  (error, warn, info, debug, trace)
+ * @param {Boolean} options.prettierLast - Run Prettier Last
+ * @param {Boolean} options.exitOnLintErr - exit on lint error and report lint errors and warnings
+ * @return {String} - the formatted string
+ */
+async function format(options) {
+  const { logLevel = getDefaultLogLevel() } = options;
+  logger$1.setLevel(logLevel);
+  logger$1.trace('called format with options:', prettyFormat(options));
+
+  const {
+    filePath,
+    text = getTextFromFilePath(filePath),
+    eslintPath = getModulePath(filePath, 'eslint'),
+    prettierPath = getModulePath(filePath, 'prettier'),
+    prettierLast,
+    fallbackPrettierOptions
+  } = options;
+
+  const eslintConfig = merge(
+    {},
+    options.eslintConfig,
+    getESLintConfig(filePath, eslintPath)
+  );
+
+  if (typeof eslintConfig.globals === 'object') {
+    eslintConfig.globals = Object.entries(eslintConfig.globals).map(
+      ([key, value]) => `${key}:${value}`
+    );
+  }
+
+  const prettierOptions = merge(
+    {},
+    filePath && { filepath: filePath },
+    getPrettierConfig(filePath, prettierPath),
+    options.prettierOptions
+  );
+
+  const formattingOptions = getOptionsForFormatting(
+    eslintConfig,
+    prettierOptions,
+    fallbackPrettierOptions,
+    eslintPath,
+    options.exitOnLintErr
+  );
+
+  logger$1.debug(
+    'inferred options:',
+    prettyFormat({
+      filePath,
+      text,
+      eslintPath,
+      prettierPath,
+      eslintConfig: formattingOptions.eslint,
+      prettierOptions: formattingOptions.prettier,
+      logLevel,
+      prettierLast
+    })
+  );
+
+  const eslintExtensions = eslintConfig.extensions || [
+    '.js',
+    '.jsx',
+    '.ts',
+    '.tsx',
+    '.mjs',
+    '.vue'
+  ];
+  const fileExtension = path__default.extname(filePath || '');
+
+  // If we don't get filePath run eslint on text, otherwise only run eslint
+  // if it's a configured extension or fall back to a "supported" file type.
+  const onlyPrettier = filePath
+    ? !eslintExtensions.includes(fileExtension)
+    : false;
+
+  const prettify = createPrettify(formattingOptions.prettier, prettierPath);
+
+  if (onlyPrettier) {
+    return prettify(text);
+  }
+
+  if (['.ts', '.tsx'].includes(fileExtension)) {
+    formattingOptions.eslint.parser = require.resolve('@typescript-eslint/parser');
+    for (const k in formattingOptions.eslint.rules) {
+      if (k.includes('vue/')) {
+        formattingOptions.eslint.rules[k] = ['off'];
+      }
+    }
+  }
+
+  if (['.vue'].includes(fileExtension)) {
+    formattingOptions.eslint.parser = require.resolve('vue-eslint-parser');
+  }
+
+  const eslintFix = createEslintFix(formattingOptions.eslint, eslintPath, options.exitOnLintErr);
+
+  if (prettierLast) {
+    return prettify(await eslintFix(text, filePath));
+  }
+  return await eslintFix(prettify(text), filePath);
+}
+
+function createPrettify(formatOptions, prettierPath) {
+  return function prettify(text) {
+    logger$1.debug('calling prettier on text');
+    logger$1.trace(
+      commonTags.stripIndent`
+      prettier input:
+
+      ${indentString(text, 2)}
+    `
+    );
+    const prettier = requireModule(prettierPath, 'prettier');
+    try {
+      logger$1.trace(`calling prettier.format with the text and prettierOptions`);
+      const output = prettier.format(text, formatOptions);
+      logger$1.trace('prettier: output === input', output === text);
+      logger$1.trace(
+        commonTags.stripIndent`
+        prettier output:
+
+        ${indentString(output, 2)}
+      `
+      );
+      return output;
+    } catch (error) {
+      logger$1.error('prettier formatting failed due to a prettier error');
+      throw error;
+    }
+  };
+}
+
+function createEslintFix(eslintConfig, eslintPath, exitOnLintErr) {
+  return async function eslintFix(text, filePath) {
+    const cliEngine = getESLintCLIEngine(eslintPath, eslintConfig);
+    try {
+      logger$1.trace(`calling cliEngine.executeOnText with the text`);
+      const report = cliEngine.executeOnText(text, filePath, true);
+      logger$1.trace(
+        `executeOnText returned the following report:`,
+        prettyFormat(report)
+      );
+      // default the output to text because if there's nothing
+      // to fix, eslint doesn't provide `output`
+      const [{ output = text, errorCount }] = report.results;
+      if (exitOnLintErr) {
+        const formatter = await cliEngine.getFormatter('stylish');
+        const output = await formatter(report.results);
+        if (output) {
+          console.info(output);
+          if (errorCount > 0) {
+            process.exit(1);
+          }
+        }
+      }
+      logger$1.trace('eslint --fix: output === input', output === text);
+      // NOTE: We're ignoring linting errors/warnings here and
+      // defaulting to the given text if there are any
+      // because all we're trying to do is fix what we can.
+      // We don't care about what we can't
+      logger$1.trace(
+        commonTags.stripIndent`
+        eslint --fix output:
+
+        ${indentString(output, 2)}
+      `
+      );
+      return output;
+    } catch (error) {
+      logger$1.error('eslint fix failed due to an eslint error');
+      throw error;
+    }
+  };
+}
+
+function getTextFromFilePath(filePath) {
+  try {
+    logger$1.trace(
+      commonTags.oneLine`
+        attempting fs.readFileSync to get
+        the text for file at "${filePath}"
+      `
+    );
+    return fs__default.readFileSync(filePath, 'utf8');
+  } catch (error) {
+    logger$1.error(
+      commonTags.oneLine`
+        failed to get the text to format
+        from the given filePath: "${filePath}"
+      `
+    );
+    throw error;
+  }
+}
+
+function getESLintConfig(filePath, eslintPath) {
+  const eslintOptions = {};
+  if (filePath) {
+    eslintOptions.cwd = path__default.dirname(filePath);
+  }
+  logger$1.trace(
+    commonTags.oneLine`
+      creating ESLint CLI Engine to get the config for
+      "${filePath || process.cwd()}"
+    `
+  );
+  const cliEngine = getESLintCLIEngine(eslintPath, eslintOptions);
+  try {
+    logger$1.debug(`getting eslint config for file at "${filePath}"`);
+    const config = cliEngine.getConfigForFile(filePath);
+    logger$1.trace(
+      `eslint config for "${filePath}" received`,
+      prettyFormat(config)
+    );
+    return {
+      ...eslintOptions,
+      ...config
+    };
+  } catch (error) {
+    // is this noisy? Try setting options.disableLog to false
+    logger$1.debug('Unable to find config');
+    return { rules: {} };
+  }
+}
+
+function getPrettierConfig(filePath, prettierPath) {
+  const prettier = requireModule(prettierPath, 'prettier');
+  return (
+    (prettier.resolveConfig &&
+      prettier.resolveConfig.sync &&
+      prettier.resolveConfig.sync(filePath)) ||
+    {}
+  );
+}
+
+function getModulePath(filePath = __filename, moduleName) {
+  try {
+    return requireRelative.resolve(moduleName, filePath);
+  } catch (error) {
+    logger$1.debug(
+      commonTags.oneLine`
+        There was a problem finding the ${moduleName}
+        module. Using prettier-eslint's version.
+      `,
+      error.message,
+      error.stack
+    );
+    return require.resolve(moduleName);
+  }
+}
+
+function getDefaultLogLevel() {
+  return process.env.LOG_LEVEL || 'warn';
+}
+
 const spawn = util$1.promisify(child_process.spawn);
 const spawnSync = child_process.spawnSync;
 const prettyTypes = ['js', 'vue', 'jsx', 'ts', 'css', 'less', 'html', 'json', 'scss', 'md'];
 const extParser = {
     js: 'babel',
+    mjs: 'babel',
     jsx: 'babel',
     ts: 'typescript',
     vue: 'vue',
@@ -1146,9 +1850,76 @@ const extParser = {
     css: 'css',
     less: 'less',
     scss: 'scss',
-    json: 'json-stringify',
+    json: 'json',
     md: 'mdx',
     yaml: 'yaml',
+};
+const lintParser = {
+    js: 'babel-eslint',
+    mjs: 'babel-eslint',
+    vue: 'vue-eslint-parser',
+    ts: '@typescript-eslint/parser',
+    tsx: '@typescript-eslint/parser',
+};
+// see https://github.com/eslint/eslint/blob/master/conf/eslint-recommended.js
+const rules = {
+    'constructor-super': 'error',
+    'for-direction': 'error',
+    'getter-return': 'error',
+    'no-async-promise-executor': 'error',
+    'no-case-declarations': 'error',
+    'no-class-assign': 'error',
+    'no-compare-neg-zero': 'error',
+    'no-cond-assign': 'error',
+    'no-const-assign': 'error',
+    'no-constant-condition': 'error',
+    'no-control-regex': 'error',
+    'no-debugger': 'error',
+    'no-delete-var': 'error',
+    'no-dupe-args': 'error',
+    'no-dupe-class-members': 'error',
+    'no-dupe-else-if': 'error',
+    'no-dupe-keys': 'error',
+    'no-duplicate-case': 'error',
+    'no-empty': 'error',
+    'no-empty-character-class': 'error',
+    'no-empty-pattern': 'error',
+    'no-ex-assign': 'error',
+    'no-extra-boolean-cast': 'error',
+    'no-extra-semi': 'error',
+    'no-fallthrough': 'error',
+    'no-func-assign': 'error',
+    'no-global-assign': 'error',
+    'no-import-assign': 'error',
+    'no-inner-declarations': 'error',
+    'no-invalid-regexp': 'error',
+    'no-irregular-whitespace': 'error',
+    'no-misleading-character-class': 'error',
+    'no-mixed-spaces-and-tabs': 'warn',
+    'no-new-symbol': 'error',
+    'no-obj-calls': 'error',
+    'no-octal': 'error',
+    'no-prototype-builtins': 'error',
+    'no-redeclare': 'error',
+    'no-regex-spaces': 'error',
+    'no-self-assign': 'error',
+    'no-setter-return': 'error',
+    'no-shadow-restricted-names': 'error',
+    'no-sparse-arrays': 'error',
+    'no-this-before-super': 'error',
+    'no-undef': 'error',
+    'no-unexpected-multiline': 'error',
+    'no-unreachable': 'error',
+    'no-unsafe-finally': 'error',
+    'no-unsafe-negation': 'error',
+    'no-unused-labels': 'error',
+    'no-unused-vars': 'warn',
+    'no-useless-catch': 'error',
+    'no-useless-escape': 'error',
+    'no-with': 'error',
+    'require-yield': 'error',
+    'use-isnan': 'error',
+    'valid-typeof': 'error',
 };
 const config = {
     eslintConfig: {
@@ -1159,13 +1930,14 @@ const config = {
         },
         parserOptions: {
             ecmaVersion: 7,
+            sourceType: 'module',
         },
-        rules: {
-            indent: ['error', 'tab'],
-            'linebreak-style': ['error', 'unix'],
-            quotes: ['error', 'single'],
-            semi: ['error', 'always'],
-        },
+        extends: ['plugin:vue/recommended', 'eslint:recommended'],
+        plugins: ['vue'],
+        parser: '',
+        rules,
+        useEslintrc: true,
+        reportUnusedDisableDirectives: true,
     },
     prettierOptions: {
         printWidth: 120,
@@ -1174,9 +1946,11 @@ const config = {
         useTabs: true,
         semi: true,
         trailingComma: 'es5',
+        bracketSpacing: true,
         arrowParens: 'always',
         endOfLine: 'lf',
         parser: 'babel',
+        jsxBracketSameLine: false,
     },
     fallbackPrettierOptions: {
         printWidth: 120,
@@ -1185,11 +1959,14 @@ const config = {
         useTabs: true,
         semi: true,
         trailingComma: 'es5',
+        bracketSpacing: true,
         arrowParens: 'always',
         endOfLine: 'lf',
         parser: 'babel',
+        jsxBracketSameLine: false,
     },
     prettierLast: true,
+    exitOnLintErr: true,
 };
 const options = {
     dir: 'config',
@@ -1198,8 +1975,6 @@ const options = {
     precommit: 'pre-commit',
     postcommit: 'post-commit',
     commitmsg: 'commit-msg',
-    prettierrc: '.prettierrc',
-    eslintrc: '.eslintrc.js',
 };
 const stat = fs.constants.R_OK | fs.constants.W_OK;
 const spawnOps = { stdio: 'inherit', shell: true };
@@ -1209,19 +1984,20 @@ class lint {
         this.opts = opts;
         this.files = [];
         this.files = files.filter((item) => item.charAt(0) != '-');
+        if (this.opts.pretty) {
+            config.exitOnLintErr = false;
+        }
+        if (this.opts.lintlast) {
+            config.prettierLast = false;
+        }
     }
-    async gitlint(git = true) {
-        const res = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACM']);
-        const arrs = res.stdout
-            .toString()
-            .split('\n')
-            .filter((v) => v);
-        if (!arrs.length) {
+    async gitlint() {
+        if (this.files.length < 1) {
             return;
         }
-        const { prefiles, gitfiles } = this.parse(arrs);
+        const { prefiles, gitfiles } = this.parse(this.files);
         await this.dolint(prefiles, gitfiles);
-        if (git) {
+        if (!this.opts.nogit) {
             await this.gitadd(gitfiles);
         }
     }
@@ -1243,9 +2019,20 @@ class lint {
         });
         return { prefiles, gitfiles, filetypes };
     }
+    autofiles() {
+        const res = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACM']);
+        const arrs = res.stdout
+            .toString()
+            .split('\n')
+            .filter((v) => v);
+        return arrs;
+    }
     async lint() {
         if (this.files.length < 1) {
-            return this.gitlint(false);
+            this.files = this.autofiles();
+        }
+        if (this.files.length < 1) {
+            return;
         }
         const { prefiles, gitfiles } = this.parse(this.files);
         await this.dolint(prefiles, gitfiles);
@@ -1255,34 +2042,36 @@ class lint {
         await Promise.all(this.lintConfig(prefiles));
     }
     lintConfig(prefiles) {
-        const format = require('prettier-eslint');
         return prefiles.map((item) => {
-            return new Promise(async (resolve, reject) => {
-                try {
-                    const r = await fsReadFile(item, 'utf-8');
-                    const options = {
-                        ...config,
-                        ...{
-                            text: r,
-                        },
-                    };
-                    options.prettierOptions.parser = this.getParser(item);
-                    const res = format(options);
-                    if (r !== res && res) {
-                        if (item.indexOf('package.json') > -1) {
-                            console.info(item, res);
-                        }
-                        else {
-                            await fsWriteFile(item, res);
-                        }
-                    }
-                    console.log(item.replace(this.cwd + '/', ''));
-                    resolve(true);
+            return (async () => {
+                const r = await fsReadFile(item, 'utf-8');
+                if (!r || r.trim().length < 1) {
+                    return true;
                 }
-                catch (e) {
-                    reject(e);
+                const options = {
+                    ...config,
+                    ...{
+                        filePath: item,
+                    },
+                    ...{
+                        text: r,
+                    },
+                };
+                const [esparser, preparser, ext] = this.getParser(item);
+                options.eslintConfig.parser = esparser;
+                options.prettierOptions.parser = preparser;
+                options.fallbackPrettierOptions.parser = preparser;
+                if (['ts', 'tsx'].includes(ext)) {
+                    options.eslintConfig.extends = options.eslintConfig.extends.filter((item) => !item.includes('vue'));
+                    options.eslintConfig.plugins = options.eslintConfig.plugins.filter((item) => !item.includes('vue'));
                 }
-            });
+                const res = await format(options);
+                if (r !== res && res) {
+                    // 异步写文件,其他异步终止进程,容易写出空文件
+                    fs.writeFileSync(item, res);
+                }
+                console.log(item.replace(this.cwd + '/', ''));
+            })();
         });
     }
     getParser(file) {
@@ -1290,7 +2079,7 @@ class lint {
             .split('.')
             .pop()
             .toLowerCase();
-        return extParser[ext] ? extParser[ext] : 'babel';
+        return [lintParser[ext] ? lintParser[ext] : '', extParser[ext] ? extParser[ext] : 'babel', ext];
     }
     gitadd(f) {
         if (f && f.length) {
@@ -1351,33 +2140,52 @@ Flags:
     -v              show air version
     -h              show this help information
     -p              set server listen port
-    -d              set server document root
+    -d              document root , work dir, install dir
     -o              set output file path for air template
-    -dir            set lint or install config path
     --debug         compress with debug mode
     --clean         compress with clean mode,remove console debugger
-    --escape        escape when use template
+    --escape        escape when use art-template
+    --pretty        pretty and lint-fixable-only for gitlint and lint
+    --lintlast      do pretty first and then do eslint
+    --nogit         do not integrate with git for gitlint
     --dry           just run as a static server
-    --art           use art-template not ssi
+    --art           use art-template instead of ssi
 `;
-const version = '0.7.0';
+const version = '0.7.2';
 const templatetips = `
 Usage:
     air template filename.html [flag]
 
 Flags:
     -o              set output file path for air template
-    -dir            set lint or install config path
+    -d              work dir for air template
     --debug         compress with debug mode
     --escape        escape when use template
-    --art           use art-template not ssi
+    --art           use art-template instead of ssi
 
 `;
 
 class command {
+    /**
+     * air lint --pretty
+     * air lint --lintlast
+     * @param args
+     * @param cwd
+     * @param opts
+     * @param staticCfg
+     */
     static async lint(args, cwd, opts, staticCfg) {
         await new lint(cwd, args, opts).lint();
     }
+    /**
+     * air gitlint --pretty
+     * air gitlint --lintlast
+     * air gitlint --nogit
+     * @param args
+     * @param cwd
+     * @param opts
+     * @param staticCfg
+     */
     static async gitlint(args, cwd, opts, staticCfg) {
         await new lint(cwd, args, opts).gitlint();
     }
@@ -1411,6 +2219,9 @@ class command {
      *
      * air template --escape
      * air template --debug
+     * @param filename
+     * @param data
+     * @param options
      */
     static async template(args, cwd, opts, staticCfg) {
         const file = args.filter((item) => item.charAt(0) !== '-')[0];
@@ -1451,25 +2262,25 @@ class cli {
                 opts: {
                     static: {
                         css: null,
-                        js: null
+                        js: null,
                     },
-                    template: {}
-                }
-            }
+                    template: {},
+                },
+            },
         };
     }
     async run(argv) {
         try {
-            await this.loadConfig();
             const [, , ...args] = argv;
             this.argv = args;
             this.args = utiljs.getParams(args);
-            this.args.cwd = process.cwd();
+            this.args.cwd = this.cwd;
             this.opts.port = this.args.port || 8088;
             if (this.args.dir) {
                 process.chdir(this.args.dir);
             }
             this.cwd = process.cwd();
+            await this.loadConfig();
             if (args.length > 0) {
                 await this.runArgs();
             }
@@ -1478,7 +2289,7 @@ class cli {
             }
         }
         catch (e) {
-            console.error(e.message || e.stack || e);
+            console.error(e.stack || e.message || e);
             process.exit(1);
         }
     }
