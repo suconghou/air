@@ -27,11 +27,11 @@ const extParser = {
 };
 
 const lintParser = {
-    js: 'babel-eslint',
-    mjs: 'babel-eslint',
-    vue:'vue-eslint-parser',
-    ts:'@typescript-eslint/parser' ,
-    tsx:'@typescript-eslint/parser'
+	js: 'babel-eslint',
+	mjs: 'babel-eslint',
+	vue: 'vue-eslint-parser',
+	ts: '@typescript-eslint/parser',
+	tsx: '@typescript-eslint/parser',
 };
 
 // see https://github.com/eslint/eslint/blob/master/conf/eslint-recommended.js
@@ -105,9 +105,9 @@ const config = {
 		parserOptions: {
 			ecmaVersion: 7,
 			sourceType: 'module',
-        },
-        extends: ['plugin:vue/recommended','eslint:recommended'],
-        plugins:['vue'],
+		},
+		extends: ['plugin:vue/recommended', 'eslint:recommended'],
+		plugins: ['vue'],
 		parser: '', // this will be auto babel-eslint / vue-eslint-parser / @typescript-eslint/parser
 		rules,
 		useEslintrc: true,
@@ -222,40 +222,36 @@ export default class lint {
 
 	private lintConfig(prefiles: Array<string>) {
 		return prefiles.map((item) => {
-			return new Promise(async (resolve, reject) => {
-				try {
-					const r = await fsReadFile(item, 'utf-8');
-					if (!r || r.trim().length < 1) {
-						return resolve(true);
-					}
-					const options = {
-						...config,
-						...{
-							filePath: item,
-						},
-						...{
-							text: r,
-						},
-					};
-					const [esparser, preparser,ext] = this.getParser(item);
-					options.eslintConfig.parser = esparser;
-					options.prettierOptions.parser = preparser;
-                    options.fallbackPrettierOptions.parser = preparser;
-                    if(['ts','tsx'].includes(ext)){
-                        options.eslintConfig.extends = options.eslintConfig.extends.filter(item=>!item.includes('vue') )
-						options.eslintConfig.plugins = options.eslintConfig.plugins.filter(item=>!item.includes('vue'))
-                    }
-					const res = await format(options);
-					if (r !== res && res) {
-						// 异步写文件,其他异步终止进程,容易写出空文件
-						fs.writeFileSync(item, res);
-					}
-					console.log(item.replace(this.cwd + '/', ''));
-					resolve(true);
-				} catch (e) {
-					reject(e);
+			return (async () => {
+				const r = await fsReadFile(item, 'utf-8');
+				if (!r || r.trim().length < 1) {
+					return true;
 				}
-			});
+				const options = {
+					...config,
+					...{
+						filePath: item,
+					},
+					...{
+						text: r,
+					},
+				};
+				const [esparser, preparser, ext] = this.getParser(item);
+				options.eslintConfig.parser = esparser;
+				options.prettierOptions.parser = preparser;
+				options.fallbackPrettierOptions.parser = preparser;
+				if (['ts', 'tsx'].includes(ext)) {
+					options.eslintConfig.extends = options.eslintConfig.extends.filter((item) => !item.includes('vue'));
+					options.eslintConfig.plugins = options.eslintConfig.plugins.filter((item) => !item.includes('vue'));
+				}
+				const res = await format(options);
+				if (r !== res && res) {
+					// 异步写文件,其他异步终止进程,容易写出空文件
+					fs.writeFileSync(item, res);
+				}
+				console.log(item.replace(this.cwd + '/', ''));
+				true;
+			})();
 		});
 	}
 
@@ -264,7 +260,7 @@ export default class lint {
 			.split('.')
 			.pop()
 			.toLowerCase();
-		return [lintParser[ext] ? lintParser[ext] : '', extParser[ext] ? extParser[ext] : 'babel',ext];
+		return [lintParser[ext] ? lintParser[ext] : '', extParser[ext] ? extParser[ext] : 'babel', ext];
 	}
 
 	private gitadd(f: Array<string>) {
