@@ -1,34 +1,45 @@
 {
-    "name": "airs",
-    "version": "0.7.0",
-    "description": "serve static files in the air",
-    "main": "index.js",
-    "dependencies": {
-        "art-template": "^4.13.2",
-        "core-js": "^3.6.5",
-        "less": "^3.11.2",
-        "less-plugin-autoprefix": "^2.0.0",
-        "prettier-eslint": "^10.1.1",
-        "terser": "^4.7.0"
-    },
-    "engines": {
-        "node": ">=12.0"
-    },
-    "bin": {
-        "air": "./air"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/suconghou/air.git"
-    },
-    "keywords": [
-        "fed",
-        "development"
-    ],
-    "author": "suconghou",
-    "license": "MIT",
-    "bugs": {
-        "url": "https://github.com/suconghou/air/issues"
-    },
-    "homepage": "https://github.com/suconghou/air#readme"
+	"name": "airs",
+	"version": "0.7.1",
+	"description": "serve static files in the air",
+	"dependencies": {
+		"@typescript-eslint/parser": "^3.0.0",
+		"art-template": "^4.13.2",
+		"common-tags": "^1.4.0",
+		"core-js": "^3.6.5",
+		"dlv": "^1.1.0",
+		"eslint": "^7.2.0",
+		"eslint-plugin-vue": "^6.2.2",
+		"indent-string": "^4.0.0",
+		"less": "^3.11.2",
+		"less-plugin-autoprefix": "^2.0.0",
+		"lodash.merge": "^4.6.0",
+		"loglevel-colored-level-prefix": "^1.0.0",
+		"prettier": "^2.0.0",
+		"pretty-format": "^23.0.1",
+		"require-relative": "^0.8.7",
+		"terser": "^4.7.0",
+		"typescript": "^3.9.3",
+		"vue-eslint-parser": "~7.1.0"
+	},
+	"engines": {
+		"node": ">=12.0"
+	},
+	"bin": {
+		"air": "./air"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/suconghou/air.git"
+	},
+	"keywords": [
+		"fed",
+		"development"
+	],
+	"author": "suconghou",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/suconghou/air/issues"
+	},
+	"homepage": "https://github.com/suconghou/air#readme"
 }
