@@ -13,14 +13,16 @@ Flags:
     -v              show air version
     -h              show this help information
     -p              set server listen port
-    -d              set server document root
+    -d              document root , work dir, install dir
     -o              set output file path for air template
-    -dir            set lint or install config path
     --debug         compress with debug mode
     --clean         compress with clean mode,remove console debugger
-    --escape        escape when use template
+    --escape        escape when use art-template
+    --pretty        pretty and lint-fixable-only for gitlint and lint
+    --lintlast      do pretty first and then do eslint
+    --nogit         do not integrate with git for gitlint
     --dry           just run as a static server
-    --art           use art-template not ssi
+    --art           use art-template instead of ssi
 `;
 
 export const version = '0.7.0';
@@ -31,9 +33,9 @@ Usage:
 
 Flags:
     -o              set output file path for air template
-    -dir            set lint or install config path
+    -d              work dir for air template
     --debug         compress with debug mode
     --escape        escape when use template
-    --art           use art-template not ssi
+    --art           use art-template instead of ssi
 
 `;
