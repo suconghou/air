@@ -40,6 +40,8 @@ export interface cliArgs {
 	escape: boolean;
 	art: boolean;
 	dry: boolean;
-	lintonly: boolean;
+	nogit: boolean;
 	debug: boolean;
+	pretty: boolean
+	lintlast: boolean
 }
