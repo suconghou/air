@@ -14,7 +14,12 @@ export default class {
 	 * @param staticCfg
 	 */
 	static async lint(args: Array<string>, cwd: string, opts: cliArgs, staticCfg: staticOpts) {
-		await new lint(cwd, args, opts).lint();
+		try {
+			await new lint(cwd, args, opts).lint();
+		} catch (e) {
+			console.info(e.message || e.stack || e);
+			process.exit(1);
+		}
 	}
 
 	/**
@@ -27,7 +32,12 @@ export default class {
 	 * @param staticCfg
 	 */
 	static async gitlint(args: Array<string>, cwd: string, opts: cliArgs, staticCfg: staticOpts) {
-		await new lint(cwd, args, opts).gitlint();
+		try {
+			await new lint(cwd, args, opts).gitlint();
+		} catch (e) {
+			console.info(e.message || e.stack || e);
+			process.exit(1);
+		}
 	}
 
 	static async commitlint(args: Array<string>, cwd: string, opts: cliArgs, staticCfg: staticOpts) {
