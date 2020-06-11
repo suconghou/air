@@ -168,4 +168,21 @@ export default class {
 			await fsWriteFile(path.join(this.opts.dirname, item), ret);
 		}
 	}
+
+	async compressLessOrJs(cliargs: cliArgs, less: Array<string>, js: Array<string>) {
+		this.options.env = 'production';
+		this.options.compress = !cliargs.debug;
+		this.jopts.debug = cliargs.debug;
+		this.jopts.clean = cliargs.clean;
+		if (less.length > 0) {
+			const dst = less[0].replace(/\.less$/, '.min.css');
+			const ret = await this.compileLess(less);
+			await fsWriteFile(dst, ret);
+		}
+		if (js.length > 0) {
+			const dst = js[0].replace(/\.js$/, '.min.js');
+			const ret = await this.compileJs(js);
+			await fsWriteFile(dst, ret);
+		}
+	}
 }
