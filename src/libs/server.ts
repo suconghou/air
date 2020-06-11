@@ -38,7 +38,7 @@ export default class server {
 			/^[\w\-/.]+\.css$/,
 			async (req: requestctx, res: responsectx, pathname: string, query: querystring.ParsedUrlQuery) => {
 				const ret = await new compress(this.args.staticCfg, pathname, query).less();
-				res.setHeader('x-hit', ret.hit ? 1 : 0);
+				res.setHeader('Cache-Control', ret.hit ? 5 : 1);
 				res.send(ret.ret.css, 'text/css');
 			}
 		);
@@ -46,7 +46,7 @@ export default class server {
 			/^[\w\-/.]+\.js$/,
 			async (req: requestctx, res: responsectx, pathname: string, query: querystring.ParsedUrlQuery) => {
 				const ret = await new compress(this.args.staticCfg, pathname, query).Js();
-				res.setHeader('x-hit', ret.hit ? 1 : 0);
+				res.setHeader('Cache-Control', ret.hit ? 5 : 1);
 				res.send(ret.ret.js, 'text/javascript');
 			}
 		);
