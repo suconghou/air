@@ -1,6 +1,6 @@
 {
 	"name": "airs",
-	"version": "0.7.3",
+	"version": "0.7.4",
 	"description": "serve static files in the air",
 	"dependencies": {
 		"art-template": "^4.13.2",
