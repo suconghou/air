@@ -22,7 +22,7 @@ const createEslintFix = (eslintConfig: any, filePath: string) => {
 			...eslintConfig,
 			...config,
 			...{
-				useEslintrc: true,
+				useEslintrc: false,
 				fix: true,
 			},
 		};
