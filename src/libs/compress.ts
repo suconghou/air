@@ -1,5 +1,6 @@
+import * as fs from 'fs';
 import * as querystring from 'querystring';
-import util, { fsWriteFile } from './util';
+import util, { fsWriteFile, fsReadFile, fsAccess } from './util';
 import * as path from 'path';
 import { staticOpts, cliArgs, lessopts, jsopts } from '../types';
 import tool from './tool';
@@ -31,7 +32,14 @@ export default class {
 					return path.join(this.opts.dirname, ...dirs, item) + '.less';
 				});
 		}
-		return [path.join(this.opts.dirname, curr) + '.less'];
+		// 先尝试less文件,无less文件fallback到css
+		let target = path.join(this.opts.dirname, curr) + '.less';
+		try {
+			await fsAccess(target, fs.constants.R_OK);
+		} catch (e) {
+			target = path.join(this.opts.dirname, curr) + '.css';
+		}
+		return [target];
 	}
 
 	async resolveJs(): Promise<Array<string>> {
@@ -57,6 +65,15 @@ export default class {
 
 	async less() {
 		const files = await this.resolveLess();
+		if (files.length == 1 && files[0].match(/\.css$/)) {
+			const text = await fsReadFile(files[0]);
+			return {
+				ret: {
+					css: text,
+				},
+				hit: false,
+			};
+		}
 
 		const time = await util.getUpdateTime(files);
 

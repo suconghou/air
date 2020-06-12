@@ -12,7 +12,7 @@ const fsChmod = promisify(fs.chmod);
 export { fsStat, fsAccess, fsChmod, fsWriteFile, fsCopyFile, fsReadFile };
 
 export default class {
-	private static resolveLookupPaths(pathstr: string, file: string): Array<string> {
+	public static resolveLookupPaths(pathstr: string, file: string): Array<string> {
 		const arr = [];
 		const tmp = [];
 		pathstr.split(path.sep).forEach((item) => {
@@ -26,7 +26,7 @@ export default class {
 		return arr.reverse();
 	}
 
-	private static async tryFiles(paths: Array<string>) {
+	public static async tryFiles(paths: Array<string>) {
 		for (let i = 0, j = paths.length; i < j; i++) {
 			const file = paths[i];
 			try {
