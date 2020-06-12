@@ -269,10 +269,7 @@ export default class lint {
 	}
 
 	private getParser(file: string) {
-		const ext = file
-			.split('.')
-			.pop()
-			.toLowerCase();
+		const ext = file.split('.').pop().toLowerCase();
 		return [lintParser[ext] ? lintParser[ext] : '', extParser[ext] ? extParser[ext] : 'babel', ext];
 	}
 
