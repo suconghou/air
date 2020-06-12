@@ -19,7 +19,6 @@ Flags:
     --debug         compress with debug mode
     --clean         compress with clean mode,remove console debugger
     --escape        escape when use art-template
-    --pretty        pretty and lint-fixable-only for gitlint and lint
     --lintlast      do pretty first and then do eslint
     --nogit         do not integrate with git for gitlint
     --dry           just run as a static server

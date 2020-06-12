@@ -42,6 +42,5 @@ export interface cliArgs {
 	dry: boolean;
 	nogit: boolean;
 	debug: boolean;
-	pretty: boolean;
 	lintlast: boolean;
 }

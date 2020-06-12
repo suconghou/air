@@ -21,7 +21,6 @@ export default {
 			'--dry': 'dry',
 			'--art': 'art',
 			'--nogit': 'nogit',
-			'--pretty': 'pretty',
 			'--lintlast': 'lintlast',
 		};
 		return this.params(args, kMap);

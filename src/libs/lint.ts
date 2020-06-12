@@ -97,20 +97,45 @@ const rules = {
 
 const config = {
 	eslintConfig: {
-		env: {
-			browser: true,
-			es6: true,
-			node: true,
-		},
-		parserOptions: {
-			ecmaVersion: 7,
-			sourceType: 'module',
+		baseConfig: {
+			extends: ['plugin:vue/recommended', 'eslint:recommended'],
+			rules,
+			env: {
+				node: true,
+				browser: true,
+				es6: true,
+				commonjs: true,
+				worker: true,
+				amd: true,
+			},
+			parserOptions: {
+				parser: 'babel-eslint',
+				ecmaVersion: 7,
+				sourceType: 'module',
+				ecmaFeatures: {
+					experimentalObjectRestSpread: true,
+					jsx: true,
+				},
+			},
+			plugins: ['vue'],
+			parser: '', // this will be auto babel-eslint / vue-eslint-parser / @typescript-eslint/parser
+			reportUnusedDisableDirectives: true,
 		},
 		extends: ['plugin:vue/recommended', 'eslint:recommended'],
-		plugins: ['vue'],
-		parser: '', // this will be auto babel-eslint / vue-eslint-parser / @typescript-eslint/parser
+		envs: ['node', 'browser', 'es6', 'commonjs', 'worker', 'amd'],
+		parserOptions: {
+			parser: 'babel-eslint',
+			ecmaVersion: 7,
+			sourceType: 'module',
+			ecmaFeatures: {
+				experimentalObjectRestSpread: true,
+				jsx: true,
+			},
+		},
 		rules,
+		globals: ['window', 'console', 'process', 'require', 'Promise', 'Map', 'Set'],
 		useEslintrc: true,
+		fix: true,
 		reportUnusedDisableDirectives: true,
 	},
 	prettierOptions: {
@@ -126,21 +151,7 @@ const config = {
 		parser: 'babel',
 		jsxBracketSameLine: false,
 	},
-	fallbackPrettierOptions: {
-		printWidth: 120,
-		tabWidth: 4,
-		singleQuote: true,
-		useTabs: true,
-		semi: true,
-		trailingComma: 'es5',
-		bracketSpacing: true,
-		arrowParens: 'always',
-		endOfLine: 'lf',
-		parser: 'babel',
-		jsxBracketSameLine: false,
-	},
 	prettierLast: true,
-	exitOnLintErr: true,
 };
 
 const options = {
@@ -155,16 +166,13 @@ const stat = fs.constants.R_OK | fs.constants.W_OK;
 
 const spawnOps = { stdio: 'inherit', shell: true };
 
-import format from '../../../prettier-eslint/src/index';
+import format from './lintformat';
 
 export default class lint {
 	private files = [];
 
 	constructor(private cwd: string, files: Array<string>, private opts: cliArgs) {
 		this.files = files.filter((item) => item.charAt(0) != '-');
-		if (this.opts.pretty) {
-			config.exitOnLintErr = false;
-		}
 		if (this.opts.lintlast) {
 			config.prettierLast = false;
 		}
@@ -241,13 +249,13 @@ export default class lint {
 						text: r,
 					},
 				};
+				const baseConfig = options.eslintConfig.baseConfig;
 				const [esparser, preparser, ext] = this.getParser(item);
-				options.eslintConfig.parser = esparser;
+				baseConfig.parser = esparser;
 				options.prettierOptions.parser = preparser;
-				options.fallbackPrettierOptions.parser = preparser;
-				if (['ts', 'tsx'].includes(ext)) {
-					options.eslintConfig.extends = options.eslintConfig.extends.filter((item) => !item.includes('vue'));
-					options.eslintConfig.plugins = options.eslintConfig.plugins.filter((item) => !item.includes('vue'));
+				if (['mjs', 'js', 'ts', 'tsx'].includes(ext)) {
+					baseConfig.extends = baseConfig.extends.filter((item) => !item.includes('vue'));
+					baseConfig.plugins = baseConfig.plugins.filter((item) => !item.includes('vue'));
 				}
 				const res = await format(options);
 				if (r !== res && res) {
