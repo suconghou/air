@@ -1,6 +1,6 @@
 {
 	"name": "airs",
-	"version": "0.7.5",
+	"version": "0.7.6",
 	"description": "serve static files in the air",
 	"dependencies": {
 		"@typescript-eslint/parser": "^3.2.0",
@@ -11,7 +11,7 @@
 		"less": "^3.11.2",
 		"less-plugin-autoprefix": "^2.0.0",
 		"prettier": "^2.0.5",
-		"terser": "^4.7.0",
+		"terser": "^4.8.0",
 		"vue-eslint-parser": "~7.1.0"
 	},
 	"engines": {
