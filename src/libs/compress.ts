@@ -139,8 +139,6 @@ export default class {
 				ecma: 5,
 				mangle: true,
 				compress: {
-					arguments: true,
-					booleans_as_integers: true,
 					drop_debugger: false,
 					drop_console: false,
 				},
