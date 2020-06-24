@@ -133,6 +133,11 @@ export default class {
 				ecma: 2016,
 				keep_classnames: true,
 				keep_fnames: true,
+				output: {
+					comments: true,
+					beautify: true,
+					ecma: 2016,
+				},
 			};
 		} else {
 			options = {
@@ -141,6 +146,11 @@ export default class {
 				compress: {
 					drop_debugger: false,
 					drop_console: false,
+				},
+				output: {
+					comments: false,
+					beautify: false,
+					ecma: 5,
 				},
 			};
 			if (this.jopts.clean) {
