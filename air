@@ -861,6 +861,11 @@ class compress {
                 ecma: 2016,
                 keep_classnames: true,
                 keep_fnames: true,
+                output: {
+                    comments: true,
+                    beautify: true,
+                    ecma: 2016,
+                }
             };
         }
         else {
@@ -868,11 +873,14 @@ class compress {
                 ecma: 5,
                 mangle: true,
                 compress: {
-                    arguments: true,
-                    booleans_as_integers: true,
                     drop_debugger: false,
                     drop_console: false,
                 },
+                output: {
+                    comments: false,
+                    beautify: false,
+                    ecma: 5,
+                }
             };
             if (this.jopts.clean) {
                 options.compress.drop_console = true;
@@ -986,60 +994,56 @@ var utiljs = {
 const readFile = util$1.promisify(fs.readFile);
 const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.]{3,50})"\s{1,5}-->/g;
 class ssi {
-	constructor(cwd, pathname, query) {
-		this.cwd = cwd;
-		this.pathname = pathname;
-		this.query = query;
-	}
-	async html() {
-		const main = path.join(this.cwd, this.pathname);
-		return await this.parseHtml(main, this.query, this.cwd);
-	}
-	async parseHtml(file, query, cwd) {
-		const resfile = await readFile(file);
-		let html = resfile.toString();
-		let res,
-			i = 0,
-			filesMap = {};
-		const fillContents = async () => {
-			let res;
-			let fileList = Object.keys(filesMap).filter((item) => {
-				return !filesMap[item];
-			});
-			res = await Promise.all(
-				fileList.map((item) => {
-					return readFile(path.join(cwd, item));
-				})
-			);
-			res.forEach((item, i) => {
-				filesMap[fileList[i]] = item.toString();
-			});
-		};
-		while (i < 6) {
-			let matches = {};
-			while ((res = includefile.exec(html))) {
-				const [holder, file] = res;
-				matches[holder] = file;
-				if (!filesMap[file]) {
-					filesMap[file] = '';
-				}
-			}
-			if (Object.keys(matches).length === 0) {
-				// // 主html文件内,没有include语法,模板引擎不用处理了,直接返回
-				return html;
-			}
-			i++;
-			if (i > 5) {
-				throw new Error('include file too deep');
-			}
-			await fillContents();
-			Object.keys(matches).forEach((item) => {
-				const file = matches[item];
-				const content = filesMap[file];
-				html = html.replace(item, content);
-			});
-		}
-	}
+    constructor(cwd, pathname, query) {
+        this.cwd = cwd;
+        this.pathname = pathname;
+        this.query = query;
+    }
+    async html() {
+        const main = path.join(this.cwd, this.pathname);
+        return await this.parseHtml(main, this.query, this.cwd);
+    }
+    async parseHtml(file, query, cwd) {
+        const resfile = await readFile(file);
+        let html = resfile.toString();
+        let res, i = 0, filesMap = {};
+        const fillContents = async () => {
+            let res;
+            let fileList = Object.keys(filesMap).filter((item) => {
+                return !filesMap[item];
+            });
+            res = await Promise.all(fileList.map((item) => {
+                return readFile(path.join(cwd, item));
+            }));
+            res.forEach((item, i) => {
+                filesMap[fileList[i]] = item.toString();
+            });
+        };
+        while (i < 6) {
+            let matches = {};
+            while ((res = includefile.exec(html))) {
+                const [holder, file] = res;
+                matches[holder] = file;
+                if (!filesMap[file]) {
+                    filesMap[file] = '';
+                }
+            }
+            if (Object.keys(matches).length === 0) {
+                // // 主html文件内,没有include语法,模板引擎不用处理了,直接返回
+                return html;
+            }
+            i++;
+            if (i > 5) {
+                throw new Error('include file too deep');
+            }
+            await fillContents();
+            Object.keys(matches).forEach((item) => {
+                const file = matches[item];
+                const content = filesMap[file];
+                html = html.replace(item, content);
+            });
+        }
+    }
 }
 
 class template {
@@ -1239,297 +1243,293 @@ const spawn = util$1.promisify(child_process.spawn);
 const spawnSync = child_process.spawnSync;
 const prettyTypes = ['js', 'vue', 'jsx', 'ts', 'css', 'less', 'html', 'json', 'scss', 'md'];
 const extParser = {
-	js: 'babel',
-	mjs: 'babel',
-	jsx: 'babel',
-	ts: 'typescript',
-	vue: 'vue',
-	html: 'html',
-	css: 'css',
-	less: 'less',
-	scss: 'scss',
-	json: 'json',
-	md: 'mdx',
-	yaml: 'yaml',
+    js: 'babel',
+    mjs: 'babel',
+    jsx: 'babel',
+    ts: 'typescript',
+    vue: 'vue',
+    html: 'html',
+    css: 'css',
+    less: 'less',
+    scss: 'scss',
+    json: 'json',
+    md: 'mdx',
+    yaml: 'yaml',
 };
 const lintParser = {
-	js: 'babel-eslint',
-	mjs: 'babel-eslint',
-	vue: 'vue-eslint-parser',
-	ts: '@typescript-eslint/parser',
-	tsx: '@typescript-eslint/parser',
+    js: 'babel-eslint',
+    mjs: 'babel-eslint',
+    vue: 'vue-eslint-parser',
+    ts: '@typescript-eslint/parser',
+    tsx: '@typescript-eslint/parser',
 };
 // see https://github.com/eslint/eslint/blob/master/conf/eslint-recommended.js
 const rules = {
-	'constructor-super': 'error',
-	'for-direction': 'error',
-	'getter-return': 'error',
-	'no-async-promise-executor': 'error',
-	'no-case-declarations': 'error',
-	'no-class-assign': 'error',
-	'no-compare-neg-zero': 'error',
-	'no-cond-assign': 'error',
-	'no-const-assign': 'error',
-	'no-constant-condition': 'error',
-	'no-control-regex': 'error',
-	'no-debugger': 'error',
-	'no-delete-var': 'error',
-	'no-dupe-args': 'error',
-	'no-dupe-class-members': 'error',
-	'no-dupe-else-if': 'error',
-	'no-dupe-keys': 'error',
-	'no-duplicate-case': 'error',
-	'no-empty': 'error',
-	'no-empty-character-class': 'error',
-	'no-empty-pattern': 'error',
-	'no-ex-assign': 'error',
-	'no-extra-boolean-cast': 'error',
-	'no-extra-semi': 'error',
-	'no-fallthrough': 'error',
-	'no-func-assign': 'error',
-	'no-global-assign': 'error',
-	'no-import-assign': 'error',
-	'no-inner-declarations': 'error',
-	'no-invalid-regexp': 'error',
-	'no-irregular-whitespace': 'error',
-	'no-misleading-character-class': 'error',
-	'no-mixed-spaces-and-tabs': 'warn',
-	'no-new-symbol': 'error',
-	'no-obj-calls': 'error',
-	'no-octal': 'error',
-	'no-prototype-builtins': 'error',
-	'no-redeclare': 'error',
-	'no-regex-spaces': 'error',
-	'no-self-assign': 'error',
-	'no-setter-return': 'error',
-	'no-shadow-restricted-names': 'error',
-	'no-sparse-arrays': 'error',
-	'no-this-before-super': 'error',
-	'no-undef': 'error',
-	'no-unexpected-multiline': 'error',
-	'no-unreachable': 'error',
-	'no-unsafe-finally': 'error',
-	'no-unsafe-negation': 'error',
-	'no-unused-labels': 'error',
-	'no-unused-vars': 'warn',
-	'no-useless-catch': 'error',
-	'no-useless-escape': 'error',
-	'no-with': 'error',
-	'require-yield': 'error',
-	'use-isnan': 'error',
-	'valid-typeof': 'error',
+    'constructor-super': 'error',
+    'for-direction': 'error',
+    'getter-return': 'error',
+    'no-async-promise-executor': 'error',
+    'no-case-declarations': 'error',
+    'no-class-assign': 'error',
+    'no-compare-neg-zero': 'error',
+    'no-cond-assign': 'error',
+    'no-const-assign': 'error',
+    'no-constant-condition': 'error',
+    'no-control-regex': 'error',
+    'no-debugger': 'error',
+    'no-delete-var': 'error',
+    'no-dupe-args': 'error',
+    'no-dupe-class-members': 'error',
+    'no-dupe-else-if': 'error',
+    'no-dupe-keys': 'error',
+    'no-duplicate-case': 'error',
+    'no-empty': 'error',
+    'no-empty-character-class': 'error',
+    'no-empty-pattern': 'error',
+    'no-ex-assign': 'error',
+    'no-extra-boolean-cast': 'error',
+    'no-extra-semi': 'error',
+    'no-fallthrough': 'error',
+    'no-func-assign': 'error',
+    'no-global-assign': 'error',
+    'no-import-assign': 'error',
+    'no-inner-declarations': 'error',
+    'no-invalid-regexp': 'error',
+    'no-irregular-whitespace': 'error',
+    'no-misleading-character-class': 'error',
+    'no-mixed-spaces-and-tabs': 'warn',
+    'no-new-symbol': 'error',
+    'no-obj-calls': 'error',
+    'no-octal': 'error',
+    'no-prototype-builtins': 'error',
+    'no-redeclare': 'error',
+    'no-regex-spaces': 'error',
+    'no-self-assign': 'error',
+    'no-setter-return': 'error',
+    'no-shadow-restricted-names': 'error',
+    'no-sparse-arrays': 'error',
+    'no-this-before-super': 'error',
+    'no-undef': 'error',
+    'no-unexpected-multiline': 'error',
+    'no-unreachable': 'error',
+    'no-unsafe-finally': 'error',
+    'no-unsafe-negation': 'error',
+    'no-unused-labels': 'error',
+    'no-unused-vars': 'warn',
+    'no-useless-catch': 'error',
+    'no-useless-escape': 'error',
+    'no-with': 'error',
+    'require-yield': 'error',
+    'use-isnan': 'error',
+    'valid-typeof': 'error',
 };
 const config = {
-	eslintConfig: {
-		baseConfig: {
-			extends: ['plugin:vue/recommended', 'eslint:recommended'],
-			rules,
-			env: {
-				node: true,
-				browser: true,
-				es6: true,
-				commonjs: true,
-				worker: true,
-				amd: true,
-			},
-			parserOptions: {
-				parser: 'babel-eslint',
-				ecmaVersion: 7,
-				sourceType: 'module',
-				ecmaFeatures: {
-					experimentalObjectRestSpread: true,
-					jsx: true,
-				},
-			},
-			plugins: ['vue'],
-			parser: '',
-			reportUnusedDisableDirectives: true,
-		},
-		extends: ['plugin:vue/recommended', 'eslint:recommended'],
-		envs: ['node', 'browser', 'es6', 'commonjs', 'worker', 'amd'],
-		parserOptions: {
-			parser: 'babel-eslint',
-			ecmaVersion: 7,
-			sourceType: 'module',
-			ecmaFeatures: {
-				experimentalObjectRestSpread: true,
-				jsx: true,
-			},
-		},
-		rules,
-		globals: ['window', 'console', 'process', 'require', 'Promise', 'Map', 'Set'],
-		useEslintrc: true,
-		fix: true,
-		reportUnusedDisableDirectives: true,
-	},
-	prettierOptions: {
-		printWidth: 120,
-		tabWidth: 4,
-		singleQuote: true,
-		useTabs: true,
-		semi: true,
-		trailingComma: 'es5',
-		bracketSpacing: true,
-		arrowParens: 'always',
-		endOfLine: 'lf',
-		parser: 'babel',
-		jsxBracketSameLine: false,
-	},
-	prettierLast: true,
+    eslintConfig: {
+        baseConfig: {
+            extends: ['plugin:vue/recommended', 'eslint:recommended'],
+            rules,
+            env: {
+                node: true,
+                browser: true,
+                es6: true,
+                commonjs: true,
+                worker: true,
+                amd: true,
+            },
+            parserOptions: {
+                parser: 'babel-eslint',
+                ecmaVersion: 7,
+                sourceType: 'module',
+                ecmaFeatures: {
+                    experimentalObjectRestSpread: true,
+                    jsx: true,
+                },
+            },
+            plugins: ['vue'],
+            parser: '',
+            reportUnusedDisableDirectives: true,
+        },
+        extends: ['plugin:vue/recommended', 'eslint:recommended'],
+        envs: ['node', 'browser', 'es6', 'commonjs', 'worker', 'amd'],
+        parserOptions: {
+            parser: 'babel-eslint',
+            ecmaVersion: 7,
+            sourceType: 'module',
+            ecmaFeatures: {
+                experimentalObjectRestSpread: true,
+                jsx: true,
+            },
+        },
+        rules,
+        globals: ['window', 'console', 'process', 'require', 'Promise', 'Map', 'Set'],
+        useEslintrc: true,
+        fix: true,
+        reportUnusedDisableDirectives: true,
+    },
+    prettierOptions: {
+        printWidth: 120,
+        tabWidth: 4,
+        singleQuote: true,
+        useTabs: true,
+        semi: true,
+        trailingComma: 'es5',
+        bracketSpacing: true,
+        arrowParens: 'always',
+        endOfLine: 'lf',
+        parser: 'babel',
+        jsxBracketSameLine: false,
+    },
+    prettierLast: true,
 };
 const options = {
-	dir: 'config',
-	git: '.git',
-	hooks: 'hooks',
-	precommit: 'pre-commit',
-	postcommit: 'post-commit',
-	commitmsg: 'commit-msg',
+    dir: 'config',
+    git: '.git',
+    hooks: 'hooks',
+    precommit: 'pre-commit',
+    postcommit: 'post-commit',
+    commitmsg: 'commit-msg',
 };
 const stat = fs.constants.R_OK | fs.constants.W_OK;
 const spawnOps = { stdio: 'inherit', shell: true };
 class lint {
-	constructor(cwd, files, opts) {
-		this.cwd = cwd;
-		this.opts = opts;
-		this.files = [];
-		this.files = files.filter((item) => item.charAt(0) != '-');
-		if (this.opts.lintlast) {
-			config.prettierLast = false;
-		}
-	}
-	async gitlint() {
-		if (this.files.length < 1) {
-			return;
-		}
-		const { prefiles, gitfiles } = this.parse(this.files);
-		await this.dolint(prefiles, gitfiles);
-		if (!this.opts.nogit) {
-			await this.gitadd(gitfiles);
-		}
-	}
-	parse(files) {
-		const prefiles = [];
-		const gitfiles = [];
-		const filetypes = files.map((item) => {
-			const name = item.trim();
-			const type = item.split('.').pop();
-			let p = name;
-			if (!path.isAbsolute(name)) {
-				p = path.join(this.cwd, name);
-			}
-			if (prettyTypes.includes(type)) {
-				prefiles.push(p);
-			}
-			gitfiles.push(p);
-			return { name, path: p, type };
-		});
-		return { prefiles, gitfiles, filetypes };
-	}
-	autofiles() {
-		const res = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACM']);
-		const arrs = res.stdout
-			.toString()
-			.split('\n')
-			.filter((v) => v);
-		return arrs;
-	}
-	async lint() {
-		if (this.files.length < 1) {
-			this.files = this.autofiles();
-		}
-		if (this.files.length < 1) {
-			return;
-		}
-		const { prefiles, gitfiles } = this.parse(this.files);
-		await this.dolint(prefiles, gitfiles);
-	}
-	async dolint(prefiles, gitfiles) {
-		await this.checkfiles(gitfiles);
-		await Promise.all(this.lintConfig(prefiles));
-	}
-	lintConfig(prefiles) {
-		return prefiles.map((item) => {
-			return (async () => {
-				const r = await fsReadFile(item, 'utf-8');
-				if (!r || r.trim().length < 1) {
-					return true;
-				}
-				const options = {
-					...config,
-					...{
-						filePath: item,
-					},
-					...{
-						text: r,
-					},
-				};
-				const baseConfig = options.eslintConfig.baseConfig;
-				const [esparser, preparser, ext] = this.getParser(item);
-				baseConfig.parser = esparser;
-				options.prettierOptions.parser = preparser;
-				if (['mjs', 'js', 'ts', 'tsx'].includes(ext)) {
-					baseConfig.extends = baseConfig.extends.filter((item) => !item.includes('vue'));
-					baseConfig.plugins = baseConfig.plugins.filter((item) => !item.includes('vue'));
-				}
-				const res = await format(options);
-				if (r !== res && res) {
-					// 异步写文件,其他异步终止进程,容易写出空文件
-					fs.writeFileSync(item, res);
-				}
-				console.log(item.replace(this.cwd + '/', ''));
-			})();
-		});
-	}
-	getParser(file) {
-		const ext = file.split('.').pop().toLowerCase();
-		return [lintParser[ext] ? lintParser[ext] : '', extParser[ext] ? extParser[ext] : 'babel', ext];
-	}
-	gitadd(f) {
-		if (f && f.length) {
-			return spawn('git', ['add', '-u', f.join(' ')], spawnOps);
-		}
-		return Promise.resolve();
-	}
-	async install() {
-		const { git, cwd, hooks, precommit, postcommit, commitmsg } = Object.assign({}, options, this.opts);
-		const dir = this.opts.dir ? '' : options.dir;
-		const prehook = path.join(this.cwd, dir, precommit);
-		const posthook = path.join(this.cwd, dir, postcommit);
-		const msghook = path.join(this.cwd, dir, commitmsg);
-		const predst = path.join(cwd, git, hooks, precommit);
-		const postdst = path.join(cwd, git, hooks, postcommit);
-		const msgdst = path.join(cwd, git, hooks, commitmsg);
-		const mode = 0o755;
-		await Promise.all([fsAccess(prehook, stat), fsAccess(posthook, stat), fsAccess(msghook, stat)]);
-		await Promise.all([fsCopyFile(prehook, predst), fsCopyFile(posthook, postdst), fsCopyFile(msghook, msgdst)]);
-		await Promise.all([fsChmod(predst, mode), fsChmod(postdst, mode), fsChmod(msgdst, mode)]);
-	}
-	async checkfiles(files) {
-		const maxsize = 1048576;
-		// 检查文件大小,超过1MB禁止提交
-		const stats = await Promise.all(files.map((item) => fsStat(item)));
-		return stats.every((item, index) => {
-			if (item.size > maxsize) {
-				throw new Error(`${files[index]} too large,${item.size} exceed ${maxsize}`);
-			}
-			return true;
-		});
-	}
-	static async commitlint(commitfile) {
-		const str = await fsReadFile(commitfile);
-		const msg = str.toString();
-		if (/Merge\s+branch/i.test(msg)) {
-			return;
-		}
-		if (
-			!/(build|ci|docs|feat|fix|perf|refactor|style|test|revert|chore).{0,2}(\(.{1,100}\))?.{0,2}:.{1,200}/.test(
-				msg
-			)
-		) {
-			console.info('commit message should be format like <type>(optional scope): <description>');
-			process$1.exit(1);
-		}
-	}
+    constructor(cwd, files, opts) {
+        this.cwd = cwd;
+        this.opts = opts;
+        this.files = [];
+        this.files = files.filter((item) => item.charAt(0) != '-');
+        if (this.opts.lintlast) {
+            config.prettierLast = false;
+        }
+    }
+    async gitlint() {
+        if (this.files.length < 1) {
+            return;
+        }
+        const { prefiles, gitfiles } = this.parse(this.files);
+        await this.dolint(prefiles, gitfiles);
+        if (!this.opts.nogit) {
+            await this.gitadd(gitfiles);
+        }
+    }
+    parse(files) {
+        const prefiles = [];
+        const gitfiles = [];
+        const filetypes = files.map((item) => {
+            const name = item.trim();
+            const type = item.split('.').pop();
+            let p = name;
+            if (!path.isAbsolute(name)) {
+                p = path.join(this.cwd, name);
+            }
+            if (prettyTypes.includes(type)) {
+                prefiles.push(p);
+            }
+            gitfiles.push(p);
+            return { name, path: p, type };
+        });
+        return { prefiles, gitfiles, filetypes };
+    }
+    autofiles() {
+        const res = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACM']);
+        const arrs = res.stdout
+            .toString()
+            .split('\n')
+            .filter((v) => v);
+        return arrs;
+    }
+    async lint() {
+        if (this.files.length < 1) {
+            this.files = this.autofiles();
+        }
+        if (this.files.length < 1) {
+            return;
+        }
+        const { prefiles, gitfiles } = this.parse(this.files);
+        await this.dolint(prefiles, gitfiles);
+    }
+    async dolint(prefiles, gitfiles) {
+        await this.checkfiles(gitfiles);
+        await Promise.all(this.lintConfig(prefiles));
+    }
+    lintConfig(prefiles) {
+        return prefiles.map((item) => {
+            return (async () => {
+                const r = await fsReadFile(item, 'utf-8');
+                if (!r || r.trim().length < 1) {
+                    return true;
+                }
+                const options = {
+                    ...config,
+                    ...{
+                        filePath: item,
+                    },
+                    ...{
+                        text: r,
+                    },
+                };
+                const baseConfig = options.eslintConfig.baseConfig;
+                const [esparser, preparser, ext] = this.getParser(item);
+                baseConfig.parser = esparser;
+                options.prettierOptions.parser = preparser;
+                if (['mjs', 'js', 'ts', 'tsx'].includes(ext)) {
+                    baseConfig.extends = baseConfig.extends.filter((item) => !item.includes('vue'));
+                    baseConfig.plugins = baseConfig.plugins.filter((item) => !item.includes('vue'));
+                }
+                const res = await format(options);
+                if (r !== res && res) {
+                    // 异步写文件,其他异步终止进程,容易写出空文件
+                    fs.writeFileSync(item, res);
+                }
+                console.log(item.replace(this.cwd + '/', ''));
+            })();
+        });
+    }
+    getParser(file) {
+        const ext = file.split('.').pop().toLowerCase();
+        return [lintParser[ext] ? lintParser[ext] : '', extParser[ext] ? extParser[ext] : 'babel', ext];
+    }
+    gitadd(f) {
+        if (f && f.length) {
+            return spawn('git', ['add', '-u', f.join(' ')], spawnOps);
+        }
+        return Promise.resolve();
+    }
+    async install() {
+        const { git, cwd, hooks, precommit, postcommit, commitmsg } = Object.assign({}, options, this.opts);
+        const dir = this.opts.dir ? '' : options.dir;
+        const prehook = path.join(this.cwd, dir, precommit);
+        const posthook = path.join(this.cwd, dir, postcommit);
+        const msghook = path.join(this.cwd, dir, commitmsg);
+        const predst = path.join(cwd, git, hooks, precommit);
+        const postdst = path.join(cwd, git, hooks, postcommit);
+        const msgdst = path.join(cwd, git, hooks, commitmsg);
+        const mode = 0o755;
+        await Promise.all([fsAccess(prehook, stat), fsAccess(posthook, stat), fsAccess(msghook, stat)]);
+        await Promise.all([fsCopyFile(prehook, predst), fsCopyFile(posthook, postdst), fsCopyFile(msghook, msgdst)]);
+        await Promise.all([fsChmod(predst, mode), fsChmod(postdst, mode), fsChmod(msgdst, mode)]);
+    }
+    async checkfiles(files) {
+        const maxsize = 1048576;
+        // 检查文件大小,超过1MB禁止提交
+        const stats = await Promise.all(files.map((item) => fsStat(item)));
+        return stats.every((item, index) => {
+            if (item.size > maxsize) {
+                throw new Error(`${files[index]} too large,${item.size} exceed ${maxsize}`);
+            }
+            return true;
+        });
+    }
+    static async commitlint(commitfile) {
+        const str = await fsReadFile(commitfile);
+        const msg = str.toString();
+        if (/Merge\s+branch/i.test(msg)) {
+            return;
+        }
+        if (!/(build|ci|docs|feat|fix|perf|refactor|style|test|revert|chore).{0,2}(\(.{1,100}\))?.{0,2}:.{1,200}/.test(msg)) {
+            console.info('commit message should be format like <type>(optional scope): <description>');
+            process$1.exit(1);
+        }
+    }
 }
 
 var help = `
@@ -1558,7 +1558,7 @@ Flags:
     --dry           just run as a static server
     --art           use art-template instead of ssi
 `;
-const version = '0.7.5';
+const version = '0.7.7';
 const templatetips = `
 Usage:
     air template filename.html [flag]
