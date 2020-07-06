@@ -257,6 +257,9 @@ export default class lint {
 				if (['mjs', 'js', 'ts', 'tsx'].includes(ext)) {
 					baseConfig.extends = baseConfig.extends.filter((item) => !item.includes('vue'));
 					baseConfig.plugins = baseConfig.plugins.filter((item) => !item.includes('vue'));
+				} else if (['yml', 'yaml'].includes(ext)) {
+					options.prettierOptions.useTabs = false;
+					options.prettierOptions.tabWidth = 2;
 				}
 				const res = await format(options);
 				if (r !== res && res) {
