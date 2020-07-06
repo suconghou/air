@@ -865,7 +865,7 @@ class compress {
                     comments: true,
                     beautify: true,
                     ecma: 2016,
-                }
+                },
             };
         }
         else {
@@ -880,7 +880,7 @@ class compress {
                     comments: false,
                     beautify: false,
                     ecma: 5,
-                }
+                },
             };
             if (this.jopts.clean) {
                 options.compress.drop_console = true;
@@ -1241,7 +1241,7 @@ var format = async (options) => {
 
 const spawn = util$1.promisify(child_process.spawn);
 const spawnSync = child_process.spawnSync;
-const prettyTypes = ['js', 'vue', 'jsx', 'ts', 'css', 'less', 'html', 'json', 'scss', 'md'];
+const prettyTypes = ['js', 'mjs', 'yml', 'yaml', 'vue', 'jsx', 'ts', 'css', 'less', 'html', 'json', 'scss', 'md'];
 const extParser = {
     js: 'babel',
     mjs: 'babel',
@@ -1254,6 +1254,7 @@ const extParser = {
     scss: 'scss',
     json: 'json',
     md: 'mdx',
+    yml: 'yaml',
     yaml: 'yaml',
 };
 const lintParser = {
@@ -1475,6 +1476,10 @@ class lint {
                     baseConfig.extends = baseConfig.extends.filter((item) => !item.includes('vue'));
                     baseConfig.plugins = baseConfig.plugins.filter((item) => !item.includes('vue'));
                 }
+                else if (['yml', 'yaml'].includes(ext)) {
+                    options.prettierOptions.useTabs = false;
+                    options.prettierOptions.tabWidth = 2;
+                }
                 const res = await format(options);
                 if (r !== res && res) {
                     // 异步写文件,其他异步终止进程,容易写出空文件
@@ -1558,7 +1563,7 @@ Flags:
     --dry           just run as a static server
     --art           use art-template instead of ssi
 `;
-const version = '0.7.7';
+const version = '0.7.8';
 const templatetips = `
 Usage:
     air template filename.html [flag]
