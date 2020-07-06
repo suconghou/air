@@ -9,7 +9,7 @@ import { cliArgs } from '../types';
 const spawn = promisify(child_process.spawn);
 const spawnSync = child_process.spawnSync;
 
-const prettyTypes = ['js', 'mjs', 'vue', 'jsx', 'ts', 'css', 'less', 'html', 'json', 'scss', 'md'];
+const prettyTypes = ['js', 'mjs', 'yml', 'yaml', 'vue', 'jsx', 'ts', 'css', 'less', 'html', 'json', 'scss', 'md'];
 
 const extParser = {
 	js: 'babel',
@@ -23,6 +23,7 @@ const extParser = {
 	scss: 'scss',
 	json: 'json',
 	md: 'mdx',
+	yml: 'yaml',
 	yaml: 'yaml',
 };
 
