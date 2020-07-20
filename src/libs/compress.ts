@@ -14,6 +14,7 @@ export default class {
 	}
 
 	// 解析优先级, 配置文件>连字符>less文件查找>静态文件
+	// 连字符这一步:如果带连字符的文件确实存在,则不按照连字符拆分
 	private async resolveLess(): Promise<Array<string>> {
 		const pathname = this.pathname.replace('.css', '').replace(/^\//, '');
 		const css = this.opts.opts.static ? Object.keys(this.opts.opts.static.css) || [] : [];
@@ -23,14 +24,22 @@ export default class {
 		}
 
 		if (/-/.test(curr)) {
-			const dirs = pathname.split('/');
-			const segment = dirs.pop();
-			return segment
-				.split('-')
-				.filter((item) => item)
-				.map((item) => {
-					return path.join(this.opts.dirname, ...dirs, item) + '.less';
-				});
+			// 如果带有连字符,先看连字符的文件确实不存在再拆分
+			try {
+				const f = path.join(this.opts.dirname, curr) + '.css';
+				await fsAccess(f, fs.constants.R_OK);
+				// return 单个css地址,后面会当做静态文件输出
+				return [f];
+			} catch (e) {
+				const dirs = pathname.split('/');
+				const segment = dirs.pop();
+				return segment
+					.split('-')
+					.filter((item) => item)
+					.map((item) => {
+						return path.join(this.opts.dirname, ...dirs, item) + '.less';
+					});
+			}
 		}
 		// 先尝试less文件,无less文件fallback到css
 		let target = path.join(this.opts.dirname, curr) + '.less';
@@ -42,6 +51,8 @@ export default class {
 		return [target];
 	}
 
+	// 解析优先级, 配置文件>连字符>静态文件
+	// 连字符这一步:如果带连字符的文件确实存在,则不按照连字符拆分
 	async resolveJs(): Promise<Array<string>> {
 		const pathname = this.pathname.replace('.js', '').replace(/^\//, '');
 		const js = this.opts.opts.static ? Object.keys(this.opts.opts.static.js) || [] : [];
@@ -50,14 +61,21 @@ export default class {
 			return this.opts.opts.static.js[curr + '.js'].map((item: string) => path.join(this.opts.dirname, item));
 		}
 		if (/-/.test(curr)) {
-			const dirs = curr.split('/');
-			const segment = dirs.pop();
-			return segment
-				.split('-')
-				.filter((item) => item)
-				.map((item) => {
-					return path.join(this.opts.dirname, ...dirs, item) + '.js';
-				});
+			try {
+				const f = path.join(this.opts.dirname, curr) + '.js';
+				await fsAccess(f, fs.constants.R_OK);
+				// return 单个js地址,后面会当做静态文件输出
+				return [f];
+			} catch (e) {
+				const dirs = curr.split('/');
+				const segment = dirs.pop();
+				return segment
+					.split('-')
+					.filter((item) => item)
+					.map((item) => {
+						return path.join(this.opts.dirname, ...dirs, item) + '.js';
+					});
+			}
 		}
 
 		return [path.join(this.opts.dirname, curr) + '.js'];
@@ -66,6 +84,7 @@ export default class {
 	async less() {
 		const files = await this.resolveLess();
 		if (files.length == 1 && files[0].match(/\.css$/)) {
+			// 收到标记使用一个css静态文件
 			const text = await fsReadFile(files[0]);
 			return {
 				ret: {
@@ -113,6 +132,17 @@ export default class {
 
 	async Js() {
 		const files = await this.resolveJs();
+		if (files.length == 1) {
+			// 收到标记使用一个js静态文件,没有什么好合并的,直接输出(这里是http响应)
+			const text = await fsReadFile(files[0]);
+			return {
+				ret: {
+					js: text,
+				},
+				hit: false,
+			};
+		}
+
 		const time = await util.getUpdateTime(files);
 		const ret = tool.get(this.pathname);
 		if (ret && ret.time == time) {

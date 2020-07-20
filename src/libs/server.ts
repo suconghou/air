@@ -20,11 +20,11 @@ export default class server {
 			this.app
 				.listen(this.args.port, this.args.host, () => {
 					console.info('Server listening on port %d', this.args.port);
+					this.watch();
 				})
 				.on('error', (err) => {
 					console.error(err.toString());
 				});
-			this.watch();
 		} catch (e) {
 			console.error(e);
 		}
