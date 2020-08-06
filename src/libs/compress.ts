@@ -18,8 +18,9 @@ export default class {
 	private async resolveLess(): Promise<Array<string>> {
 		const pathname = this.pathname.replace('.css', '').replace(/^\//, '');
 		const css = this.opts.opts.static ? Object.keys(this.opts.opts.static.css) || [] : [];
-		const curr = pathname.replace(/.*static\//, '');
-		if (css.includes(curr + '.css')) {
+		// dirname存在说明有配置文件,无配置文件时按照原始地址
+		const curr = this.opts.dirname ? pathname.replace(/.*static\//, '') : pathname;
+		if (this.opts.dirname && css.includes(curr + '.css')) {
 			return this.opts.opts.static.css[curr + '.css'].map((item: string) => path.join(this.opts.dirname, item));
 		}
 
@@ -56,8 +57,9 @@ export default class {
 	async resolveJs(): Promise<Array<string>> {
 		const pathname = this.pathname.replace('.js', '').replace(/^\//, '');
 		const js = this.opts.opts.static ? Object.keys(this.opts.opts.static.js) || [] : [];
-		const curr = pathname.replace(/.*static\//, '');
-		if (js.includes(curr + '.js')) {
+		// this.opts.dirname存在说明有配置文件,无配置文件按照原始地址
+		const curr = this.opts.dirname ? pathname.replace(/.*static\//, '') : pathname;
+		if (this.opts.dirname && js.includes(curr + '.js')) {
 			return this.opts.opts.static.js[curr + '.js'].map((item: string) => path.join(this.opts.dirname, item));
 		}
 		if (/-/.test(curr)) {
