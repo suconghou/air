@@ -758,8 +758,9 @@ class compress {
     async resolveLess() {
         const pathname = this.pathname.replace('.css', '').replace(/^\//, '');
         const css = this.opts.opts.static ? Object.keys(this.opts.opts.static.css) || [] : [];
-        const curr = pathname.replace(/.*static\//, '');
-        if (css.includes(curr + '.css')) {
+        // dirname存在说明有配置文件,无配置文件时按照原始地址
+        const curr = this.opts.dirname ? pathname.replace(/.*static\//, '') : pathname;
+        if (this.opts.dirname && css.includes(curr + '.css')) {
             return this.opts.opts.static.css[curr + '.css'].map((item) => path.join(this.opts.dirname, item));
         }
         if (/-/.test(curr)) {
@@ -796,8 +797,9 @@ class compress {
     async resolveJs() {
         const pathname = this.pathname.replace('.js', '').replace(/^\//, '');
         const js = this.opts.opts.static ? Object.keys(this.opts.opts.static.js) || [] : [];
-        const curr = pathname.replace(/.*static\//, '');
-        if (js.includes(curr + '.js')) {
+        // this.opts.dirname存在说明有配置文件,无配置文件按照原始地址
+        const curr = this.opts.dirname ? pathname.replace(/.*static\//, '') : pathname;
+        if (this.opts.dirname && js.includes(curr + '.js')) {
             return this.opts.opts.static.js[curr + '.js'].map((item) => path.join(this.opts.dirname, item));
         }
         if (/-/.test(curr)) {
@@ -1194,14 +1196,23 @@ class server {
     }
 }
 
+let debug = process$1.env.debug ? {} : { eslint: 1, prettier: 1 };
 const eslintExtensions = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.vue'];
 const getESLintCLIEngine = (eslintConfig) => {
     const { CLIEngine } = require('eslint');
+    if (!debug.eslint) {
+        console.info('eslint version ' + CLIEngine.version);
+        debug.eslint = 1;
+    }
     return new CLIEngine(eslintConfig);
 };
 const createPrettify = (formatOptions) => {
     return async (text) => {
         const prettier = require('prettier');
+        if (!debug.prettier) {
+            console.info('prettier version ' + prettier.version);
+            debug.prettier = 1;
+        }
         const output = prettier.format(text, formatOptions);
         return output;
     };
@@ -1248,7 +1259,7 @@ const createEslintFix = (eslintConfig, filePath) => {
         if (logoutput) {
             console.info(logoutput);
             if (errorCount > 0) {
-                process.exit(1);
+                process$1.exit(1);
             }
         }
         return output;
@@ -1594,7 +1605,7 @@ Flags:
     --dry           just run as a static server
     --art           use art-template instead of ssi
 `;
-const version = '0.7.9';
+const version = '0.7.11';
 const templatetips = `
 Usage:
     air template filename.html [flag]
