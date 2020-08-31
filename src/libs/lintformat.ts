@@ -1,15 +1,26 @@
 import * as path from 'path';
+import * as process from 'process';
+
+let debug = process.env.debug ? {} : { eslint: 1, prettier: 1 };
 
 const eslintExtensions = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.vue'];
 
 const getESLintCLIEngine = (eslintConfig: any) => {
 	const { CLIEngine } = require('eslint');
+	if (!debug.eslint) {
+		console.info('eslint version ' + CLIEngine.version);
+		debug.eslint = 1;
+	}
 	return new CLIEngine(eslintConfig);
 };
 
 const createPrettify = (formatOptions: any) => {
 	return async (text: string) => {
 		const prettier = require('prettier');
+		if (!debug.prettier) {
+			console.info('prettier version ' + prettier.version);
+			debug.prettier = 1;
+		}
 		const output = prettier.format(text, formatOptions);
 		return output;
 	};
