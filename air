@@ -393,7 +393,18 @@ class file {
         let matches = headers.range ? headers.range.trim().match(/^bytes=(\d+)-(\d+)?$/) : false;
         if (matches) {
             const start = parseInt(matches[1]);
-            const end = matches[2] ? parseInt(matches[2]) : (stats.size - 1);
+            let end = matches[2] ? parseInt(matches[2]) : (stats.size - 1);
+            if (end >= stats.size) {
+                end = stats.size - 1;
+            }
+            if (start > end || start >= stats.size) {
+                return {
+                    code: 416,
+                    meta: {
+                        'Content-Length': 0
+                    }
+                };
+            }
             const len = end - start + 1;
             return {
                 code: 206,
@@ -420,7 +431,7 @@ class file {
     static pipe(res, info, file) {
         const { code, meta, start, end } = info;
         res.writeHead(code, meta);
-        if (code == 304) {
+        if (code == 304 || code == 416) {
             return res.end();
         }
         else if (code == 206) {
@@ -1025,7 +1036,7 @@ var utiljs = {
 };
 
 const readFile = util$1.promisify(fs.readFile);
-const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.]{3,50})"\s{1,5}-->/g;
+const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.-]{3,50})"\s{1,5}-->/g;
 class ssi {
     constructor(cwd, pathname, query) {
         this.cwd = cwd;
@@ -1037,16 +1048,20 @@ class ssi {
         return await this.parseHtml(main, this.query, this.cwd);
     }
     async parseHtml(file, query, cwd) {
+        const filedir = path.dirname(file);
         const resfile = await readFile(file);
         let html = resfile.toString();
         let res, i = 0, filesMap = {};
         const fillContents = async () => {
+            // 主要目的是将filesMap中的文件都读取缓存起来
             let res;
             let fileList = Object.keys(filesMap).filter((item) => {
+                // 如果文件的内容之前已读取过,则复用,不再readFile
                 return !filesMap[item];
             });
             res = await Promise.all(fileList.map((item) => {
-                return readFile(path.join(cwd, item));
+                const f = path.join(path.isAbsolute(item) ? cwd : filedir, item);
+                return readFile(f);
             }));
             res.forEach((item, i) => {
                 filesMap[fileList[i]] = item.toString();
@@ -1163,7 +1178,7 @@ class server {
             res.setHeader('Cache-Control', ret.hit ? 5 : 1);
             res.send(ret.ret.js, 'text/javascript');
         });
-        this.app.get(/^[\w\-/.]+\.html$/, async (req, res, pathname, query) => {
+        const tpl = async (req, res, pathname, query) => {
             const tpl = new template(this.args.staticCfg, this.cwd, pathname, query);
             let ret;
             if (this.cliargs.art) {
@@ -1173,6 +1188,10 @@ class server {
                 ret = await tpl.ssi();
             }
             res.send(ret);
+        };
+        this.app.get(/^[\w\-/.]+\.html$/, tpl);
+        this.app.get(/^\/$/, async (req, res, pathname, query) => {
+            return tpl(req, res, '/index.html', query);
         });
     }
     watch() {
@@ -1605,7 +1624,7 @@ Flags:
     --dry           just run as a static server
     --art           use art-template instead of ssi
 `;
-const version = '0.7.11';
+const version = '0.7.12';
 const templatetips = `
 Usage:
     air template filename.html [flag]
