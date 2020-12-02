@@ -5,7 +5,7 @@ import * as fs from 'fs';
 
 const readFile = promisify(fs.readFile);
 
-const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.]{3,50})"\s{1,5}-->/g;
+const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.-]{3,50})"\s{1,5}-->/g;
 
 export default class {
 	constructor(private cwd: string, private pathname: string, private query: querystring.ParsedUrlQuery) {}
@@ -15,7 +15,8 @@ export default class {
 		return await this.parseHtml(main, this.query, this.cwd);
 	}
 
-	async parseHtml(file: string, query: querystring.ParsedUrlQuery, cwd: string): Promise<string> {
+	private async parseHtml(file: string, query: querystring.ParsedUrlQuery, cwd: string): Promise<string> {
+		const filedir = path.dirname(file);
 		const resfile = await readFile(file);
 		let html = resfile.toString();
 		let res: any,
@@ -23,16 +24,19 @@ export default class {
 			filesMap = {};
 
 		const fillContents = async () => {
+			// 主要目的是将filesMap中的文件都读取缓存起来
 			let res: any;
 			let fileList = Object.keys(filesMap).filter((item) => {
+				// 如果文件的内容之前已读取过,则复用,不再readFile
 				return !filesMap[item];
 			});
 			res = await Promise.all(
 				fileList.map((item) => {
-					return readFile(path.join(cwd, item));
+					const f = path.join(path.isAbsolute(item) ? cwd : filedir, item);
+					return readFile(f);
 				})
 			);
-			res.forEach((item, i) => {
+			res.forEach((item: Buffer, i: number) => {
 				filesMap[fileList[i]] = item.toString();
 			});
 		};

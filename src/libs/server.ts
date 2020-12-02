@@ -50,17 +50,21 @@ export default class server {
 				res.send(ret.ret.js, 'text/javascript');
 			}
 		);
+		const tpl = async (req: requestctx, res: responsectx, pathname: string, query: querystring.ParsedUrlQuery) => {
+			const tpl = new template(this.args.staticCfg, this.cwd, pathname, query);
+			let ret: string;
+			if (this.cliargs.art) {
+				ret = await tpl.art();
+			} else {
+				ret = await tpl.ssi();
+			}
+			res.send(ret);
+		};
+		this.app.get(/^[\w\-/.]+\.html$/, tpl);
 		this.app.get(
-			/^[\w\-/.]+\.html$/,
+			/^\/$/,
 			async (req: requestctx, res: responsectx, pathname: string, query: querystring.ParsedUrlQuery) => {
-				const tpl = new template(this.args.staticCfg, this.cwd, pathname, query);
-				let ret: string;
-				if (this.cliargs.art) {
-					ret = await tpl.art();
-				} else {
-					ret = await tpl.ssi();
-				}
-				res.send(ret);
+				return tpl(req, res, '/index.html', query);
 			}
 		);
 	}
