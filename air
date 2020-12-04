@@ -1130,7 +1130,7 @@ class template {
                 const datafile = path.join(this.cwd, config.template[file]);
                 r = require(datafile);
             }
-            data = Object.assign({}, data, r);
+            data = Object.assign({}, r, data);
         }
         return template(dstfile, Object.keys(data).length > 0 ? data : {});
     }
@@ -1624,7 +1624,7 @@ Flags:
     --dry           just run as a static server
     --art           use art-template instead of ssi
 `;
-const version = '0.7.12';
+const version = '0.7.13';
 const templatetips = `
 Usage:
     air template filename.html [flag]
@@ -1731,7 +1731,7 @@ class command {
         if (!file) {
             throw new Error(templatetips);
         }
-        const query = { minimize: true, escape: false };
+        const query = { ...process.env, minimize: true, escape: false };
         if (opts.debug) {
             query.minimize = false;
         }
