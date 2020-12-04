@@ -40,7 +40,7 @@ export default class {
 				const datafile = path.join(this.cwd, config.template[file]);
 				r = require(datafile);
 			}
-			data = Object.assign({}, data, r);
+			data = Object.assign({}, r, data);
 		}
 		return template(dstfile, Object.keys(data).length > 0 ? data : {});
 	}

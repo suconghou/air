@@ -99,7 +99,7 @@ export default class {
 		if (!file) {
 			throw new Error(templatetips);
 		}
-		const query: any = { minimize: true, escape: false };
+		const query: any = { ...process.env, minimize: true, escape: false };
 		if (opts.debug) {
 			query.minimize = false;
 		}
