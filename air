@@ -1118,7 +1118,7 @@ class template {
         };
         Object.assign(template.defaults, options);
         const dstfile = path.join(this.cwd, file);
-        let data = this.query || {};
+        let data = this.query ? { ...this.query } : {};
         const config = this.opts.opts;
         if (config.template && config.template[file]) {
             const v = config.template[file];
@@ -1624,7 +1624,7 @@ Flags:
     --dry           just run as a static server
     --art           use art-template instead of ssi
 `;
-const version = '0.7.13';
+const version = '0.7.14';
 const templatetips = `
 Usage:
     air template filename.html [flag]
