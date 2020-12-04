@@ -29,7 +29,7 @@ export default class {
 		};
 		Object.assign(template.defaults, options);
 		const dstfile = path.join(this.cwd, file);
-		let data = this.query || {};
+		let data = this.query ? { ...this.query } : {};
 		const config = this.opts.opts;
 		if (config.template && config.template[file]) {
 			const v = config.template[file];
