@@ -19,6 +19,7 @@ export default {
 			'--debug': 'debug',
 			'--clean': 'clean',
 			'--dry': 'dry',
+			'--cors': 'cors',
 			'--art': 'art',
 			'--nogit': 'nogit',
 			'--lintlast': 'lintlast',

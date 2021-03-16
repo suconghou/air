@@ -22,10 +22,11 @@ Flags:
     --lintlast      do pretty first and then do eslint
     --nogit         do not integrate with git for gitlint
     --dry           just run as a static server
+    --cors          send Access-Control-Allow-Origin
     --art           use art-template instead of ssi
 `;
 
-export const version = '0.7.14';
+export const version = '0.7.15';
 
 export const templatetips = `
 Usage:

@@ -40,6 +40,7 @@ export interface cliArgs {
 	escape: boolean;
 	art: boolean;
 	dry: boolean;
+	cors: boolean;
 	nogit: boolean;
 	debug: boolean;
 	lintlast: boolean;

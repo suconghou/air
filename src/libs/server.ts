@@ -1,6 +1,6 @@
 import * as querystring from 'querystring';
 import * as fs from 'fs';
-import nodeserve from '../nodeserve/index';
+import nodeserve, { cors } from '../nodeserve/index';
 import compress from './compress';
 
 import { serverArgs, cliArgs } from '../types';
@@ -31,6 +31,9 @@ export default class server {
 	}
 
 	private route() {
+		if (this.cliargs.cors) {
+			this.app.use(cors);
+		}
 		if (this.cliargs.dry) {
 			return;
 		}
