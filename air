@@ -733,6 +733,22 @@ class nodeserve extends servefns {
     }
 }
 
+const cors = (request, response, next) => {
+    const { origin } = request.headers;
+    if (origin) {
+        response.setHeader('Access-Control-Allow-Origin', origin);
+        response.setHeader('Access-Control-Allow-Credentials', 'true');
+    }
+    else {
+        response.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    response.setHeader('Access-Control-Max-Age', '604800');
+    response.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, HEAD, PATCH, OPTIONS');
+    response.setHeader('Access-Control-Allow-Headers', 'Range, Origin, X-Requested-With, Content-Type, Content-Length, Accept, Accept-Encoding, Cache-Control, Expires, Pragma');
+    response.setHeader('Access-Control-Expose-Headers', 'Content-Length, Accept-Ranges');
+    next();
+};
+
 const maxItem = 1e3;
 const caches = new Map();
 class default_1 {
@@ -1004,6 +1020,7 @@ var utiljs = {
             '--debug': 'debug',
             '--clean': 'clean',
             '--dry': 'dry',
+            '--cors': 'cors',
             '--art': 'art',
             '--nogit': 'nogit',
             '--lintlast': 'lintlast',
@@ -1165,6 +1182,9 @@ class server {
         }
     }
     route() {
+        if (this.cliargs.cors) {
+            this.app.use(cors);
+        }
         if (this.cliargs.dry) {
             return;
         }
@@ -1622,9 +1642,10 @@ Flags:
     --lintlast      do pretty first and then do eslint
     --nogit         do not integrate with git for gitlint
     --dry           just run as a static server
+    --cors          send Access-Control-Allow-Origin
     --art           use art-template instead of ssi
 `;
-const version = '0.7.14';
+const version = '0.7.15';
 const templatetips = `
 Usage:
     air template filename.html [flag]
