@@ -1645,7 +1645,7 @@ Flags:
     --cors          send Access-Control-Allow-Origin
     --art           use art-template instead of ssi
 `;
-const version = '0.7.15';
+const version = '0.7.16';
 const templatetips = `
 Usage:
     air template filename.html [flag]
