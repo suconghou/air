@@ -99,6 +99,11 @@ http://lesscss.org/usage/#less-options-math
 
 lessOptions 指定 math 为 `always`, 行为同3.0版本
 
+lessOptions的配置项有
+
+> math
+> 
+> urlArgs , 如果是启动http server方式,query上的参数`urlArgs`,可覆盖此配置文件值
 
 
 ### air install
