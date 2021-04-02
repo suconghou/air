@@ -65,6 +65,42 @@
 
 
 
+**break change**
+
+https://github.com/less/less.js/releases/tag/v4.0.0
+
+less 4.0 开始, math 默认值发生了改变, 除法必须使用括号了.
+
+http://lesscss.org/usage/#less-options-math
+
+可以使用配置文件 `lessOptions` 端, 还原到旧版行为
+
+```json
+{
+	"lessOptions": {
+		"math": "always"
+	},
+	"static": {
+		"js": {
+			"js/all.js": [
+				"js/jquery.js",
+				"js/etpl.js"
+			]
+		},
+		"css": {
+			"css/style.css": [
+				"css/page.less",
+				"css/admin.less"
+			]
+		}
+	}
+}
+```
+
+lessOptions 指定 math 为 `always`, 行为同3.0版本
+
+
+
 ### air install
 
 安装git hooks, 会将指定目录的git钩子安装到当前仓库, 当前位置必须是仓库根目录
