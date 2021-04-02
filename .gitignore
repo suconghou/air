@@ -4,4 +4,9 @@ src/nodeserve
 *.css
 *.vue
 *.less
-
+*.js
+.DS_Store
+data
+config
+.vscode
+air

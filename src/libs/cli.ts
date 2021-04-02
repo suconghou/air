@@ -14,6 +14,7 @@ export default class {
 			fpath: '',
 			dirname: '',
 			opts: {
+				lessOptions: {},
 				static: {
 					css: null,
 					js: null,
@@ -57,14 +58,14 @@ export default class {
 
 	/**
     
-     * air compress
-     * air lint
-     * air template
-     * 
-     * air install
-     * air gitlint
-     * air commitlint
-     */
+	 * air compress
+	 * air lint
+	 * air template
+	 * 
+	 * air install
+	 * air gitlint
+	 * air commitlint
+	 */
 	private async runArgs() {
 		const [m, ...args] = this.argv;
 

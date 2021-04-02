@@ -2,6 +2,7 @@ export interface staticOpts {
 	dirname: string;
 	fpath: string;
 	opts: {
+		lessOptions: any;
 		static: {
 			css: Map<string, Array<string>>;
 			js: Map<string, Array<string>>;
@@ -20,6 +21,7 @@ export interface lessopts {
 	urlArgs?: string;
 	compress?: boolean;
 	env?: string;
+	math?: string;
 }
 
 export interface jsopts {

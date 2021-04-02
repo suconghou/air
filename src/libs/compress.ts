@@ -6,11 +6,13 @@ import { staticOpts, cliArgs, lessopts, jsopts } from '../types';
 import tool from './tool';
 
 export default class {
-	private options: lessopts = { urlArgs: '', compress: false, env: 'development' };
+	private options: lessopts = { urlArgs: '', compress: false, math: '', env: 'development' };
 	private jopts: jsopts = { debug: true, clean: false };
 
 	constructor(private opts: staticOpts, private pathname: string, private query: querystring.ParsedUrlQuery) {
-		this.options.urlArgs = query.urlArgs ? query.urlArgs.toString() : '';
+		const lessOptions = opts.opts.lessOptions || {};
+		this.options.urlArgs = query.urlArgs ? query.urlArgs.toString() : lessOptions.urlArgs || '';
+		this.options.math = lessOptions.math;
 	}
 
 	// 解析优先级, 配置文件>连字符>less文件查找>静态文件
@@ -117,7 +119,7 @@ export default class {
 			})
 			.join('\r\n');
 
-		let { urlArgs, compress, env } = this.options;
+		let { urlArgs, compress, env, math } = this.options;
 
 		const less = require('less');
 		const autoprefix = require('less-plugin-autoprefix');
@@ -127,6 +129,7 @@ export default class {
 			urlArgs,
 			compress,
 			env,
+			math,
 		};
 		const ret: any = await less.render(lessInput, option);
 		return ret.css;
