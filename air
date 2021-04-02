@@ -776,9 +776,11 @@ class compress {
         this.opts = opts;
         this.pathname = pathname;
         this.query = query;
-        this.options = { urlArgs: '', compress: false, env: 'development' };
+        this.options = { urlArgs: '', compress: false, math: '', env: 'development' };
         this.jopts = { debug: true, clean: false };
-        this.options.urlArgs = query.urlArgs ? query.urlArgs.toString() : '';
+        const lessOptions = opts.opts.lessOptions || {};
+        this.options.urlArgs = query.urlArgs ? query.urlArgs.toString() : (lessOptions.urlArgs || '');
+        this.options.math = lessOptions.match;
     }
     // 解析优先级, 配置文件>连字符>less文件查找>静态文件
     // 连字符这一步:如果带连字符的文件确实存在,则不按照连字符拆分
@@ -877,7 +879,7 @@ class compress {
             return '@import "' + item + '";';
         })
             .join('\r\n');
-        let { urlArgs, compress, env } = this.options;
+        let { urlArgs, compress, env, math } = this.options;
         const less = require('less');
         const autoprefix = require('less-plugin-autoprefix');
         const option = {
@@ -886,6 +888,7 @@ class compress {
             urlArgs,
             compress,
             env,
+            math,
         };
         const ret = await less.render(lessInput, option);
         return ret.css;
@@ -1645,7 +1648,7 @@ Flags:
     --cors          send Access-Control-Allow-Origin
     --art           use art-template instead of ssi
 `;
-const version = '0.7.16';
+const version = '0.7.17';
 const templatetips = `
 Usage:
     air template filename.html [flag]
@@ -1784,6 +1787,7 @@ class cli {
                 fpath: '',
                 dirname: '',
                 opts: {
+                    lessOptions: {},
                     static: {
                         css: null,
                         js: null,
