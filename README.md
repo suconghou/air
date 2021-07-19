@@ -104,7 +104,10 @@ lessOptions的配置项有
 > math
 > 
 > urlArgs , 如果是启动http server方式,query上的参数`urlArgs`,可覆盖此配置文件值
-
+>
+> globalVars less 的 globalVars 参数, 此配置可由 环境变量 GLOBALVARS (key=value)形式字符串
+>
+> modifyVars less 的 modifyVars 参数, 此配置可由 环境变量 MODIFYVARS (配置key=value) 覆盖, 优先级 -m 参数 (使用http形式是query.modifyVars) > 环境变量 > 配置文件
 
 ### air install
 
