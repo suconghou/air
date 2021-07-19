@@ -776,10 +776,27 @@ class compress {
         this.opts = opts;
         this.pathname = pathname;
         this.query = query;
-        this.options = { urlArgs: '', compress: false, math: '', env: 'development' };
+        this.options = {
+            urlArgs: '',
+            globalVars: {},
+            modifyVars: {},
+            compress: false,
+            math: '',
+            env: 'development',
+        };
         this.jopts = { debug: true, clean: false };
         const lessOptions = opts.opts.lessOptions || {};
-        this.options.urlArgs = query.urlArgs ? query.urlArgs.toString() : (lessOptions.urlArgs || '');
+        this.options.urlArgs = query.urlArgs
+            ? query.urlArgs.toString()
+            : process.env.URLARGS || lessOptions.urlArgs || '';
+        this.options.globalVars = process.env.GLOBALVARS
+            ? querystring.parse(process.env.GLOBALVARS)
+            : lessOptions.globalVars || {};
+        this.options.modifyVars = query.modifyVars
+            ? querystring.parse(query.modifyVars.toString())
+            : process.env.MODIFYVARS
+                ? querystring.parse(process.env.MODIFYVARS)
+                : lessOptions.modifyVars || {};
         this.options.math = lessOptions.math;
     }
     // 解析优先级, 配置文件>连字符>less文件查找>静态文件
@@ -879,13 +896,15 @@ class compress {
             return '@import "' + item + '";';
         })
             .join('\r\n');
-        let { urlArgs, compress, env, math } = this.options;
+        let { urlArgs, globalVars, modifyVars, compress, env, math } = this.options;
         const less = require('less');
         const autoprefix = require('less-plugin-autoprefix');
         const option = {
             plugins: [new autoprefix({ browsers: ['last 5 versions', 'ie > 9', 'Firefox ESR'] })],
             paths: this.opts.dirname,
             urlArgs,
+            globalVars,
+            modifyVars,
             compress,
             env,
             math,
@@ -1019,6 +1038,7 @@ var utiljs = {
             '-o': 'output',
             '-d': 'dir',
             '-q': 'query',
+            '-m': 'modifyVars',
             '--escape': 'escape',
             '--debug': 'debug',
             '--clean': 'clean',
@@ -1639,6 +1659,7 @@ Flags:
     -d              document root , work dir, install dir
     -o              set output file path for air template
     -q              urlArgs params in less render
+    -m              modifyVars params in less render, eg: env=beta
     --debug         compress with debug mode
     --clean         compress with clean mode,remove console debugger
     --escape        escape when use art-template
@@ -1648,7 +1669,7 @@ Flags:
     --cors          send Access-Control-Allow-Origin
     --art           use art-template instead of ssi
 `;
-const version = '0.7.18';
+const version = '0.7.19';
 const templatetips = `
 Usage:
     air template filename.html [flag]
@@ -1715,11 +1736,13 @@ class command {
      * air compress --debug
      * air compress style.less other.less -q urlargs
      * air compress style.less other.less some.js --clean/debug
+     * air compress -m env=beta
      * @param args
      * @param cwd
      * @param opts
      */
     static async compress(args, cwd, opts, staticCfg) {
+        const fakequery = { urlArgs: opts.query, modifyVars: opts.modifyVars };
         let less = [];
         let js = [];
         args.forEach((item) => {
@@ -1734,13 +1757,13 @@ class command {
             }
         });
         if (less.length > 0 || js.length > 0) {
-            return await new compress(staticCfg, '', {}).compressLessOrJs(opts, less, js);
+            return await new compress(staticCfg, '', fakequery).compressLessOrJs(opts, less, js);
         }
         if (!staticCfg.fpath) {
             console.log('no config found');
             return;
         }
-        await new compress(staticCfg, '', { urlArgs: opts.query }).compress(opts);
+        await new compress(staticCfg, '', fakequery).compress(opts);
     }
     /**
      *

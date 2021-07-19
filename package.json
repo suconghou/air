@@ -1,6 +1,6 @@
 {
 	"name": "airs",
-	"version": "0.7.18",
+	"version": "0.7.19",
 	"description": "serve static files in the air",
 	"dependencies": {
 		"@typescript-eslint/parser": "^4.19.0",
