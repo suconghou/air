@@ -15,6 +15,7 @@ export default {
 			'-o': 'output',
 			'-d': 'dir',
 			'-q': 'query',
+			'-m': 'modifyVars',
 			'--escape': 'escape',
 			'--debug': 'debug',
 			'--clean': 'clean',

@@ -16,6 +16,7 @@ Flags:
     -d              document root , work dir, install dir
     -o              set output file path for air template
     -q              urlArgs params in less render
+    -m              modifyVars params in less render, eg: env=beta
     --debug         compress with debug mode
     --clean         compress with clean mode,remove console debugger
     --escape        escape when use art-template
@@ -26,7 +27,7 @@ Flags:
     --art           use art-template instead of ssi
 `;
 
-export const version = '0.7.18';
+export const version = '0.7.19';
 
 export const templatetips = `
 Usage:

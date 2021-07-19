@@ -59,11 +59,13 @@ export default class {
 	 * air compress --debug
 	 * air compress style.less other.less -q urlargs
 	 * air compress style.less other.less some.js --clean/debug
+	 * air compress -m env=beta
 	 * @param args
 	 * @param cwd
 	 * @param opts
 	 */
 	static async compress(args: Array<string>, cwd: string, opts: cliArgs, staticCfg: staticOpts) {
+		const fakequery = { urlArgs: opts.query, modifyVars: opts.modifyVars };
 		let less: Array<string> = [];
 		let js: Array<string> = [];
 		args.forEach((item) => {
@@ -77,13 +79,13 @@ export default class {
 			}
 		});
 		if (less.length > 0 || js.length > 0) {
-			return await new compress(staticCfg, '', {}).compressLessOrJs(opts, less, js);
+			return await new compress(staticCfg, '', fakequery).compressLessOrJs(opts, less, js);
 		}
 		if (!staticCfg.fpath) {
 			console.log('no config found');
 			return;
 		}
-		await new compress(staticCfg, '', { urlArgs: opts.query }).compress(opts);
+		await new compress(staticCfg, '', fakequery).compress(opts);
 	}
 
 	/**

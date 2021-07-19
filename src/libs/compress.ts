@@ -6,12 +6,29 @@ import { staticOpts, cliArgs, lessopts, jsopts } from '../types';
 import tool from './tool';
 
 export default class {
-	private options: lessopts = { urlArgs: '', compress: false, math: '', env: 'development' };
+	private options: lessopts = {
+		urlArgs: '',
+		globalVars: {},
+		modifyVars: {},
+		compress: false,
+		math: '',
+		env: 'development',
+	};
 	private jopts: jsopts = { debug: true, clean: false };
 
 	constructor(private opts: staticOpts, private pathname: string, private query: querystring.ParsedUrlQuery) {
 		const lessOptions = opts.opts.lessOptions || {};
-		this.options.urlArgs = query.urlArgs ? query.urlArgs.toString() : lessOptions.urlArgs || '';
+		this.options.urlArgs = query.urlArgs
+			? query.urlArgs.toString()
+			: process.env.URLARGS || lessOptions.urlArgs || '';
+		this.options.globalVars = process.env.GLOBALVARS
+			? querystring.parse(process.env.GLOBALVARS)
+			: lessOptions.globalVars || {};
+		this.options.modifyVars = query.modifyVars
+			? querystring.parse(query.modifyVars.toString())
+			: process.env.MODIFYVARS
+			? querystring.parse(process.env.MODIFYVARS)
+			: lessOptions.modifyVars || {};
 		this.options.math = lessOptions.math;
 	}
 
@@ -119,7 +136,7 @@ export default class {
 			})
 			.join('\r\n');
 
-		let { urlArgs, compress, env, math } = this.options;
+		let { urlArgs, globalVars, modifyVars, compress, env, math } = this.options;
 
 		const less = require('less');
 		const autoprefix = require('less-plugin-autoprefix');
@@ -127,6 +144,8 @@ export default class {
 			plugins: [new autoprefix({ browsers: ['last 5 versions', 'ie > 9', 'Firefox ESR'] })],
 			paths: this.opts.dirname,
 			urlArgs,
+			globalVars,
+			modifyVars,
 			compress,
 			env,
 			math,

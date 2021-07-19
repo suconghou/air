@@ -11,6 +11,10 @@ export interface staticOpts {
 	};
 }
 
+interface Dict<T> {
+	[key: string]: T;
+}
+
 export interface serverArgs {
 	host: string;
 	port: number;
@@ -19,6 +23,8 @@ export interface serverArgs {
 
 export interface lessopts {
 	urlArgs?: string;
+	modifyVars?: Dict<string>;
+	globalVars?: Dict<string>;
 	compress?: boolean;
 	env?: string;
 	math?: string;
@@ -38,6 +44,7 @@ export interface cliArgs {
 	output: string;
 	cwd: string;
 	query: string;
+	modifyVars: string;
 	clean: boolean;
 	escape: boolean;
 	art: boolean;
