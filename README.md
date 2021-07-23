@@ -174,13 +174,22 @@ yarn global add prettier eslint babel-eslint vue-eslint-parser eslint-plugin-vue
 
 使用`art-template`模板渲染
 
-`air template index.html data.json -o output.html --debug`
+`air template tpl.html -o output.html --debug --art`
 
 加上`--debug`为不压缩
 
 `-o`指定输出文件,如果不指定则直接输出到标准输出
 
+`--art` 表示使用`art-template`模板,否则使用ssi
 
+`tpl.html`的数据文件会在`static.json`配置文件中自动查找
+
+
+```json
+"template": {
+	"tpl.html": "data/index.json"
+}
+```
 
 
 # 使用配置文件
