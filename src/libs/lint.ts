@@ -26,14 +26,6 @@ const extParser = {
 	yaml: 'yaml',
 };
 
-const eslintParser = {
-	js: '@babel/eslint-parser',
-	mjs: '@babel/eslint-parser',
-	vue: 'vue-eslint-parser',
-	ts: '@typescript-eslint/parser',
-	tsx: '@typescript-eslint/parser',
-};
-
 // 修改一些eslint规则来适应prettier
 const fixrules = {
 	// https://github.com/prettier/eslint-plugin-prettier#arrow-body-style-and-prefer-arrow-callback-issue
@@ -287,13 +279,12 @@ const config = {
 			env: {
 				node: true,
 				browser: true,
-				es6: true,
+				es2021: true,
 				commonjs: true,
 				worker: true,
 				amd: true,
 			},
 			parserOptions: {
-				parser: '@babel/eslint-parser',
 				ecmaVersion: 'latest',
 				sourceType: 'module',
 				requireConfigFile: false,
@@ -309,7 +300,6 @@ const config = {
 		extends: ['plugin:vue/recommended', 'eslint:recommended'],
 		envs: ['node', 'browser', 'es6', 'commonjs', 'worker', 'amd'],
 		parserOptions: {
-			parser: '@babel/eslint-parser',
 			ecmaVersion: 'latest',
 			sourceType: 'module',
 			requireConfigFile: false,
@@ -439,8 +429,7 @@ export default class lint {
 					},
 				};
 				const baseConfig = options.eslintConfig.baseConfig;
-				const [esparser, preparser, ext] = this.getParser(item);
-				baseConfig.parser = esparser;
+				const [preparser, ext] = this.getParser(item);
 				options.prettierOptions.parser = preparser;
 				if (['mjs', 'js', 'ts', 'tsx'].includes(ext)) {
 					baseConfig.extends = baseConfig.extends.filter((item) => !item.includes('vue'));
@@ -462,7 +451,7 @@ export default class lint {
 
 	private getParser(file: string) {
 		const ext = file.split('.').pop().toLowerCase();
-		return [eslintParser[ext] ? eslintParser[ext] : '', extParser[ext] ? extParser[ext] : 'babel', ext];
+		return [extParser[ext] ? extParser[ext] : 'babel', ext];
 	}
 
 	private gitadd(f: Array<string>) {

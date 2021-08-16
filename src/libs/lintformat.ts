@@ -26,6 +26,8 @@ const createPrettify = (formatOptions: any) => {
 };
 
 const createEslintFix = (eslintConfig: Record<string, any>, fixrules: Record<string, any>, filePath: string) => {
+	// 此处加载CLIEngine只是为了获取可能存在的配置文件,options.parser必然已设置为空,否则此处直接加载插件,查找目录不正确导致无法加载
+	// 下面的require.resolve在安装air目录下的node_modules查找
 	const config = getESLintCLIEngine(eslintConfig).getConfigForFile(filePath);
 	return async (text: string, filePath: string) => {
 		const options = {
