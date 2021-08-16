@@ -15,7 +15,7 @@ const getESLintCLIEngine = (eslintConfig: any) => {
 };
 
 const createPrettify = (formatOptions: any) => {
-	return async (text: string) => {
+	return (text: string) => {
 		const prettier = require('prettier');
 		if (!debug.prettier) {
 			console.info('prettier version ' + prettier.version);

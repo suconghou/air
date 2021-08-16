@@ -20,17 +20,16 @@ export default class {
 		const resfile = await readFile(file);
 		let html = resfile.toString();
 		let res: any,
-			i = 0,
-			filesMap = {};
+			i = 0;
+		const filesMap = {};
 
 		const fillContents = async () => {
 			// 主要目的是将filesMap中的文件都读取缓存起来
-			let res: any;
 			const fileList = Object.keys(filesMap).filter((item) => {
 				// 如果文件的内容之前已读取过,则复用,不再readFile
 				return !filesMap[item];
 			});
-			res = await Promise.all(
+			const res = await Promise.all(
 				fileList.map((item) => {
 					const f = path.join(path.isAbsolute(item) ? cwd : filedir, item);
 					return readFile(f);

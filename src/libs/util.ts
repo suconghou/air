@@ -32,13 +32,13 @@ export default class {
 			try {
 				await fsAccess(file, fs.constants.R_OK);
 				return file;
-			} catch (e) {
+			} catch (_e) {
 				// not exist try next
 			}
 		}
 	}
 
-	public static async getConfig(cwd: string, name: string = 'static.json') {
+	public static async getConfig(cwd: string, name = 'static.json') {
 		if (!/static\/?$/.test(cwd)) {
 			cwd = path.join(cwd, 'static');
 		}

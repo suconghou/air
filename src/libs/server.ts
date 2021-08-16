@@ -66,7 +66,7 @@ export default class server {
 		this.app.get(/^[\w\-/.]+\.html$/, tpl);
 		this.app.get(
 			/^\/$/,
-			async (req: requestctx, res: responsectx, pathname: string, query: querystring.ParsedUrlQuery) => {
+			(req: requestctx, res: responsectx, pathname: string, query: querystring.ParsedUrlQuery) => {
 				return tpl(req, res, '/index.html', query);
 			}
 		);

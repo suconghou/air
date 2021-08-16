@@ -27,7 +27,7 @@ export default {
 		};
 		return this.params(args, kMap);
 	},
-	params(args: Array<string>, kMap: object) {
+	params(args: Array<string>, kMap: Record<string, any>) {
 		const ret = {};
 		const keys = Object.keys(kMap);
 		let key: string;
