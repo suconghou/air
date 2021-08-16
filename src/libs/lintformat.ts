@@ -1,15 +1,15 @@
 import * as path from 'path';
 import * as process from 'process';
 
-const debug = { eslint: 0, prettier: 0 };
+const version = { eslint: 0, prettier: 0 };
 
 const eslintExtensions = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.vue'];
 
 const getESLintCLIEngine = (eslintConfig: any) => {
 	const { CLIEngine } = require('eslint');
-	if (!debug.eslint) {
+	if (!version.eslint) {
 		console.info('eslint version ' + CLIEngine.version);
-		debug.eslint = CLIEngine.version;
+		version.eslint = CLIEngine.version;
 	}
 	return new CLIEngine(eslintConfig);
 };
@@ -17,21 +17,22 @@ const getESLintCLIEngine = (eslintConfig: any) => {
 const createPrettify = (formatOptions: any) => {
 	return (text: string) => {
 		const prettier = require('prettier');
-		if (!debug.prettier) {
+		if (!version.prettier) {
 			console.info('prettier version ' + prettier.version);
-			debug.prettier = prettier.version;
+			version.prettier = prettier.version;
 		}
 		const output = prettier.format(text, formatOptions);
 		return output;
 	};
 };
 
-const createEslintFix = (eslintConfig: any, filePath: string) => {
+const createEslintFix = (eslintConfig: Record<string, any>, fixrules: Record<string, any>, filePath: string) => {
 	const config = getESLintCLIEngine(eslintConfig).getConfigForFile(filePath);
 	return async (text: string, filePath: string) => {
 		const options = {
 			...eslintConfig,
 			...config,
+			...fixrules,
 			...{
 				useEslintrc: false,
 				fix: true,
@@ -78,7 +79,7 @@ const createEslintFix = (eslintConfig: any, filePath: string) => {
 };
 
 export default async (options: any) => {
-	const { filePath, text, eslintConfig, prettierOptions, prettierLast } = options;
+	const { filePath, text, eslintConfig, prettierOptions, fixrules, prettierLast } = options;
 	const fileExtension = path.extname(filePath || '');
 	const onlyPrettier = !eslintExtensions.includes(fileExtension);
 	const prettify = createPrettify(prettierOptions);
@@ -86,7 +87,7 @@ export default async (options: any) => {
 		return prettify(text);
 	}
 	eslintConfig.cwd = path.dirname(filePath);
-	const eslintFix = createEslintFix(eslintConfig, filePath);
+	const eslintFix = createEslintFix(eslintConfig, fixrules, filePath);
 	if (prettierLast) {
 		return await prettify(await eslintFix(text, filePath));
 	}
