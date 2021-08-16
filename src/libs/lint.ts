@@ -279,15 +279,16 @@ const config = {
 			env: {
 				node: true,
 				browser: true,
-				es2021: true,
+				es2021: true, // 将会自动设置ecmaVersion为12 https://eslint.org/docs/user-guide/configuring/language-options#specifying-parser-options
 				commonjs: true,
 				worker: true,
 				amd: true,
 			},
 			parserOptions: {
-				ecmaVersion: 'latest',
+				ecmaVersion: 12,
 				sourceType: 'module',
 				requireConfigFile: false,
+				allowImportExportEverywhere: true,
 				ecmaFeatures: {
 					experimentalObjectRestSpread: true,
 					jsx: true,
@@ -300,9 +301,10 @@ const config = {
 		extends: ['plugin:vue/recommended', 'eslint:recommended'],
 		envs: ['node', 'browser', 'es6', 'commonjs', 'worker', 'amd'],
 		parserOptions: {
-			ecmaVersion: 'latest',
+			ecmaVersion: 12,
 			sourceType: 'module',
 			requireConfigFile: false,
+			allowImportExportEverywhere: true,
 			ecmaFeatures: {
 				experimentalObjectRestSpread: true,
 				jsx: true,
