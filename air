@@ -36,7 +36,7 @@ class util {
                 await fsAccess(file, fs.constants.R_OK);
                 return file;
             }
-            catch (e) {
+            catch (_e) {
                 // not exist try next
             }
         }
@@ -750,7 +750,7 @@ const cors = (request, response, next) => {
 };
 
 const maxItem = 1e3;
-const caches = new Map();
+const memcaches = new Map();
 class default_1 {
     static log(msg) {
         msg = msg.toString();
@@ -763,10 +763,10 @@ class default_1 {
         console.log(msg);
     }
     static get(k) {
-        return caches.get(k);
+        return memcaches.get(k);
     }
     static set(k, v) {
-        return caches.set(k, v);
+        return memcaches.set(k, v);
     }
 }
 default_1.errorlog = [];
@@ -817,7 +817,7 @@ class compress {
                 // return 单个css地址,后面会当做静态文件输出
                 return [f];
             }
-            catch (e) {
+            catch (_e) {
                 const dirs = pathname.split('/');
                 const segment = dirs.pop();
                 return segment
@@ -833,7 +833,7 @@ class compress {
         try {
             await fsAccess(target, fs.constants.R_OK);
         }
-        catch (e) {
+        catch (_e) {
             target = path.join(this.opts.dirname, curr) + '.css';
         }
         return [target];
@@ -855,7 +855,7 @@ class compress {
                 // return 单个js地址,后面会当做静态文件输出
                 return [f];
             }
-            catch (e) {
+            catch (_e) {
                 const dirs = curr.split('/');
                 const segment = dirs.pop();
                 return segment
@@ -896,7 +896,7 @@ class compress {
             return '@import "' + item + '";';
         })
             .join('\r\n');
-        let { urlArgs, globalVars, modifyVars, compress, env, math } = this.options;
+        const { urlArgs, globalVars, modifyVars, compress, env, math } = this.options;
         const less = require('less');
         const autoprefix = require('less-plugin-autoprefix');
         const option = {
@@ -992,12 +992,12 @@ class compress {
         this.jopts.debug = cliargs.debug;
         this.jopts.clean = cliargs.clean;
         const { css, js } = this.opts.opts.static;
-        for (let item in css) {
+        for (const item in css) {
             const source = css[item];
             const ret = await this.compileLess(source);
             await fsWriteFile(path.join(this.opts.dirname, item), ret);
         }
-        for (let item in js) {
+        for (const item in js) {
             const source = js[item].map((item) => path.join(this.opts.dirname, item));
             const ret = await this.compileJs(source);
             await fsWriteFile(path.join(this.opts.dirname, item), ret);
@@ -1009,14 +1009,14 @@ class compress {
         this.jopts.debug = cliargs.debug;
         this.jopts.clean = cliargs.clean;
         if (less.length > 0) {
-            const dst = less[0].replace(/\.less$/, '.min.css');
-            const ret = await this.compileLess(less);
-            await fsWriteFile(dst, ret);
+            const cssdst = less[0].replace(/\.less$/, '.min.css');
+            const cssret = await this.compileLess(less);
+            await fsWriteFile(cssdst, cssret);
         }
         if (js.length > 0) {
-            const dst = js[0].replace(/\.js$/, '.min.js');
-            const ret = await this.compileJs(js);
-            await fsWriteFile(dst, ret);
+            const jsdst = js[0].replace(/\.js$/, '.min.js');
+            const jsret = await this.compileJs(js);
+            await fsWriteFile(jsdst, jsret);
         }
     }
 }
@@ -1087,19 +1087,19 @@ class ssi {
         const main = path.join(this.cwd, this.pathname);
         return await this.parseHtml(main, this.query, this.cwd);
     }
-    async parseHtml(file, query, cwd) {
-        const filedir = path.dirname(file);
-        const resfile = await readFile(file);
+    async parseHtml(mainfile, query, cwd) {
+        const filedir = path.dirname(mainfile);
+        const resfile = await readFile(mainfile);
         let html = resfile.toString();
-        let res, i = 0, filesMap = {};
+        let res, i = 0;
+        const filesMap = {};
         const fillContents = async () => {
             // 主要目的是将filesMap中的文件都读取缓存起来
-            let res;
-            let fileList = Object.keys(filesMap).filter((item) => {
+            const fileList = Object.keys(filesMap).filter((item) => {
                 // 如果文件的内容之前已读取过,则复用,不再readFile
                 return !filesMap[item];
             });
-            res = await Promise.all(fileList.map((item) => {
+            const res = await Promise.all(fileList.map((item) => {
                 const f = path.join(path.isAbsolute(item) ? cwd : filedir, item);
                 return readFile(f);
             }));
@@ -1108,7 +1108,7 @@ class ssi {
             });
         };
         while (i < 6) {
-            let matches = {};
+            const matches = {};
             while ((res = includefile.exec(html))) {
                 const [holder, file] = res;
                 matches[holder] = file;
@@ -1141,7 +1141,7 @@ class template {
         this.pathname = pathname;
         this.query = query;
     }
-    async art() {
+    art() {
         let file = this.pathname;
         if (file.charAt(0) == '/') {
             file = file.substr(1);
@@ -1188,7 +1188,7 @@ class server {
         this.cwd = cwd;
         this.app = new nodeserve();
     }
-    async serve() {
+    serve() {
         try {
             this.route();
             this.app
@@ -1233,7 +1233,7 @@ class server {
             res.send(ret);
         };
         this.app.get(/^[\w\-/.]+\.html$/, tpl);
-        this.app.get(/^\/$/, async (req, res, pathname, query) => {
+        this.app.get(/^\/$/, (req, res, pathname, query) => {
             return tpl(req, res, '/index.html', query);
         });
     }
@@ -1243,7 +1243,7 @@ class server {
             return;
         }
         console.info('load config file ' + f);
-        fs.watchFile(f, async () => {
+        fs.watchFile(f, () => {
             try {
                 delete require.cache[f];
                 const c = require(f);
@@ -1258,33 +1258,36 @@ class server {
     }
 }
 
-let debug = process$1.env.debug ? {} : { eslint: 1, prettier: 1 };
+const version = { eslint: 0, prettier: 0, tsparser: 0, jsparser: 0, vueparser: 0 };
 const eslintExtensions = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.vue'];
 const getESLintCLIEngine = (eslintConfig) => {
     const { CLIEngine } = require('eslint');
-    if (!debug.eslint) {
+    if (!version.eslint) {
         console.info('eslint version ' + CLIEngine.version);
-        debug.eslint = 1;
+        version.eslint = CLIEngine.version;
     }
     return new CLIEngine(eslintConfig);
 };
 const createPrettify = (formatOptions) => {
-    return async (text) => {
+    return (text) => {
         const prettier = require('prettier');
-        if (!debug.prettier) {
+        if (!version.prettier) {
             console.info('prettier version ' + prettier.version);
-            debug.prettier = 1;
+            version.prettier = prettier.version;
         }
         const output = prettier.format(text, formatOptions);
         return output;
     };
 };
-const createEslintFix = (eslintConfig, filePath) => {
+const createEslintFix = (eslintConfig, fixrules, filePath) => {
+    // 此处加载CLIEngine只是为了获取可能存在的配置文件,options.parser必然已设置为空,否则此处直接加载插件,查找目录不正确导致无法加载
+    // 下面的require.resolve在安装air目录下的node_modules查找
     const config = getESLintCLIEngine(eslintConfig).getConfigForFile(filePath);
     return async (text, filePath) => {
         const options = {
             ...eslintConfig,
             ...config,
+            ...fixrules,
             ...{
                 useEslintrc: false,
                 fix: true,
@@ -1296,6 +1299,10 @@ const createEslintFix = (eslintConfig, filePath) => {
         const fileExtension = path.extname(filePath || '');
         if (['.ts', '.tsx'].includes(fileExtension)) {
             options.parser = require.resolve('@typescript-eslint/parser');
+            if (!version.tsparser) {
+                console.info('@typescript-eslint/parser ', options.parser);
+                version.tsparser = options.parser;
+            }
             for (const k in options.rules) {
                 if (k.includes('vue/')) {
                     options.rules[k] = ['off'];
@@ -1303,7 +1310,11 @@ const createEslintFix = (eslintConfig, filePath) => {
             }
         }
         if (['.js', '.mjs'].includes(fileExtension)) {
-            options.parser = require.resolve('babel-eslint');
+            options.parser = require.resolve('@babel/eslint-parser');
+            if (!version.jsparser) {
+                console.info('@babel/eslint-parser ', options.parser);
+                version.jsparser = options.parser;
+            }
             for (const k in options.rules) {
                 if (k.includes('vue/')) {
                     options.rules[k] = ['off'];
@@ -1312,6 +1323,10 @@ const createEslintFix = (eslintConfig, filePath) => {
         }
         if (['.vue'].includes(fileExtension)) {
             options.parser = require.resolve('vue-eslint-parser');
+            if (!version.vueparser) {
+                console.info('vue-eslint-parser ', options.parser);
+                version.vueparser = options.parser;
+            }
         }
         const cliEngine = getESLintCLIEngine(options);
         const report = cliEngine.executeOnText(text, filePath, true);
@@ -1321,14 +1336,14 @@ const createEslintFix = (eslintConfig, filePath) => {
         if (logoutput) {
             console.info(logoutput);
             if (errorCount > 0) {
-                process$1.exit(1);
+                process.exit(1);
             }
         }
         return output;
     };
 };
 var format = async (options) => {
-    const { filePath, text, eslintConfig, prettierOptions, prettierLast } = options;
+    const { filePath, text, eslintConfig, prettierOptions, fixrules, prettierLast } = options;
     const fileExtension = path.extname(filePath || '');
     const onlyPrettier = !eslintExtensions.includes(fileExtension);
     const prettify = createPrettify(prettierOptions);
@@ -1336,7 +1351,7 @@ var format = async (options) => {
         return prettify(text);
     }
     eslintConfig.cwd = path.dirname(filePath);
-    const eslintFix = createEslintFix(eslintConfig, filePath);
+    const eslintFix = createEslintFix(eslintConfig, fixrules, filePath);
     if (prettierLast) {
         return await prettify(await eslintFix(text, filePath));
     }
@@ -1361,13 +1376,182 @@ const extParser = {
     yml: 'yaml',
     yaml: 'yaml',
 };
-const lintParser = {
-    js: 'babel-eslint',
-    mjs: 'babel-eslint',
-    vue: 'vue-eslint-parser',
-    ts: '@typescript-eslint/parser',
-    tsx: '@typescript-eslint/parser',
+// 修改一些eslint规则来适应prettier
+const fixrules = {
+    // https://github.com/prettier/eslint-plugin-prettier#arrow-body-style-and-prefer-arrow-callback-issue
+    'arrow-body-style': 0,
+    'prefer-arrow-callback': 0,
+    // https://github.com/prettier/eslint-config-prettier/blob/main/index.js
+    curly: ['error', 'all'],
+    'lines-around-comment': 0,
+    'max-len': 0,
+    'no-confusing-arrow': 0,
+    'no-mixed-operators': 0,
+    'no-tabs': 0,
+    'no-unexpected-multiline': 0,
+    quotes: 0,
+    '@typescript-eslint/quotes': 0,
+    'babel/quotes': 0,
+    'vue/html-self-closing': 0,
+    'vue/max-len': 0,
+    // The rest are rules that you never need to enable when using Prettier.
+    'array-bracket-newline': 'off',
+    'array-bracket-spacing': 'off',
+    'array-element-newline': 'off',
+    'arrow-parens': 'off',
+    'arrow-spacing': 'off',
+    'block-spacing': 'off',
+    'brace-style': 'off',
+    'comma-dangle': 'off',
+    'comma-spacing': 'off',
+    'comma-style': 'off',
+    'computed-property-spacing': 'off',
+    'dot-location': 'off',
+    'eol-last': 'off',
+    'func-call-spacing': 'off',
+    'function-call-argument-newline': 'off',
+    'function-paren-newline': 'off',
+    'generator-star': 'off',
+    'generator-star-spacing': 'off',
+    'implicit-arrow-linebreak': 'off',
+    indent: 'off',
+    'jsx-quotes': 'off',
+    'key-spacing': 'off',
+    'keyword-spacing': 'off',
+    'linebreak-style': 'off',
+    'multiline-ternary': 'off',
+    'newline-per-chained-call': 'off',
+    'new-parens': 'off',
+    'no-arrow-condition': 'off',
+    'no-comma-dangle': 'off',
+    'no-extra-parens': 'off',
+    'no-extra-semi': 'off',
+    'no-floating-decimal': 'off',
+    'no-mixed-spaces-and-tabs': 'off',
+    'no-multi-spaces': 'off',
+    'no-multiple-empty-lines': 'off',
+    'no-reserved-keys': 'off',
+    'no-space-before-semi': 'off',
+    'no-trailing-spaces': 'off',
+    'no-whitespace-before-property': 'off',
+    'no-wrap-func': 'off',
+    'nonblock-statement-body-position': 'off',
+    'object-curly-newline': 'off',
+    'object-curly-spacing': 'off',
+    'object-property-newline': 'off',
+    'one-var-declaration-per-line': 'off',
+    'operator-linebreak': 'off',
+    'padded-blocks': 'off',
+    'quote-props': 'off',
+    'rest-spread-spacing': 'off',
+    semi: 'off',
+    'semi-spacing': 'off',
+    'semi-style': 'off',
+    'space-after-function-name': 'off',
+    'space-after-keywords': 'off',
+    'space-before-blocks': 'off',
+    'space-before-function-paren': 'off',
+    'space-before-function-parentheses': 'off',
+    'space-before-keywords': 'off',
+    'space-in-brackets': 'off',
+    'space-in-parens': 'off',
+    'space-infix-ops': 'off',
+    'space-return-throw-case': 'off',
+    'space-unary-ops': 'off',
+    'space-unary-word-ops': 'off',
+    'switch-colon-spacing': 'off',
+    'template-curly-spacing': 'off',
+    'template-tag-spacing': 'off',
+    'unicode-bom': 'off',
+    'wrap-iife': 'off',
+    'wrap-regex': 'off',
+    'yield-star-spacing': 'off',
+    '@babel/object-curly-spacing': 'off',
+    '@babel/semi': 'off',
+    '@typescript-eslint/brace-style': 'off',
+    '@typescript-eslint/comma-dangle': 'off',
+    '@typescript-eslint/comma-spacing': 'off',
+    '@typescript-eslint/func-call-spacing': 'off',
+    '@typescript-eslint/indent': 'off',
+    '@typescript-eslint/keyword-spacing': 'off',
+    '@typescript-eslint/member-delimiter-style': 'off',
+    '@typescript-eslint/no-extra-parens': 'off',
+    '@typescript-eslint/no-extra-semi': 'off',
+    '@typescript-eslint/object-curly-spacing': 'off',
+    '@typescript-eslint/semi': 'off',
+    '@typescript-eslint/space-before-function-paren': 'off',
+    '@typescript-eslint/space-infix-ops': 'off',
+    '@typescript-eslint/type-annotation-spacing': 'off',
+    'babel/object-curly-spacing': 'off',
+    'babel/semi': 'off',
+    'flowtype/boolean-style': 'off',
+    'flowtype/delimiter-dangle': 'off',
+    'flowtype/generic-spacing': 'off',
+    'flowtype/object-type-curly-spacing': 'off',
+    'flowtype/object-type-delimiter': 'off',
+    'flowtype/quotes': 'off',
+    'flowtype/semi': 'off',
+    'flowtype/space-after-type-colon': 'off',
+    'flowtype/space-before-generic-bracket': 'off',
+    'flowtype/space-before-type-colon': 'off',
+    'flowtype/union-intersection-spacing': 'off',
+    'react/jsx-child-element-spacing': 'off',
+    'react/jsx-closing-bracket-location': 'off',
+    'react/jsx-closing-tag-location': 'off',
+    'react/jsx-curly-newline': 'off',
+    'react/jsx-curly-spacing': 'off',
+    'react/jsx-equals-spacing': 'off',
+    'react/jsx-first-prop-new-line': 'off',
+    'react/jsx-indent': 'off',
+    'react/jsx-indent-props': 'off',
+    'react/jsx-max-props-per-line': 'off',
+    'react/jsx-newline': 'off',
+    'react/jsx-one-expression-per-line': 'off',
+    'react/jsx-props-no-multi-spaces': 'off',
+    'react/jsx-tag-spacing': 'off',
+    'react/jsx-wrap-multilines': 'off',
+    'standard/array-bracket-even-spacing': 'off',
+    'standard/computed-property-even-spacing': 'off',
+    'standard/object-curly-even-spacing': 'off',
+    'unicorn/empty-brace-spaces': 'off',
+    'unicorn/no-nested-ternary': 'off',
+    'unicorn/number-literal-case': 'off',
+    'vue/array-bracket-newline': 'off',
+    'vue/array-bracket-spacing': 'off',
+    'vue/arrow-spacing': 'off',
+    'vue/block-spacing': 'off',
+    'vue/block-tag-newline': 'off',
+    'vue/brace-style': 'off',
+    'vue/comma-dangle': 'off',
+    'vue/comma-spacing': 'off',
+    'vue/comma-style': 'off',
+    'vue/dot-location': 'off',
+    'vue/func-call-spacing': 'off',
+    'vue/html-closing-bracket-newline': 'off',
+    'vue/html-closing-bracket-spacing': 'off',
+    'vue/html-end-tags': 'off',
+    'vue/html-indent': 'off',
+    'vue/html-quotes': 'off',
+    'vue/key-spacing': 'off',
+    'vue/keyword-spacing': 'off',
+    'vue/max-attributes-per-line': 'off',
+    'vue/multiline-html-element-content-newline': 'off',
+    'vue/mustache-interpolation-spacing': 'off',
+    'vue/no-extra-parens': 'off',
+    'vue/no-multi-spaces': 'off',
+    'vue/no-spaces-around-equal-signs-in-attribute': 'off',
+    'vue/object-curly-newline': 'off',
+    'vue/object-curly-spacing': 'off',
+    'vue/object-property-newline': 'off',
+    'vue/operator-linebreak': 'off',
+    'vue/script-indent': 'off',
+    'vue/singleline-html-element-content-newline': 'off',
+    'vue/space-in-parens': 'off',
+    'vue/space-infix-ops': 'off',
+    'vue/space-unary-ops': 'off',
+    'vue/template-curly-spacing': 'off',
 };
+// no-unused-vars 我们从error修改到了warn
 // see https://github.com/eslint/eslint/blob/master/conf/eslint-recommended.js
 const rules = {
     'constructor-super': 'error',
@@ -1401,9 +1585,11 @@ const rules = {
     'no-inner-declarations': 'error',
     'no-invalid-regexp': 'error',
     'no-irregular-whitespace': 'error',
+    'no-loss-of-precision': 'error',
     'no-misleading-character-class': 'error',
-    'no-mixed-spaces-and-tabs': 'warn',
+    'no-mixed-spaces-and-tabs': 'error',
     'no-new-symbol': 'error',
+    'no-nonoctal-decimal-escape': 'error',
     'no-obj-calls': 'error',
     'no-octal': 'error',
     'no-prototype-builtins': 'error',
@@ -1419,8 +1605,10 @@ const rules = {
     'no-unreachable': 'error',
     'no-unsafe-finally': 'error',
     'no-unsafe-negation': 'error',
+    'no-unsafe-optional-chaining': 'error',
     'no-unused-labels': 'error',
     'no-unused-vars': 'warn',
+    'no-useless-backreference': 'error',
     'no-useless-catch': 'error',
     'no-useless-escape': 'error',
     'no-with': 'error',
@@ -1436,15 +1624,16 @@ const config = {
             env: {
                 node: true,
                 browser: true,
-                es6: true,
+                es2021: true,
                 commonjs: true,
                 worker: true,
                 amd: true,
             },
             parserOptions: {
-                parser: 'babel-eslint',
-                ecmaVersion: 7,
+                ecmaVersion: 12,
                 sourceType: 'module',
+                requireConfigFile: false,
+                allowImportExportEverywhere: true,
                 ecmaFeatures: {
                     experimentalObjectRestSpread: true,
                     jsx: true,
@@ -1457,9 +1646,10 @@ const config = {
         extends: ['plugin:vue/recommended', 'eslint:recommended'],
         envs: ['node', 'browser', 'es6', 'commonjs', 'worker', 'amd'],
         parserOptions: {
-            parser: 'babel-eslint',
-            ecmaVersion: 7,
+            ecmaVersion: 12,
             sourceType: 'module',
+            requireConfigFile: false,
+            allowImportExportEverywhere: true,
             ecmaFeatures: {
                 experimentalObjectRestSpread: true,
                 jsx: true,
@@ -1478,12 +1668,15 @@ const config = {
         useTabs: true,
         semi: true,
         trailingComma: 'es5',
+        quoteProps: 'as-needed',
         bracketSpacing: true,
         arrowParens: 'always',
         endOfLine: 'lf',
         parser: 'babel',
         jsxBracketSameLine: false,
+        editorconfig: false,
     },
+    fixrules,
     prettierLast: true,
 };
 const options = {
@@ -1573,8 +1766,7 @@ class lint {
                     },
                 };
                 const baseConfig = options.eslintConfig.baseConfig;
-                const [esparser, preparser, ext] = this.getParser(item);
-                baseConfig.parser = esparser;
+                const [preparser, ext] = this.getParser(item);
                 options.prettierOptions.parser = preparser;
                 if (['mjs', 'js', 'ts', 'tsx'].includes(ext)) {
                     baseConfig.extends = baseConfig.extends.filter((item) => !item.includes('vue'));
@@ -1595,7 +1787,7 @@ class lint {
     }
     getParser(file) {
         const ext = file.split('.').pop().toLowerCase();
-        return [lintParser[ext] ? lintParser[ext] : '', extParser[ext] ? extParser[ext] : 'babel', ext];
+        return [extParser[ext] ? extParser[ext] : 'babel', ext];
     }
     gitadd(f) {
         if (f && f.length) {
@@ -1636,7 +1828,7 @@ class lint {
         }
         if (!/(build|ci|docs|feat|fix|perf|refactor|style|test|revert|chore).{0,2}(\(.{1,100}\))?.{0,2}:.{1,200}/.test(msg)) {
             console.info('commit message should be format like <type>(optional scope): <description>');
-            process$1.exit(1);
+            process.exit(1);
         }
     }
 }
@@ -1669,7 +1861,7 @@ Flags:
     --cors          send Access-Control-Allow-Origin
     --art           use art-template instead of ssi
 `;
-const version = '0.7.19';
+const version$1 = '0.7.21';
 const templatetips = `
 Usage:
     air template filename.html [flag]
@@ -1743,8 +1935,8 @@ class command {
      */
     static async compress(args, cwd, opts, staticCfg) {
         const fakequery = { urlArgs: opts.query, modifyVars: opts.modifyVars };
-        let less = [];
-        let js = [];
+        const less = [];
+        const js = [];
         args.forEach((item) => {
             if (item.charAt(0) !== '-') {
                 const ext = item.split('.').pop();
@@ -1875,7 +2067,7 @@ class cli {
      * air --art
      *
      */
-    async runInit() {
+    runInit() {
         return new server(this.opts, this.args, this.cwd).serve();
     }
     /**
@@ -1902,7 +2094,7 @@ class cli {
         }
     }
     version() {
-        console.log('air version: air/' + version);
+        console.log('air version: air/' + version$1);
     }
     help() {
         console.info(help);

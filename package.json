@@ -1,18 +1,19 @@
 {
 	"name": "airs",
-	"version": "0.7.19",
+	"version": "0.7.21",
 	"description": "serve static files in the air",
 	"dependencies": {
-		"@typescript-eslint/parser": "^4.19.0",
+		"@babel/core": "^7.15.0",
+		"@babel/eslint-parser": "^7.15.0",
+		"@typescript-eslint/parser": "^4.29.1",
 		"art-template": "^4.13.2",
-		"babel-eslint": "^10.1.0",
-		"eslint": "^7.22.0",
-		"eslint-plugin-vue": "^7.8.0",
+		"eslint": "^7.32.0",
+		"eslint-plugin-vue": "^7.16.0",
 		"less": "^4.1.1",
 		"less-plugin-autoprefix": "^2.0.0",
-		"prettier": "^2.2.1",
-		"terser": "^5.6.1",
-		"vue-eslint-parser": "~7.6.0"
+		"prettier": "^2.3.2",
+		"terser": "^5.7.1",
+		"vue-eslint-parser": "^7.10.0"
 	},
 	"engines": {
 		"node": ">=12.0"
