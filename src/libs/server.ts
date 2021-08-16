@@ -14,7 +14,7 @@ export default class server {
 		this.app = new nodeserve();
 	}
 
-	async serve() {
+	serve() {
 		try {
 			this.route();
 			this.app
@@ -78,7 +78,7 @@ export default class server {
 			return;
 		}
 		console.info('load config file ' + f);
-		fs.watchFile(f, async () => {
+		fs.watchFile(f, () => {
 			try {
 				delete require.cache[f];
 				const c = require(f);

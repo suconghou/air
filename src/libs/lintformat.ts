@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as process from 'process';
 
-let debug = process.env.debug ? {} : { eslint: 1, prettier: 1 };
+const debug = { eslint: 0, prettier: 0 };
 
 const eslintExtensions = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.vue'];
 
@@ -9,7 +9,7 @@ const getESLintCLIEngine = (eslintConfig: any) => {
 	const { CLIEngine } = require('eslint');
 	if (!debug.eslint) {
 		console.info('eslint version ' + CLIEngine.version);
-		debug.eslint = 1;
+		debug.eslint = CLIEngine.version;
 	}
 	return new CLIEngine(eslintConfig);
 };
@@ -19,7 +19,7 @@ const createPrettify = (formatOptions: any) => {
 		const prettier = require('prettier');
 		if (!debug.prettier) {
 			console.info('prettier version ' + prettier.version);
-			debug.prettier = 1;
+			debug.prettier = prettier.version;
 		}
 		const output = prettier.format(text, formatOptions);
 		return output;

@@ -2,12 +2,12 @@ export interface staticOpts {
 	dirname: string;
 	fpath: string;
 	opts: {
-		lessOptions: any;
+		lessOptions: Record<string, any>;
 		static: {
 			css: Map<string, Array<string>>;
 			js: Map<string, Array<string>>;
 		};
-		template: {};
+		template: Record<string, any>;
 	};
 }
 

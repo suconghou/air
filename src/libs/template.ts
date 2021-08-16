@@ -12,7 +12,7 @@ export default class {
 		private query: querystring.ParsedUrlQuery
 	) {}
 
-	async art() {
+	art() {
 		let file = this.pathname;
 		if (file.charAt(0) == '/') {
 			file = file.substr(1);

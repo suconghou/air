@@ -66,8 +66,8 @@ export default class {
 	 */
 	static async compress(args: Array<string>, cwd: string, opts: cliArgs, staticCfg: staticOpts) {
 		const fakequery = { urlArgs: opts.query, modifyVars: opts.modifyVars };
-		let less: Array<string> = [];
-		let js: Array<string> = [];
+		const less: Array<string> = [];
+		const js: Array<string> = [];
 		args.forEach((item) => {
 			if (item.charAt(0) !== '-') {
 				const ext = item.split('.').pop();

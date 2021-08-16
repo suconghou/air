@@ -26,7 +26,7 @@ export default class {
 		const fillContents = async () => {
 			// 主要目的是将filesMap中的文件都读取缓存起来
 			let res: any;
-			let fileList = Object.keys(filesMap).filter((item) => {
+			const fileList = Object.keys(filesMap).filter((item) => {
 				// 如果文件的内容之前已读取过,则复用,不再readFile
 				return !filesMap[item];
 			});
@@ -42,7 +42,7 @@ export default class {
 		};
 
 		while (i < 6) {
-			let matches = {};
+			const matches = {};
 			while ((res = includefile.exec(html))) {
 				const [holder, file] = res;
 				matches[holder] = file;

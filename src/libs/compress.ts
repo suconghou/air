@@ -50,7 +50,7 @@ export default class {
 				await fsAccess(f, fs.constants.R_OK);
 				// return 单个css地址,后面会当做静态文件输出
 				return [f];
-			} catch (e) {
+			} catch (_e) {
 				const dirs = pathname.split('/');
 				const segment = dirs.pop();
 				return segment
@@ -65,7 +65,7 @@ export default class {
 		let target = path.join(this.opts.dirname, curr) + '.less';
 		try {
 			await fsAccess(target, fs.constants.R_OK);
-		} catch (e) {
+		} catch (_e) {
 			target = path.join(this.opts.dirname, curr) + '.css';
 		}
 		return [target];
@@ -87,7 +87,7 @@ export default class {
 				await fsAccess(f, fs.constants.R_OK);
 				// return 单个js地址,后面会当做静态文件输出
 				return [f];
-			} catch (e) {
+			} catch (_e) {
 				const dirs = curr.split('/');
 				const segment = dirs.pop();
 				return segment
@@ -136,7 +136,7 @@ export default class {
 			})
 			.join('\r\n');
 
-		let { urlArgs, globalVars, modifyVars, compress, env, math } = this.options;
+		const { urlArgs, globalVars, modifyVars, compress, env, math } = this.options;
 
 		const less = require('less');
 		const autoprefix = require('less-plugin-autoprefix');
@@ -236,12 +236,12 @@ export default class {
 		this.jopts.debug = cliargs.debug;
 		this.jopts.clean = cliargs.clean;
 		const { css, js } = this.opts.opts.static;
-		for (let item in css) {
+		for (const item in css) {
 			const source = css[item];
 			const ret = await this.compileLess(source);
 			await fsWriteFile(path.join(this.opts.dirname, item), ret);
 		}
-		for (let item in js) {
+		for (const item in js) {
 			const source = js[item].map((item: string) => path.join(this.opts.dirname, item));
 			const ret = await this.compileJs(source);
 			await fsWriteFile(path.join(this.opts.dirname, item), ret);

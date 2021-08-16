@@ -83,7 +83,7 @@ export default class {
 	 * air --art
 	 *
 	 */
-	private async runInit() {
+	private runInit() {
 		return new server(this.opts, this.args, this.cwd).serve();
 	}
 
