@@ -1,7 +1,6 @@
 import * as path from 'path';
-import * as process from 'process';
 
-const version = { eslint: 0, prettier: 0 };
+const version = { eslint: 0, prettier: 0, tsparser: 0, jsparser: 0, vueparser: 0 };
 
 const eslintExtensions = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.vue'];
 
@@ -44,6 +43,10 @@ const createEslintFix = (eslintConfig: Record<string, any>, fixrules: Record<str
 		const fileExtension = path.extname(filePath || '');
 		if (['.ts', '.tsx'].includes(fileExtension)) {
 			options.parser = require.resolve('@typescript-eslint/parser');
+			if (!version.tsparser) {
+				console.info('@typescript-eslint/parser ', options.parser);
+				version.tsparser = options.parser;
+			}
 			for (const k in options.rules) {
 				if (k.includes('vue/')) {
 					options.rules[k] = ['off'];
@@ -51,7 +54,11 @@ const createEslintFix = (eslintConfig: Record<string, any>, fixrules: Record<str
 			}
 		}
 		if (['.js', '.mjs'].includes(fileExtension)) {
-			options.parser = require.resolve('babel-eslint');
+			options.parser = require.resolve('@babel/eslint-parser');
+			if (!version.jsparser) {
+				console.info('@babel/eslint-parser ', options.parser);
+				version.jsparser = options.parser;
+			}
 			for (const k in options.rules) {
 				if (k.includes('vue/')) {
 					options.rules[k] = ['off'];
@@ -60,6 +67,10 @@ const createEslintFix = (eslintConfig: Record<string, any>, fixrules: Record<str
 		}
 		if (['.vue'].includes(fileExtension)) {
 			options.parser = require.resolve('vue-eslint-parser');
+			if (!version.vueparser) {
+				console.info('vue-eslint-parser ', options.parser);
+				version.vueparser = options.parser;
+			}
 		}
 
 		const cliEngine = getESLintCLIEngine(options);

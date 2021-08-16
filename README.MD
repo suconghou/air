@@ -8,21 +8,29 @@ air
 
 开发 `ag --ts -l | entr make dev`
 
+
+程序直接引用的外部依赖,6个
+均使用require方式加载的.
+
 ```
-yarn add less less-plugin-autoprefix art-template terser 
-
-prettier-eslint
-
-core-js
+less
+less-plugin-autoprefix
+terser
 eslint
-eslint-plugin-vue
-@typescript-eslint/parser
-vue-eslint-parser
-
-@types/node
-
+prettier
+art-template
+```
+另外eslint动态加载的几个插件
 
 ```
+@typescript-eslint/parser
+@babel/eslint-parser
+vue-eslint-parser
+```
+
+`@babel/eslint-parser` 又依赖 `@babel/core`
+
+
 
 优先级 .eslintrc.js >  .eslintrc > package.json
 

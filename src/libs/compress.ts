@@ -254,14 +254,14 @@ export default class {
 		this.jopts.debug = cliargs.debug;
 		this.jopts.clean = cliargs.clean;
 		if (less.length > 0) {
-			const dst = less[0].replace(/\.less$/, '.min.css');
-			const ret = await this.compileLess(less);
-			await fsWriteFile(dst, ret);
+			const cssdst = less[0].replace(/\.less$/, '.min.css');
+			const cssret = await this.compileLess(less);
+			await fsWriteFile(cssdst, cssret);
 		}
 		if (js.length > 0) {
-			const dst = js[0].replace(/\.js$/, '.min.js');
-			const ret = await this.compileJs(js);
-			await fsWriteFile(dst, ret);
+			const jsdst = js[0].replace(/\.js$/, '.min.js');
+			const jsret = await this.compileJs(js);
+			await fsWriteFile(jsdst, jsret);
 		}
 	}
 }

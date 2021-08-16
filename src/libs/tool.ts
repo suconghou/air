@@ -1,5 +1,5 @@
 const maxItem = 1e3;
-const caches = new Map();
+const memcaches = new Map();
 export default class {
 	private static errorlog = [];
 
@@ -15,10 +15,10 @@ export default class {
 	}
 
 	static get(k: string) {
-		return caches.get(k);
+		return memcaches.get(k);
 	}
 
 	static set(k: string, v: any) {
-		return caches.set(k, v);
+		return memcaches.set(k, v);
 	}
 }

@@ -1,4 +1,3 @@
-import * as process from 'process';
 import * as path from 'path';
 import { promisify } from 'util';
 import * as child_process from 'child_process';
@@ -27,9 +26,9 @@ const extParser = {
 	yaml: 'yaml',
 };
 
-const lintParser = {
-	js: 'babel-eslint',
-	mjs: 'babel-eslint',
+const eslintParser = {
+	js: '@babel/eslint-parser',
+	mjs: '@babel/eslint-parser',
 	vue: 'vue-eslint-parser',
 	ts: '@typescript-eslint/parser',
 	tsx: '@typescript-eslint/parser',
@@ -294,24 +293,26 @@ const config = {
 				amd: true,
 			},
 			parserOptions: {
-				parser: 'babel-eslint',
-				ecmaVersion: 7,
+				parser: '@babel/eslint-parser',
+				ecmaVersion: 'latest',
 				sourceType: 'module',
+				requireConfigFile: false,
 				ecmaFeatures: {
 					experimentalObjectRestSpread: true,
 					jsx: true,
 				},
 			},
 			plugins: ['vue'],
-			parser: '', // this will be auto babel-eslint / vue-eslint-parser / @typescript-eslint/parser
+			parser: '', // this will be auto @babel/eslint-parser / vue-eslint-parser / @typescript-eslint/parser
 			reportUnusedDisableDirectives: true,
 		},
 		extends: ['plugin:vue/recommended', 'eslint:recommended'],
 		envs: ['node', 'browser', 'es6', 'commonjs', 'worker', 'amd'],
 		parserOptions: {
-			parser: 'babel-eslint',
-			ecmaVersion: 7,
+			parser: '@babel/eslint-parser',
+			ecmaVersion: 'latest',
 			sourceType: 'module',
+			requireConfigFile: false,
 			ecmaFeatures: {
 				experimentalObjectRestSpread: true,
 				jsx: true,
@@ -461,7 +462,7 @@ export default class lint {
 
 	private getParser(file: string) {
 		const ext = file.split('.').pop().toLowerCase();
-		return [lintParser[ext] ? lintParser[ext] : '', extParser[ext] ? extParser[ext] : 'babel', ext];
+		return [eslintParser[ext] ? eslintParser[ext] : '', extParser[ext] ? extParser[ext] : 'babel', ext];
 	}
 
 	private gitadd(f: Array<string>) {

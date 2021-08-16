@@ -15,9 +15,9 @@ export default class {
 		return await this.parseHtml(main, this.query, this.cwd);
 	}
 
-	private async parseHtml(file: string, query: querystring.ParsedUrlQuery, cwd: string): Promise<string> {
-		const filedir = path.dirname(file);
-		const resfile = await readFile(file);
+	private async parseHtml(mainfile: string, query: querystring.ParsedUrlQuery, cwd: string): Promise<string> {
+		const filedir = path.dirname(mainfile);
+		const resfile = await readFile(mainfile);
 		let html = resfile.toString();
 		let res: any,
 			i = 0;
