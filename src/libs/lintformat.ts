@@ -33,12 +33,12 @@ const createEslintFix = (eslintConfig: Record<string, any>, fixrules: Record<str
 		const options = {
 			...eslintConfig,
 			...config,
-			...fixrules,
 			...{
 				useEslintrc: false,
 				fix: true,
 			},
 		};
+		options.rules = { ...options.rules, ...fixrules };
 		if (typeof options.globals === 'object') {
 			options.globals = Object.entries(options.globals).map(([key, value]) => `${key}:${value}`);
 		}
