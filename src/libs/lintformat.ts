@@ -5,7 +5,11 @@ const version = { eslint: 0, prettier: 0, tsparser: 0, jsparser: 0, vueparser: 0
 const eslintExtensions = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.vue'];
 
 const getESLintCLIEngine = (eslintConfig: any) => {
-	const { CLIEngine } = require('eslint');
+	const eslint_path = require.resolve('eslint');
+	if (!version.eslint) {
+		console.info('loading', eslint_path);
+	}
+	const { CLIEngine } = require(eslint_path);
 	if (!version.eslint) {
 		console.info('eslint version ' + CLIEngine.version);
 		version.eslint = CLIEngine.version;
@@ -15,7 +19,11 @@ const getESLintCLIEngine = (eslintConfig: any) => {
 
 const createPrettify = (formatOptions: any) => {
 	return (text: string) => {
-		const prettier = require('prettier');
+		const prettier_path = require.resolve('prettier');
+		if (!version.prettier) {
+			console.info('loading', prettier_path);
+		}
+		const prettier = require(prettier_path);
 		if (!version.prettier) {
 			console.info('prettier version ' + prettier.version);
 			version.prettier = prettier.version;
