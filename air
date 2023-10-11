@@ -5,27 +5,52 @@ var process$1 = require('process');
 var fs = require('fs');
 var path = require('path');
 var util$1 = require('util');
-var querystring = require('querystring');
 var http = require('http');
+var querystring = require('querystring');
 var child_process = require('child_process');
 
-const fsStat = util$1.promisify(fs.stat);
-const fsAccess = util$1.promisify(fs.access);
-const fsWriteFile = util$1.promisify(fs.writeFile);
-const fsReadFile = util$1.promisify(fs.readFile);
-const fsCopyFile = util$1.promisify(fs.copyFile);
-const fsChmod = util$1.promisify(fs.chmod);
+function _interopNamespace(e) {
+    if (e && e.__esModule) return e;
+    var n = Object.create(null);
+    if (e) {
+        Object.keys(e).forEach(function (k) {
+            if (k !== 'default') {
+                var d = Object.getOwnPropertyDescriptor(e, k);
+                Object.defineProperty(n, k, d.get ? d : {
+                    enumerable: true,
+                    get: function () { return e[k]; }
+                });
+            }
+        });
+    }
+    n["default"] = e;
+    return Object.freeze(n);
+}
+
+var process__namespace = /*#__PURE__*/_interopNamespace(process$1);
+var fs__namespace = /*#__PURE__*/_interopNamespace(fs);
+var path__namespace = /*#__PURE__*/_interopNamespace(path);
+var http__namespace = /*#__PURE__*/_interopNamespace(http);
+var querystring__namespace = /*#__PURE__*/_interopNamespace(querystring);
+var child_process__namespace = /*#__PURE__*/_interopNamespace(child_process);
+
+const fsStat$1 = util$1.promisify(fs__namespace.stat);
+const fsAccess = util$1.promisify(fs__namespace.access);
+const fsWriteFile = util$1.promisify(fs__namespace.writeFile);
+const fsReadFile = util$1.promisify(fs__namespace.readFile);
+const fsCopyFile = util$1.promisify(fs__namespace.copyFile);
+const fsChmod = util$1.promisify(fs__namespace.chmod);
 class util {
     static resolveLookupPaths(pathstr, file) {
         const arr = [];
         const tmp = [];
-        pathstr.split(path.sep).forEach((item) => {
+        pathstr.split(path__namespace.sep).forEach((item) => {
             if (/^[a-zA-Z]:$/.test(item)) {
                 // for windows
                 return;
             }
             tmp.push(item);
-            arr.push(path.resolve(path.join(path.sep, ...tmp, file)));
+            arr.push(path__namespace.resolve(path__namespace.join(path__namespace.sep, ...tmp, file)));
         });
         return arr.reverse();
     }
@@ -33,7 +58,7 @@ class util {
         for (let i = 0, j = paths.length; i < j; i++) {
             const file = paths[i];
             try {
-                await fsAccess(file, fs.constants.R_OK);
+                await fsAccess(file, fs__namespace.constants.R_OK);
                 return file;
             }
             catch (_e) {
@@ -43,7 +68,7 @@ class util {
     }
     static async getConfig(cwd, name = 'static.json') {
         if (!/static\/?$/.test(cwd)) {
-            cwd = path.join(cwd, 'static');
+            cwd = path__namespace.join(cwd, 'static');
         }
         const paths = this.resolveLookupPaths(cwd, name);
         let f = '', json = {}, fpath = '', dirname = '';
@@ -51,7 +76,7 @@ class util {
         if (f) {
             json = require(f);
             fpath = f;
-            dirname = path.dirname(f);
+            dirname = path__namespace.dirname(f);
         }
         return { json, fpath, dirname };
     }
@@ -59,7 +84,7 @@ class util {
         const mtimes = [];
         for (let i = 0, j = files.length; i < j; i++) {
             const v = files[i];
-            const stat = await fsStat(v);
+            const stat = await fsStat$1(v);
             mtimes.push(stat.mtime.getTime());
         }
         const updateTime = Math.max.apply(this, mtimes);
@@ -76,7 +101,7 @@ class util {
     }
 }
 
-const fsStat$1 = util$1.promisify(fs.stat);
+const fsStat = util$1.promisify(fs__namespace.stat);
 
 const types = {
     'application/andrew-inset': ['ez'],
@@ -161,7 +186,7 @@ const types = {
         'msi',
         'msp',
         'msm',
-        'buffer'
+        'buffer',
     ],
     'application/oda': ['oda'],
     'application/oebps-package+xml': ['opf'],
@@ -328,11 +353,11 @@ const types = {
     'video/mpeg': ['mpeg', 'mpg', 'mpe', 'm1v', 'm2v'],
     'video/ogg': ['ogv'],
     'video/quicktime': ['qt', 'mov'],
-    'video/webm': ['webm']
+    'video/webm': ['webm'],
 };
 const typesMap = {};
 const defaultMime = 'application/octet-stream';
-Object.keys(types).forEach(mimestr => {
+Object.keys(types).forEach((mimestr) => {
     const item = types[mimestr];
     item.forEach((ext) => {
         typesMap[ext] = mimestr;
@@ -340,16 +365,16 @@ Object.keys(types).forEach(mimestr => {
 });
 const resolveMime = (filePath) => {
     const t = filePath.split('.').pop();
-    const type = typesMap[t];
+    const type = typesMap[t || ''];
     return type ? type : defaultMime;
 };
 class file {
-    static async serve(req, res, pathname, cwd = ".", index = 'index.html') {
+    static async serve(req, res, pathname, cwd = '.', index = 'index.html') {
         const { text, code, stats, file } = await this.target(pathname, cwd, index);
-        if (code !== 200) {
+        if (!stats) {
             res.writeHead(code, {
                 'Content-Type': 'text/plain',
-                'Content-Length': text.length
+                'Content-Length': text.length,
             });
             return res.end(text);
         }
@@ -357,25 +382,25 @@ class file {
         return this.pipe(res, info, file);
     }
     static async target(pathname, cwd = '.', index = 'index.html') {
-        let file = path.join(cwd, pathname);
+        let file = path__namespace.join(cwd, pathname);
         if (file.endsWith('/')) {
-            file = path.join(file, index);
+            file = path__namespace.join(file, index);
         }
         if (file.endsWith('/')) {
             return { text: '403 forbidden', code: 403 };
         }
         let stats;
         try {
-            stats = await fsStat$1(file);
+            stats = await fsStat(file);
         }
-        catch (e) {
+        catch (_e) {
             // not exist
             return { text: '404 page not found', code: 404 };
         }
         if (!stats || !stats.isFile()) {
             return { text: '403 forbidden', code: 403 };
         }
-        return { code: 200, stats, file };
+        return { code: 200, stats, file, text: '' };
     }
     static info(headers, stats, file) {
         const mime = resolveMime(file);
@@ -386,14 +411,14 @@ class file {
                 meta: {
                     'Last-Modified': lastModify,
                     'Content-Type': mime,
-                    'Content-Length': 0
-                }
+                    'Content-Length': 0,
+                },
             };
         }
-        let matches = headers.range ? headers.range.trim().match(/^bytes=(\d+)-(\d+)?$/) : false;
+        const matches = headers.range ? headers.range.trim().match(/^bytes=(\d+)-(\d+)?$/) : false;
         if (matches) {
             const start = parseInt(matches[1]);
-            let end = matches[2] ? parseInt(matches[2]) : (stats.size - 1);
+            let end = matches[2] ? parseInt(matches[2]) : stats.size - 1;
             if (end >= stats.size) {
                 end = stats.size - 1;
             }
@@ -401,8 +426,8 @@ class file {
                 return {
                     code: 416,
                     meta: {
-                        'Content-Length': 0
-                    }
+                        'Content-Length': 0,
+                    },
                 };
             }
             const len = end - start + 1;
@@ -415,7 +440,7 @@ class file {
                     'Content-Length': len,
                 },
                 start,
-                end
+                end,
             };
         }
         return {
@@ -424,8 +449,8 @@ class file {
                 'Last-Modified': lastModify,
                 'Accept-Ranges': 'bytes',
                 'Content-Type': mime,
-                'Content-Length': stats.size
-            }
+                'Content-Length': stats.size,
+            },
         };
     }
     static pipe(res, info, file) {
@@ -435,16 +460,16 @@ class file {
             return res.end();
         }
         else if (code == 206) {
-            return fs.createReadStream(file, { start, end }).pipe(res);
+            return fs__namespace.createReadStream(file, { start, end }).pipe(res);
         }
-        return fs.createReadStream(file).pipe(res);
+        return fs__namespace.createReadStream(file).pipe(res);
     }
 }
 
 class route {
+    routes = [];
+    middlewares = [];
     constructor() {
-        this.routes = [];
-        this.middlewares = [];
     }
     get(path, fn) {
         return this.add(path, fn, ['GET']);
@@ -491,7 +516,7 @@ class route {
         return false;
     }
     async runRoute(req, res, pathname, query) {
-        const m = this.match(req.method, pathname);
+        const m = this.match(req.method || 'GET', pathname);
         if (!m) {
             return true;
         }
@@ -524,9 +549,9 @@ class route {
         return middlewares;
     }
     async runMiddleWare(req, res, pathname, query) {
-        const m = this.middlewareMatch(req.method, pathname);
+        const m = this.middlewareMatch(req.method || 'GET', pathname);
         req.ctx = {
-            params: [],
+            params: null,
             run: true,
             middlewares: [],
             routes: []
@@ -570,14 +595,16 @@ class servefns extends route {
         req.query = query;
         req.body = this.body(req);
         req.json = this.parseJson(req);
-        req.after = (prefix, middleware, timeout = 5000, method = ["GET", "POST", "PUT", "DELETE", "HEAD", "PATCH", "OPTIONS"]) => {
+        req.after = (prefix, middleware, timeout = 5000, method = ['GET', 'POST', 'PUT', 'DELETE', 'HEAD', 'PATCH', 'OPTIONS']) => {
             let path = prefix;
             let handler = middleware;
             if (!handler) {
                 path = /^\//;
                 handler = prefix;
             }
-            req.ctx.middlewares.push({ path, handler, timeout, method });
+            if (req.ctx) {
+                req.ctx.middlewares.push({ path, handler, timeout, method });
+            }
             return req;
         };
         res.json = this.sendJson(res);
@@ -587,7 +614,8 @@ class servefns extends route {
     body(request) {
         return async (max = 8192) => {
             return await new Promise((resolve, reject) => {
-                let buf = [], count = 0;
+                const buf = [];
+                let count = 0;
                 request
                     .on('error', reject)
                     .on('aborted', reject)
@@ -597,7 +625,8 @@ class servefns extends route {
                     if (count > max) {
                         reject('body too large');
                     }
-                }).on('end', () => {
+                })
+                    .on('end', () => {
                     resolve(Buffer.concat(buf));
                 });
             });
@@ -615,7 +644,7 @@ class servefns extends route {
             const str = JSON.stringify(data);
             response.writeHead(status, {
                 'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(str, 'utf8')
+                'Content-Length': Buffer.byteLength(str, 'utf8'),
             });
             return response.end(str);
         };
@@ -624,7 +653,7 @@ class servefns extends route {
         return (data, type = 'text/html', status = 200) => {
             response.writeHead(status, {
                 'Content-Type': type,
-                'Content-Length': Buffer.byteLength(data, 'utf8')
+                'Content-Length': Buffer.byteLength(data, 'utf8'),
             });
             return response.end(data);
         };
@@ -636,32 +665,33 @@ class servefns extends route {
     }
     static static(dir) {
         return async (request, response, next, stop) => {
-            return file.serve(request, response, request.path, dir) && stop();
+            return await file.serve(request, response, request.path, dir) && stop();
         };
     }
 }
 
 class nodeserve extends servefns {
+    httpser;
     constructor() {
         super();
         this.httpser = this.init();
     }
     init() {
-        return http.createServer(async (request, response) => {
+        return http__namespace.createServer(async (request, response) => {
             const errhandler = (e) => {
                 console.error(e);
                 if (!response.headersSent) {
                     response.writeHead(500);
                 }
-                if (!response.finished) {
+                if (!response.writableEnded) {
                     response.end(e.message || e.toString());
                 }
             };
             try {
                 request.once('error', errhandler);
                 response.once('error', errhandler);
-                const [pathname, qs] = decodeURI(request.url).split('?');
-                const query = querystring.parse(qs);
+                const [pathname, qs] = decodeURI(request.url || '').split('?');
+                const query = new URLSearchParams(qs);
                 this.buildctx(request, response, pathname, query);
                 let ret;
                 ret = await this.middleware(request, response, pathname, query);
@@ -689,7 +719,7 @@ class nodeserve extends servefns {
         const ret = await this.runRoute(req, res, pathname, query);
         return ret && req.ctx.run;
     }
-    async servestatic(req, res, pathname, query) {
+    servestatic(req, res, pathname, query) {
         return file.serve(req, res, pathname);
     }
     getAfter(middlewareList, m, uri) {
@@ -703,7 +733,7 @@ class nodeserve extends servefns {
         return middlewares;
     }
     async runAfter(req, res, pathname, query) {
-        const m = this.getAfter(req.ctx.middlewares, req.method, pathname);
+        const m = this.getAfter(req.ctx.middlewares, req.method || 'GET', pathname);
         for (let i = 0, j = m.length; i < j; i++) {
             const { handler, timeout } = m[i];
             const ret = await new Promise(async (resolve, reject) => {
@@ -752,6 +782,7 @@ const cors = (request, response, next) => {
 const maxItem = 1e3;
 const memcaches = new Map();
 class default_1 {
+    static errorlog = [];
     static log(msg) {
         msg = msg.toString();
         if (this.errorlog.length > maxItem) {
@@ -769,33 +800,35 @@ class default_1 {
         return memcaches.set(k, v);
     }
 }
-default_1.errorlog = [];
 
 class compress {
+    opts;
+    pathname;
+    query;
+    options = {
+        urlArgs: '',
+        globalVars: {},
+        modifyVars: {},
+        compress: false,
+        math: '',
+        env: 'development',
+    };
+    jopts = { debug: true, clean: false };
     constructor(opts, pathname, query) {
         this.opts = opts;
         this.pathname = pathname;
         this.query = query;
-        this.options = {
-            urlArgs: '',
-            globalVars: {},
-            modifyVars: {},
-            compress: false,
-            math: '',
-            env: 'development',
-        };
-        this.jopts = { debug: true, clean: false };
         const lessOptions = opts.opts.lessOptions || {};
         this.options.urlArgs = query.urlArgs
             ? query.urlArgs.toString()
             : process.env.URLARGS || lessOptions.urlArgs || '';
         this.options.globalVars = process.env.GLOBALVARS
-            ? querystring.parse(process.env.GLOBALVARS)
+            ? querystring__namespace.parse(process.env.GLOBALVARS)
             : lessOptions.globalVars || {};
         this.options.modifyVars = query.modifyVars
-            ? querystring.parse(query.modifyVars.toString())
+            ? querystring__namespace.parse(query.modifyVars.toString())
             : process.env.MODIFYVARS
-                ? querystring.parse(process.env.MODIFYVARS)
+                ? querystring__namespace.parse(process.env.MODIFYVARS)
                 : lessOptions.modifyVars || {};
         this.options.math = lessOptions.math;
     }
@@ -807,13 +840,13 @@ class compress {
         // dirname存在说明有配置文件,无配置文件时按照原始地址
         const curr = this.opts.dirname ? pathname.replace(/.*static\//, '') : pathname;
         if (this.opts.dirname && css.includes(curr + '.css')) {
-            return this.opts.opts.static.css[curr + '.css'].map((item) => path.join(this.opts.dirname, item));
+            return this.opts.opts.static.css[curr + '.css'].map((item) => path__namespace.join(this.opts.dirname, item));
         }
         if (/-/.test(curr)) {
             // 如果带有连字符,先看连字符的文件确实不存在再拆分
             try {
-                const f = path.join(this.opts.dirname, curr) + '.css';
-                await fsAccess(f, fs.constants.R_OK);
+                const f = path__namespace.join(this.opts.dirname, curr) + '.css';
+                await fsAccess(f, fs__namespace.constants.R_OK);
                 // return 单个css地址,后面会当做静态文件输出
                 return [f];
             }
@@ -824,17 +857,17 @@ class compress {
                     .split('-')
                     .filter((item) => item)
                     .map((item) => {
-                    return path.join(this.opts.dirname, ...dirs, item) + '.less';
+                    return path__namespace.join(this.opts.dirname, ...dirs, item) + '.less';
                 });
             }
         }
         // 先尝试less文件,无less文件fallback到css
-        let target = path.join(this.opts.dirname, curr) + '.less';
+        let target = path__namespace.join(this.opts.dirname, curr) + '.less';
         try {
-            await fsAccess(target, fs.constants.R_OK);
+            await fsAccess(target, fs__namespace.constants.R_OK);
         }
         catch (_e) {
-            target = path.join(this.opts.dirname, curr) + '.css';
+            target = path__namespace.join(this.opts.dirname, curr) + '.css';
         }
         return [target];
     }
@@ -846,12 +879,12 @@ class compress {
         // this.opts.dirname存在说明有配置文件,无配置文件按照原始地址
         const curr = this.opts.dirname ? pathname.replace(/.*static\//, '') : pathname;
         if (this.opts.dirname && js.includes(curr + '.js')) {
-            return this.opts.opts.static.js[curr + '.js'].map((item) => path.join(this.opts.dirname, item));
+            return this.opts.opts.static.js[curr + '.js'].map((item) => path__namespace.join(this.opts.dirname, item));
         }
         if (/-/.test(curr)) {
             try {
-                const f = path.join(this.opts.dirname, curr) + '.js';
-                await fsAccess(f, fs.constants.R_OK);
+                const f = path__namespace.join(this.opts.dirname, curr) + '.js';
+                await fsAccess(f, fs__namespace.constants.R_OK);
                 // return 单个js地址,后面会当做静态文件输出
                 return [f];
             }
@@ -862,11 +895,11 @@ class compress {
                     .split('-')
                     .filter((item) => item)
                     .map((item) => {
-                    return path.join(this.opts.dirname, ...dirs, item) + '.js';
+                    return path__namespace.join(this.opts.dirname, ...dirs, item) + '.js';
                 });
             }
         }
-        return [path.join(this.opts.dirname, curr) + '.js'];
+        return [path__namespace.join(this.opts.dirname, curr) + '.js'];
     }
     async less() {
         const files = await this.resolveLess();
@@ -995,12 +1028,12 @@ class compress {
         for (const item in css) {
             const source = css[item];
             const ret = await this.compileLess(source);
-            await fsWriteFile(path.join(this.opts.dirname, item), ret);
+            await fsWriteFile(path__namespace.join(this.opts.dirname, item), ret);
         }
         for (const item in js) {
-            const source = js[item].map((item) => path.join(this.opts.dirname, item));
+            const source = js[item].map((item) => path__namespace.join(this.opts.dirname, item));
             const ret = await this.compileJs(source);
-            await fsWriteFile(path.join(this.opts.dirname, item), ret);
+            await fsWriteFile(path__namespace.join(this.opts.dirname, item), ret);
         }
     }
     async compressLessOrJs(cliargs, less, js) {
@@ -1075,20 +1108,23 @@ var utiljs = {
     },
 };
 
-const readFile = util$1.promisify(fs.readFile);
+const readFile = util$1.promisify(fs__namespace.readFile);
 const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.-]{3,50})"\s{1,5}-->/g;
 class ssi {
+    cwd;
+    pathname;
+    query;
     constructor(cwd, pathname, query) {
         this.cwd = cwd;
         this.pathname = pathname;
         this.query = query;
     }
     async html() {
-        const main = path.join(this.cwd, this.pathname);
+        const main = path__namespace.join(this.cwd, this.pathname);
         return await this.parseHtml(main, this.query, this.cwd);
     }
     async parseHtml(mainfile, query, cwd) {
-        const filedir = path.dirname(mainfile);
+        const filedir = path__namespace.dirname(mainfile);
         const resfile = await readFile(mainfile);
         let html = resfile.toString();
         let res, i = 0;
@@ -1100,7 +1136,7 @@ class ssi {
                 return !filesMap[item];
             });
             const res = await Promise.all(fileList.map((item) => {
-                const f = path.join(path.isAbsolute(item) ? cwd : filedir, item);
+                const f = path__namespace.join(path__namespace.isAbsolute(item) ? cwd : filedir, item);
                 return readFile(f);
             }));
             res.forEach((item, i) => {
@@ -1135,6 +1171,10 @@ class ssi {
 }
 
 class template {
+    opts;
+    cwd;
+    pathname;
+    query;
     constructor(opts, cwd, pathname, query) {
         this.opts = opts;
         this.cwd = cwd;
@@ -1157,7 +1197,7 @@ class template {
             cache: false,
         };
         Object.assign(template.defaults, options);
-        const dstfile = path.join(this.cwd, file);
+        const dstfile = path__namespace.join(this.cwd, file);
         let data = this.query ? { ...this.query } : {};
         const config = this.opts.opts;
         if (config.template && config.template[file]) {
@@ -1167,7 +1207,7 @@ class template {
                 r = v;
             }
             else {
-                const datafile = path.join(this.cwd, config.template[file]);
+                const datafile = path__namespace.join(this.cwd, config.template[file]);
                 r = require(datafile);
             }
             data = Object.assign({}, r, data);
@@ -1182,6 +1222,10 @@ class template {
 }
 
 class server {
+    args;
+    cliargs;
+    cwd;
+    app;
     constructor(args, cliargs, cwd) {
         this.args = args;
         this.cliargs = cliargs;
@@ -1243,7 +1287,7 @@ class server {
             return;
         }
         console.info('load config file ' + f);
-        fs.watchFile(f, () => {
+        fs__namespace.watchFile(f, () => {
             try {
                 delete require.cache[f];
                 const c = require(f);
@@ -1258,22 +1302,30 @@ class server {
     }
 }
 
-const version = { eslint: 0, prettier: 0, tsparser: 0, jsparser: 0, vueparser: 0 };
+const version$1 = { eslint: 0, prettier: 0, tsparser: 0, jsparser: 0, vueparser: 0 };
 const eslintExtensions = ['.js', '.jsx', '.ts', '.tsx', '.mjs', '.vue'];
 const getESLintCLIEngine = (eslintConfig) => {
-    const { CLIEngine } = require('eslint');
-    if (!version.eslint) {
+    const eslint_path = require.resolve('eslint');
+    if (!version$1.eslint) {
+        console.info('loading', eslint_path);
+    }
+    const { CLIEngine } = require(eslint_path);
+    if (!version$1.eslint) {
         console.info('eslint version ' + CLIEngine.version);
-        version.eslint = CLIEngine.version;
+        version$1.eslint = CLIEngine.version;
     }
     return new CLIEngine(eslintConfig);
 };
 const createPrettify = (formatOptions) => {
     return (text) => {
-        const prettier = require('prettier');
-        if (!version.prettier) {
+        const prettier_path = require.resolve('prettier');
+        if (!version$1.prettier) {
+            console.info('loading', prettier_path);
+        }
+        const prettier = require(prettier_path);
+        if (!version$1.prettier) {
             console.info('prettier version ' + prettier.version);
-            version.prettier = prettier.version;
+            version$1.prettier = prettier.version;
         }
         const output = prettier.format(text, formatOptions);
         return output;
@@ -1296,12 +1348,12 @@ const createEslintFix = (eslintConfig, fixrules, filePath) => {
         if (typeof options.globals === 'object') {
             options.globals = Object.entries(options.globals).map(([key, value]) => `${key}:${value}`);
         }
-        const fileExtension = path.extname(filePath || '');
+        const fileExtension = path__namespace.extname(filePath || '');
         if (['.ts', '.tsx'].includes(fileExtension)) {
             options.parser = require.resolve('@typescript-eslint/parser');
-            if (!version.tsparser) {
+            if (!version$1.tsparser) {
                 console.info('@typescript-eslint/parser ', options.parser);
-                version.tsparser = options.parser;
+                version$1.tsparser = options.parser;
             }
             for (const k in options.rules) {
                 if (k.includes('vue/')) {
@@ -1311,9 +1363,9 @@ const createEslintFix = (eslintConfig, fixrules, filePath) => {
         }
         if (['.js', '.mjs'].includes(fileExtension)) {
             options.parser = require.resolve('@babel/eslint-parser');
-            if (!version.jsparser) {
+            if (!version$1.jsparser) {
                 console.info('@babel/eslint-parser ', options.parser);
-                version.jsparser = options.parser;
+                version$1.jsparser = options.parser;
             }
             for (const k in options.rules) {
                 if (k.includes('vue/')) {
@@ -1323,9 +1375,9 @@ const createEslintFix = (eslintConfig, fixrules, filePath) => {
         }
         if (['.vue'].includes(fileExtension)) {
             options.parser = require.resolve('vue-eslint-parser');
-            if (!version.vueparser) {
+            if (!version$1.vueparser) {
                 console.info('vue-eslint-parser ', options.parser);
-                version.vueparser = options.parser;
+                version$1.vueparser = options.parser;
             }
         }
         const cliEngine = getESLintCLIEngine(options);
@@ -1344,13 +1396,13 @@ const createEslintFix = (eslintConfig, fixrules, filePath) => {
 };
 var format = async (options) => {
     const { filePath, text, eslintConfig, prettierOptions, fixrules, prettierLast } = options;
-    const fileExtension = path.extname(filePath || '');
+    const fileExtension = path__namespace.extname(filePath || '');
     const onlyPrettier = !eslintExtensions.includes(fileExtension);
     const prettify = createPrettify(prettierOptions);
     if (onlyPrettier) {
         return prettify(text);
     }
-    eslintConfig.cwd = path.dirname(filePath);
+    eslintConfig.cwd = path__namespace.dirname(filePath);
     const eslintFix = createEslintFix(eslintConfig, fixrules, filePath);
     if (prettierLast) {
         return await prettify(await eslintFix(text, filePath));
@@ -1358,8 +1410,8 @@ var format = async (options) => {
     return await eslintFix(await prettify(text), filePath);
 };
 
-const spawn = util$1.promisify(child_process.spawn);
-const spawnSync = child_process.spawnSync;
+const spawn = util$1.promisify(child_process__namespace.spawn);
+const spawnSync = child_process__namespace.spawnSync;
 const prettyTypes = ['js', 'mjs', 'yml', 'yaml', 'vue', 'jsx', 'ts', 'css', 'less', 'html', 'json', 'scss', 'md'];
 const extParser = {
     js: 'babel',
@@ -1687,13 +1739,15 @@ const options = {
     postcommit: 'post-commit',
     commitmsg: 'commit-msg',
 };
-const stat = fs.constants.R_OK | fs.constants.W_OK;
+const stat = fs__namespace.constants.R_OK | fs__namespace.constants.W_OK;
 const spawnOps = { stdio: 'inherit', shell: true };
 class lint {
+    cwd;
+    opts;
+    files = [];
     constructor(cwd, files, opts) {
         this.cwd = cwd;
         this.opts = opts;
-        this.files = [];
         this.files = files.filter((item) => item.charAt(0) != '-');
         if (this.opts.lintlast) {
             config.prettierLast = false;
@@ -1716,8 +1770,8 @@ class lint {
             const name = item.trim();
             const type = item.split('.').pop();
             let p = name;
-            if (!path.isAbsolute(name)) {
-                p = path.join(this.cwd, name);
+            if (!path__namespace.isAbsolute(name)) {
+                p = path__namespace.join(this.cwd, name);
             }
             if (prettyTypes.includes(type)) {
                 prefiles.push(p);
@@ -1779,7 +1833,7 @@ class lint {
                 const res = await format(options);
                 if (r !== res && res) {
                     // 异步写文件,其他异步终止进程,容易写出空文件
-                    fs.writeFileSync(item, res);
+                    fs__namespace.writeFileSync(item, res);
                 }
                 console.log(item.replace(this.cwd + '/', ''));
             })();
@@ -1798,12 +1852,12 @@ class lint {
     async install() {
         const { git, cwd, hooks, precommit, postcommit, commitmsg } = Object.assign({}, options, this.opts);
         const dir = this.opts.dir ? '' : options.dir;
-        const prehook = path.join(this.cwd, dir, precommit);
-        const posthook = path.join(this.cwd, dir, postcommit);
-        const msghook = path.join(this.cwd, dir, commitmsg);
-        const predst = path.join(cwd, git, hooks, precommit);
-        const postdst = path.join(cwd, git, hooks, postcommit);
-        const msgdst = path.join(cwd, git, hooks, commitmsg);
+        const prehook = path__namespace.join(this.cwd, dir, precommit);
+        const posthook = path__namespace.join(this.cwd, dir, postcommit);
+        const msghook = path__namespace.join(this.cwd, dir, commitmsg);
+        const predst = path__namespace.join(cwd, git, hooks, precommit);
+        const postdst = path__namespace.join(cwd, git, hooks, postcommit);
+        const msgdst = path__namespace.join(cwd, git, hooks, commitmsg);
         const mode = 0o755;
         await Promise.all([fsAccess(prehook, stat), fsAccess(posthook, stat), fsAccess(msghook, stat)]);
         await Promise.all([fsCopyFile(prehook, predst), fsCopyFile(posthook, postdst), fsCopyFile(msghook, msgdst)]);
@@ -1812,7 +1866,7 @@ class lint {
     async checkfiles(files) {
         const maxsize = 1048576;
         // 检查文件大小,超过1MB禁止提交
-        const stats = await Promise.all(files.map((item) => fsStat(item)));
+        const stats = await Promise.all(files.map((item) => fsStat$1(item)));
         return stats.every((item, index) => {
             if (item.size > maxsize) {
                 throw new Error(`${files[index]} too large,${item.size} exceed ${maxsize}`);
@@ -1861,7 +1915,7 @@ Flags:
     --cors          send Access-Control-Allow-Origin
     --art           use art-template instead of ssi
 `;
-const version$1 = '0.7.22';
+const version = '0.7.23';
 const templatetips = `
 Usage:
     air template filename.html [flag]
@@ -1993,24 +2047,27 @@ class command {
 }
 
 class cli {
+    cwd;
+    argv;
+    args;
+    opts = {
+        host: '0.0.0.0',
+        port: 8088,
+        staticCfg: {
+            fpath: '',
+            dirname: '',
+            opts: {
+                lessOptions: {},
+                static: {
+                    css: null,
+                    js: null,
+                },
+                template: {},
+            },
+        },
+    };
     constructor(cwd) {
         this.cwd = cwd;
-        this.opts = {
-            host: '0.0.0.0',
-            port: 8088,
-            staticCfg: {
-                fpath: '',
-                dirname: '',
-                opts: {
-                    lessOptions: {},
-                    static: {
-                        css: null,
-                        js: null,
-                    },
-                    template: {},
-                },
-            },
-        };
     }
     async run(argv) {
         try {
@@ -2094,11 +2151,11 @@ class cli {
         }
     }
     version() {
-        console.log('air version: air/' + version$1);
+        console.log('air version: air/' + version);
     }
     help() {
         console.info(help);
     }
 }
 
-new cli(process$1.cwd()).run(process$1.argv);
+new cli(process__namespace.cwd()).run(process__namespace.argv);
