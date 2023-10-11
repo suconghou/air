@@ -6,4 +6,4 @@ dev:
 	echo '#!/usr/bin/env node' | cat - bundle.js > air && chmod +x air
 ts:
 	cd src && \
-	tsc -m ESNext -t ESNEXT index.ts
+	tsc -m ESNext -t ESNEXT -moduleResolution node index.ts
