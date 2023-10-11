@@ -1,7 +1,7 @@
 const maxItem = 1e3;
 const memcaches = new Map();
 export default class {
-	private static errorlog = [];
+	private static errorlog: Array<string> = [];
 
 	static log(msg: any) {
 		msg = msg.toString();

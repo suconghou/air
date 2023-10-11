@@ -36,11 +36,13 @@ export default class {
 	// 连字符这一步:如果带连字符的文件确实存在,则不按照连字符拆分
 	private async resolveLess(): Promise<Array<string>> {
 		const pathname = this.pathname.replace('.css', '').replace(/^\//, '');
-		const css = this.opts.opts.static ? Object.keys(this.opts.opts.static.css) || [] : [];
+		const css = this.opts.opts.static ? Object.keys(this.opts.opts.static.css || {}) || [] : [];
 		// dirname存在说明有配置文件,无配置文件时按照原始地址
 		const curr = this.opts.dirname ? pathname.replace(/.*static\//, '') : pathname;
 		if (this.opts.dirname && css.includes(curr + '.css')) {
-			return this.opts.opts.static.css[curr + '.css'].map((item: string) => path.join(this.opts.dirname, item));
+			return (this.opts.opts.static.css || {})[curr + '.css'].map((item: string) =>
+				path.join(this.opts.dirname, item)
+			);
 		}
 
 		if (/-/.test(curr)) {
@@ -52,7 +54,7 @@ export default class {
 				return [f];
 			} catch (_e) {
 				const dirs = pathname.split('/');
-				const segment = dirs.pop();
+				const segment = dirs.pop() || '';
 				return segment
 					.split('-')
 					.filter((item) => item)
@@ -75,11 +77,13 @@ export default class {
 	// 连字符这一步:如果带连字符的文件确实存在,则不按照连字符拆分
 	async resolveJs(): Promise<Array<string>> {
 		const pathname = this.pathname.replace('.js', '').replace(/^\//, '');
-		const js = this.opts.opts.static ? Object.keys(this.opts.opts.static.js) || [] : [];
+		const js = this.opts.opts.static ? Object.keys(this.opts.opts.static.js || {}) || [] : [];
 		// this.opts.dirname存在说明有配置文件,无配置文件按照原始地址
 		const curr = this.opts.dirname ? pathname.replace(/.*static\//, '') : pathname;
 		if (this.opts.dirname && js.includes(curr + '.js')) {
-			return this.opts.opts.static.js[curr + '.js'].map((item: string) => path.join(this.opts.dirname, item));
+			return (this.opts.opts.static.js || {})[curr + '.js'].map((item: string) =>
+				path.join(this.opts.dirname, item)
+			);
 		}
 		if (/-/.test(curr)) {
 			try {
@@ -89,7 +93,7 @@ export default class {
 				return [f];
 			} catch (_e) {
 				const dirs = curr.split('/');
-				const segment = dirs.pop();
+				const segment = dirs.pop() || '';
 				return segment
 					.split('-')
 					.filter((item) => item)

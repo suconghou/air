@@ -4,8 +4,8 @@ export interface staticOpts {
 	opts: {
 		lessOptions: Record<string, any>;
 		static: {
-			css: Map<string, Array<string>>;
-			js: Map<string, Array<string>>;
+			css: Map<string, Array<string>> | null;
+			js: Map<string, Array<string>> | null;
 		};
 		template: Record<string, any>;
 	};

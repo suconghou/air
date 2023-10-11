@@ -13,8 +13,8 @@ export { fsStat, fsAccess, fsChmod, fsWriteFile, fsCopyFile, fsReadFile };
 
 export default class {
 	public static resolveLookupPaths(pathstr: string, file: string): Array<string> {
-		const arr = [];
-		const tmp = [];
+		const arr: Array<string> = [];
+		const tmp: Array<string> = [];
 		pathstr.split(path.sep).forEach((item) => {
 			if (/^[a-zA-Z]:$/.test(item)) {
 				// for windows
@@ -36,6 +36,7 @@ export default class {
 				// not exist try next
 			}
 		}
+		return '';
 	}
 
 	public static async getConfig(cwd: string, name = 'static.json') {
@@ -57,7 +58,7 @@ export default class {
 	}
 
 	public static async getUpdateTime(files: Array<string>) {
-		const mtimes = [];
+		const mtimes: Array<number> = [];
 		for (let i = 0, j = files.length; i < j; i++) {
 			const v = files[i];
 			const stat = await fsStat(v);

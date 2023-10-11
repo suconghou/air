@@ -27,7 +27,7 @@ Flags:
     --art           use art-template instead of ssi
 `;
 
-export const version = '0.7.22';
+export const version = '0.7.23';
 
 export const templatetips = `
 Usage:

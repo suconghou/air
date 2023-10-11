@@ -350,7 +350,7 @@ const spawnOps = { stdio: 'inherit', shell: true };
 import format from './lintformat';
 
 export default class lint {
-	private files = [];
+	private files: Array<string> = [];
 
 	constructor(private cwd: string, files: Array<string>, private opts: cliArgs) {
 		this.files = files.filter((item) => item.charAt(0) != '-');
@@ -371,11 +371,11 @@ export default class lint {
 	}
 
 	private parse(files: Array<string>) {
-		const prefiles = [];
-		const gitfiles = [];
+		const prefiles: Array<string> = [];
+		const gitfiles: Array<string> = [];
 		const filetypes = files.map((item) => {
 			const name = item.trim();
-			const type = item.split('.').pop();
+			const type = item.split('.').pop() || '';
 			let p = name;
 			if (!path.isAbsolute(name)) {
 				p = path.join(this.cwd, name);
@@ -391,7 +391,7 @@ export default class lint {
 
 	private autofiles() {
 		const res = spawnSync('git', ['diff', '--name-only', '--diff-filter=ACM']);
-		const arrs = res.stdout
+		const arrs: Array<string> = res.stdout
 			.toString()
 			.split('\n')
 			.filter((v) => v);
@@ -452,7 +452,7 @@ export default class lint {
 	}
 
 	private getParser(file: string) {
-		const ext = file.split('.').pop().toLowerCase();
+		const ext = (file.split('.').pop() || '').toLowerCase();
 		return [extParser[ext] ? extParser[ext] : 'babel', ext];
 	}
 

@@ -30,7 +30,7 @@ export default {
 	params(args: Array<string>, kMap: Record<string, any>) {
 		const ret = {};
 		const keys = Object.keys(kMap);
-		let key: string;
+		let key: string | null;
 		args.forEach((item) => {
 			if (keys.includes(item)) {
 				if (item.substr(0, 2) == '--') {
