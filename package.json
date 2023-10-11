@@ -1,6 +1,6 @@
 {
 	"name": "airs",
-	"version": "0.7.22",
+	"version": "0.7.23",
 	"description": "serve static files in the air",
 	"dependencies": {
 		"@babel/core": "^7.23.0",
