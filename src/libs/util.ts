@@ -69,7 +69,7 @@ export default class {
 	public static async getContent(files: Array<string>) {
 		const arr = files.map((file) => fsReadFile(file, 'utf-8'));
 		const res = await Promise.all(arr);
-		const objs = {};
+		const objs: Record<string, string> = {};
 		files.forEach((file, index) => {
 			objs[file] = res[index];
 		});

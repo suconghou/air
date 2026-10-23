@@ -243,8 +243,8 @@ export default class {
 	async compress(cliargs: cliArgs) {
 		this.options.env = 'production';
 		this.options.compress = !cliargs.debug;
-		this.jopts.debug = cliargs.debug;
-		this.jopts.clean = cliargs.clean;
+		this.jopts.debug = !!cliargs.debug;
+		this.jopts.clean = !!cliargs.clean;
 		const { css, js } = this.opts.opts.static;
 		for (const item in css) {
 			const files = css[item].map((file: string) => path.join(this.opts.dirname, file));
@@ -261,8 +261,8 @@ export default class {
 	async compressLessOrJs(cliargs: cliArgs, less: Array<string>, js: Array<string>) {
 		this.options.env = 'production';
 		this.options.compress = !cliargs.debug;
-		this.jopts.debug = cliargs.debug;
-		this.jopts.clean = cliargs.clean;
+		this.jopts.debug = !!cliargs.debug;
+		this.jopts.clean = !!cliargs.clean;
 		if (less.length > 0) {
 			const cssdst = less[0].replace(/\.less$/, '.min.css');
 			const cssret = await this.compileLess(less);

@@ -6,7 +6,7 @@ import help, { version } from '../config';
 import { cliArgs, serverArgs } from '../types';
 
 export default class {
-	private args: cliArgs;
+	private args: cliArgs = {};
 	private opts: serverArgs = {
 		host: '0.0.0.0',
 		port: 8088,
