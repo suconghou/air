@@ -4,8 +4,8 @@ import command from './command';
 import utiljs from './utiljs';
 import help, { version } from '../config';
 import { cliArgs, serverArgs } from '../types';
+
 export default class {
-	private argv: Array<string>;
 	private args: cliArgs;
 	private opts: serverArgs = {
 		host: '0.0.0.0',
@@ -16,10 +16,9 @@ export default class {
 			opts: {
 				lessOptions: {},
 				static: {
-					css: null,
-					js: null,
+					css: {},
+					js: {},
 				},
-				template: {},
 			},
 		},
 	};
@@ -29,9 +28,7 @@ export default class {
 	async run(argv: string[]) {
 		try {
 			const [, , ...args] = argv;
-			this.argv = args;
 			this.args = utiljs.getParams(args);
-			this.args.cwd = this.cwd;
 			this.opts.port = this.args.port || 8088;
 			if (this.args.dir) {
 				process.chdir(this.args.dir);
@@ -39,11 +36,11 @@ export default class {
 			this.cwd = process.cwd();
 			await this.loadConfig();
 			if (args.length > 0) {
-				await this.runArgs();
+				await this.runArgs(args);
 			} else {
-				await this.runInit();
+				this.runInit();
 			}
-		} catch (e) {
+		} catch (e: any) {
 			console.error(e.stack || e.message || e);
 			process.exit(1);
 		}
@@ -56,53 +53,24 @@ export default class {
 		this.opts.staticCfg.dirname = dirname;
 	}
 
-	/**
-    
-	 * air compress
-	 * air lint
-	 * air template
-	 * 
-	 * air install
-	 * air gitlint
-	 * air commitlint
-	 */
-	private async runArgs() {
-		const [m, ...args] = this.argv;
-
-		const f = command[m];
+	private async runArgs(args: Array<string>) {
+		const [m, ...rest] = args;
+		const f = (command as Record<string, any>)[m];
 		if (utiljs.isFunction(f)) {
-			return await f.call(command, args, this.cwd, this.args, this.opts.staticCfg);
+			return await f.call(command, rest, this.args, this.opts.staticCfg);
 		}
-		return await this.fallback(m, args);
+		return await this.fallback(m, rest);
 	}
 
-	/**
-	 * air -p
-	 * air -d
-	 * air --dry
-	 * air --art
-	 *
-	 */
 	private runInit() {
 		return new server(this.opts, this.args, this.cwd).serve();
 	}
 
-	/**
-	 *
-	 * parse flag
-	 *
-	 * air -v
-	 * air -h
-	 * air serve
-	 *
-	 */
 	private async fallback(m: string, args: Array<string>) {
 		if (['-v'].includes(m) || args.includes('-v')) {
 			this.version();
-		} else if (['serve', '-p', '-d', '--dry', '--art'].includes(m)) {
-			await this.runInit();
-		} else if (this.args.help) {
-			this.help();
+		} else if (['serve', '-p', '-d', '--dry'].includes(m)) {
+			this.runInit();
 		} else {
 			this.help();
 		}

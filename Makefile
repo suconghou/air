@@ -1,9 +1,10 @@
-dev:
-	make ts && \
-	cd src && \
-	rollup index.js --environment INCLUDE_DEPS,BUILD:production -o ../bundle.js -f cjs -e net,fs,os,process,path,child_process,util,http,querystring && \
-	cd .. && \
-	echo '#!/usr/bin/env node' | cat - bundle.js > air && chmod +x air
-ts:
-	cd src && \
-	tsc -m ESNext -t ESNEXT -moduleResolution node index.ts
+build:
+	npx esbuild src/index.ts --bundle --platform=node --format=cjs --target=node18 \
+		--banner:js='#!/usr/bin/env node' --outfile=air
+	chmod +x air
+
+check:
+	npx tsc --noEmit
+
+clean:
+	rm -f air

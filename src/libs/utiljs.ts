@@ -2,33 +2,20 @@ export default {
 	isFunction(value: any) {
 		return typeof value === 'function';
 	},
-	isObject(value: any) {
-		return value && typeof value === 'object' && value.constructor === Object;
-	},
-	unique(arr: any) {
-		return Array.from(new Set(arr));
-	},
 	getParams(args: Array<string>) {
-		const kMap = {
+		const kMap: Record<string, string> = {
 			'-v': 'version',
 			'-p': 'port',
-			'-o': 'output',
 			'-d': 'dir',
 			'-q': 'query',
 			'-m': 'modifyVars',
-			'--escape': 'escape',
 			'--debug': 'debug',
 			'--clean': 'clean',
 			'--dry': 'dry',
 			'--cors': 'cors',
-			'--art': 'art',
-			'--nogit': 'nogit',
-			'--lintlast': 'lintlast',
+			'--help': 'help',
 		};
-		return this.params(args, kMap);
-	},
-	params(args: Array<string>, kMap: Record<string, any>) {
-		const ret = {};
+		const ret: Record<string, any> = {};
 		const keys = Object.keys(kMap);
 		let key: string | null;
 		args.forEach((item) => {

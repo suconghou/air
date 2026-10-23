@@ -1,115 +1,68 @@
-## air server
+## air
 
-start air server
+静态站点服务器 + 前端构建工具,单文件 JS 分发,运行仅需系统装有 node。
 
 ```bash
-air
+air              # 启动服务器,默认端口 8088
+air serve        # 同上
+air serve --cors # 带 CORS 头启动
+air -p 9000      # 指定端口
+air -d site/     # 指定工作目录
+air --dry        # 纯静态服务,不做 less/js 编译
+air -v           # 版本
+air -h           # 帮助
 ```
 
-开发 `ag --ts -l | entr make dev`
+## 构建
 
-
-程序直接引用的外部依赖,6个
-均使用require方式加载的.
-
-```
-less
-less-plugin-autoprefix
-terser
-eslint
-prettier
-art-template
-```
-另外eslint动态加载的几个插件
-
-```
-@typescript-eslint/parser
-@babel/eslint-parser
-vue-eslint-parser
+```bash
+yarn install
+make build   # esbuild 打包为单文件可执行 air (2.8MB,内含 shebang)
+make check   # tsc 类型检查
 ```
 
-`@babel/eslint-parser` 又依赖 `@babel/core`
+构建产物 `air` 自包含 less/terser/nodeserve,无需 node_modules。
 
+## 能力
 
+- **serve**: 静态文件服务(304/range/路径穿越防护),`.css`/`.js` 请求按 `static.json` 或连字符规则实时编译返回,`.html` 走 SSI
+- **ssi**: `<!--# include file="inc/header.html" -->`,嵌套上限 6 层
+- **compress**: 命令行压缩,less 输出 `.min.css`,js 经 terser 输出 `.min.js`
+- **watch**: 配置文件 `static.json` 变更自动热更新
 
-优先级 .eslintrc.js >  .eslintrc > package.json
+```bash
+air compress style.less a.js b.js            # 相对当前目录
+air compress --clean --debug                 # clean 移除 console/debugger
+```
 
-并且会向父级查找
+## static.json
 
+查找规则: 从工作目录的 `static/` 起逐级向上找 `static.json`,也可手动放于 `static/` 下。
 
-air gitlint 必须接受文件地址
+```json
+{
+  "lessOptions": { "urlArgs": "", "modifyVars": { "env": "beta" } },
+  "static": {
+    "css": { "css/all.css": ["css/a.less", "css/b.less"] },
+    "js":  { "js/all.js":  ["js/x.js", "js/y.js"] }
+  }
+}
+```
 
-air lint 可接受文件地址,也可在根目录直接执行从git获取变更的文件
+css/js 合并规则: 配置文件优先;其次连字符拆分(`a-b.css` → `a.less` + `b.less`);最后按单文件输出。
 
+## 结构
 
-对vue的lint需要
+```
+src/index.ts            入口
+src/libs/cli.ts         参数解析与命令分发
+src/libs/command.ts     子命令 (compress)
+src/libs/server.ts      路由与配置热更新
+src/libs/compress.ts    less/js 编译 (less + less-plugin-autoprefix + terser)
+src/libs/ssi.ts         SSI 解析
+src/nodeserve           HTTP 框架 (软链至本机 nodeserve 仓库, github.com/suconghou/nodeserve)
+```
 
-可以在项目里安装,也可以全局安装
+## 版本说明
 
-但是项目里安装,每个项目都要安装
-
-全局安装由于yarn全局安装并不安装在NODE_PATH里,所有yarn的全局安装不带可执行文件的依赖其实没什么卵用
-
-修改NODE_PATH可能导致已安装的npm无法使用
-
-npm的安装会安装在NODE_PATH下
-
-cnpm i -g eslint-plugin-vue eslint --no-bin-links 
-
-即可在本地查找不到时,查找全局的
-
-若要typescript的lint需要
-
-cnpm i -g @typescript-eslint/parser typescript --no-bin-links 
-
-
-
-### options
-
-> -v show version
-> -h show help message
-> -p serve port , default: 8088
-> --art use art template instand of ssi , default use ssi
-> --watch watch config file change and reload, default : true
-
-## air template
-
-use art template build html files from template
-
-### options
-
-> --debug do not minify html files
-
-
-## air compress 
-
-compress and concat javascript and less files
-
-### options
-
-> --debug  compress but not ug
-> --clean  remove console and debugger
-
-## air install
-
-install git hooks file
-
-### options 
-
-> --dir
-> 
-
-## air lint
-
-
-### air gitlint
-
-
-
-
-
-跳过
-
-`git commit -n`
-
-`git commit --no-verify`
+0.8.0 起移除 lint/gitlint/commitlint/install/template(art-template)能力,依赖仅剩 less/terser。

@@ -3,7 +3,9 @@ import * as querystring from 'querystring';
 import util, { fsWriteFile, fsReadFile, fsAccess } from './util';
 import * as path from 'path';
 import { staticOpts, cliArgs, lessopts, jsopts } from '../types';
-import tool from './tool';
+
+// 编译结果缓存,键为请求路径,值为 {css|js, time, urlArgs}
+const cache = new Map<string, any>();
 
 export default class {
 	private options: lessopts = {
@@ -16,19 +18,23 @@ export default class {
 	};
 	private jopts: jsopts = { debug: true, clean: false };
 
-	constructor(private opts: staticOpts, private pathname: string, private query: querystring.ParsedUrlQuery) {
+	constructor(
+		private opts: staticOpts,
+		private pathname: string,
+		private query: querystring.ParsedUrlQuery
+	) {
 		const lessOptions = opts.opts.lessOptions || {};
 		this.options.urlArgs = query.urlArgs
 			? query.urlArgs.toString()
 			: process.env.URLARGS || lessOptions.urlArgs || '';
 		this.options.globalVars = process.env.GLOBALVARS
-			? querystring.parse(process.env.GLOBALVARS)
+			? (querystring.parse(process.env.GLOBALVARS) as Record<string, string>)
 			: lessOptions.globalVars || {};
 		this.options.modifyVars = query.modifyVars
-			? querystring.parse(query.modifyVars.toString())
+			? (querystring.parse(query.modifyVars.toString()) as Record<string, string>)
 			: process.env.MODIFYVARS
-			? querystring.parse(process.env.MODIFYVARS)
-			: lessOptions.modifyVars || {};
+				? (querystring.parse(process.env.MODIFYVARS) as Record<string, string>)
+				: lessOptions.modifyVars || {};
 		this.options.math = lessOptions.math;
 	}
 
@@ -53,7 +59,7 @@ export default class {
 				// return 单个css地址,后面会当做静态文件输出
 				return [f];
 			} catch (_e) {
-				const dirs = pathname.split('/');
+				const dirs = curr.split('/');
 				const segment = dirs.pop() || '';
 				return segment
 					.split('-')
@@ -121,14 +127,14 @@ export default class {
 
 		const time = await util.getUpdateTime(files);
 
-		const ret = tool.get(this.pathname);
+		const ret = cache.get(this.pathname);
 		if (ret && ret.time == time && ret.urlArgs == this.options.urlArgs) {
 			return { ret, hit: true };
 		}
 
 		const r = await this.compileLess(files);
 		const res = { css: r, time, urlArgs: this.options.urlArgs };
-		tool.set(this.pathname, res);
+		cache.set(this.pathname, res);
 
 		return { ret: res, hit: false };
 	}
@@ -172,13 +178,13 @@ export default class {
 		}
 
 		const time = await util.getUpdateTime(files);
-		const ret = tool.get(this.pathname);
+		const ret = cache.get(this.pathname);
 		if (ret && ret.time == time) {
 			return { ret, hit: true };
 		}
 		const r = await this.compileJs(files);
 		const res = { js: r, time };
-		tool.set(this.pathname, res);
+		cache.set(this.pathname, res);
 		return { ret: res, hit: false };
 	}
 
@@ -241,13 +247,13 @@ export default class {
 		this.jopts.clean = cliargs.clean;
 		const { css, js } = this.opts.opts.static;
 		for (const item in css) {
-			const source = css[item];
-			const ret = await this.compileLess(source);
+			const files = css[item].map((file: string) => path.join(this.opts.dirname, file));
+			const ret = await this.compileLess(files);
 			await fsWriteFile(path.join(this.opts.dirname, item), ret);
 		}
 		for (const item in js) {
-			const source = js[item].map((item: string) => path.join(this.opts.dirname, item));
-			const ret = await this.compileJs(source);
+			const files = js[item].map((file: string) => path.join(this.opts.dirname, file));
+			const ret = await this.compileJs(files);
 			await fsWriteFile(path.join(this.opts.dirname, item), ret);
 		}
 	}

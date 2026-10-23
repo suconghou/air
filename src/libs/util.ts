@@ -6,10 +6,8 @@ const fsStat = promisify(fs.stat);
 const fsAccess = promisify(fs.access);
 const fsWriteFile = promisify(fs.writeFile);
 const fsReadFile = promisify(fs.readFile);
-const fsCopyFile = promisify(fs.copyFile);
-const fsChmod = promisify(fs.chmod);
 
-export { fsStat, fsAccess, fsChmod, fsWriteFile, fsCopyFile, fsReadFile };
+export { fsStat, fsAccess, fsWriteFile, fsReadFile };
 
 export default class {
 	public static resolveLookupPaths(pathstr: string, file: string): Array<string> {
@@ -50,7 +48,7 @@ export default class {
 			dirname = '';
 		f = await this.tryFiles(paths);
 		if (f) {
-			json = require(f);
+			json = JSON.parse(fs.readFileSync(f, 'utf-8'));
 			fpath = f;
 			dirname = path.dirname(f);
 		}

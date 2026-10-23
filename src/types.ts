@@ -2,17 +2,17 @@ export interface staticOpts {
 	dirname: string;
 	fpath: string;
 	opts: {
-		lessOptions: Record<string, any>;
-		static: {
-			css: Map<string, Array<string>> | null;
-			js: Map<string, Array<string>> | null;
+		lessOptions: {
+			urlArgs?: string;
+			globalVars?: Record<string, string>;
+			modifyVars?: Record<string, string>;
+			math?: string;
 		};
-		template: Record<string, any>;
+		static: {
+			css: Record<string, Array<string>>;
+			js: Record<string, Array<string>>;
+		};
 	};
-}
-
-interface Dict<T> {
-	[key: string]: T;
 }
 
 export interface serverArgs {
@@ -23,8 +23,8 @@ export interface serverArgs {
 
 export interface lessopts {
 	urlArgs?: string;
-	modifyVars?: Dict<string>;
-	globalVars?: Dict<string>;
+	globalVars?: Record<string, string>;
+	modifyVars?: Record<string, string>;
 	compress?: boolean;
 	env?: string;
 	math?: string;
@@ -36,21 +36,13 @@ export interface jsopts {
 }
 
 export interface cliArgs {
-	version: boolean;
-	help: boolean;
-	port: number;
-	root: string;
-	dir: string;
-	output: string;
-	cwd: string;
-	query: string;
-	modifyVars: string;
-	clean: boolean;
-	escape: boolean;
-	art: boolean;
-	dry: boolean;
-	cors: boolean;
-	nogit: boolean;
-	debug: boolean;
-	lintlast: boolean;
+	port?: number;
+	dir?: string;
+	query?: string;
+	modifyVars?: string;
+	debug?: boolean;
+	clean?: boolean;
+	dry?: boolean;
+	cors?: boolean;
+	help?: boolean;
 }

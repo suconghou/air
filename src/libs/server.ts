@@ -2,32 +2,31 @@ import * as querystring from 'querystring';
 import * as fs from 'fs';
 import nodeserve, { cors } from '../nodeserve/index';
 import compress from './compress';
-
+import ssi from './ssi';
 import { serverArgs, cliArgs } from '../types';
 import { requestctx, responsectx } from '../nodeserve/types';
-import template from './template';
 
 export default class server {
 	private app: nodeserve;
 
-	constructor(private args: serverArgs, private cliargs: cliArgs, private cwd: string) {
+	constructor(
+		private args: serverArgs,
+		private cliargs: cliArgs,
+		private cwd: string
+	) {
 		this.app = new nodeserve();
 	}
 
 	serve() {
-		try {
-			this.route();
-			this.app
-				.listen(this.args.port, this.args.host, () => {
-					console.info('Server listening on port %d', this.args.port);
-					this.watch();
-				})
-				.on('error', (err) => {
-					console.error(err.toString());
-				});
-		} catch (e) {
-			console.error(e);
-		}
+		this.route();
+		this.app
+			.listen(this.args.port, this.args.host, () => {
+				console.info('Server listening on port %d', this.args.port);
+				this.watch();
+			})
+			.on('error', (err) => {
+				console.error(err.toString());
+			});
 	}
 
 	private route() {
@@ -54,14 +53,7 @@ export default class server {
 			}
 		);
 		const tpl = async (req: requestctx, res: responsectx, pathname: string, query: querystring.ParsedUrlQuery) => {
-			const tpl = new template(this.args.staticCfg, this.cwd, pathname, query);
-			let ret: string;
-			if (this.cliargs.art) {
-				ret = await tpl.art();
-			} else {
-				ret = await tpl.ssi();
-			}
-			res.send(ret);
+			res.send(await new ssi(this.cwd, pathname).html());
 		};
 		this.app.get(/^[\w\-/.]+\.html$/, tpl);
 		this.app.get(
@@ -80,13 +72,10 @@ export default class server {
 		console.info('load config file ' + f);
 		fs.watchFile(f, () => {
 			try {
-				delete require.cache[f];
-				const c = require(f);
-				const newcfg = Object.assign({}, c);
-				this.args.staticCfg.opts = newcfg;
+				this.args.staticCfg.opts = JSON.parse(fs.readFileSync(f, 'utf-8'));
 				console.info('config reload success ', f);
 			} catch (e) {
-				console.error('config relaod error ', f, e);
+				console.error('config reload error ', f, e);
 			}
 		});
 	}
