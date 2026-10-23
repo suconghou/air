@@ -4,8 +4,15 @@ import util, { fsWriteFile, fsReadFile, fsAccess } from './util';
 import * as path from 'path';
 import { staticOpts, cliArgs, lessopts, jsopts } from '../types';
 
-// 编译结果缓存,键为请求路径,值为 {css|js, time, urlArgs}
+// 编译结果缓存: 键为请求路径, 值含源文件清单与 mtime; 超上限整体清空, 避免常驻进程内存无限增长
 const cache = new Map<string, any>();
+const cacheMax = 1000;
+const cacheSet = (k: string, v: any) => {
+	if (cache.size >= cacheMax) {
+		cache.clear();
+	}
+	cache.set(k, v);
+};
 
 export default class {
 	private options: lessopts = {
@@ -13,7 +20,6 @@ export default class {
 		globalVars: {},
 		modifyVars: {},
 		compress: false,
-		math: '',
 		env: 'development',
 	};
 	private jopts: jsopts = { debug: true, clean: false };
@@ -33,41 +39,22 @@ export default class {
 		this.options.modifyVars = query.modifyVars
 			? (querystring.parse(query.modifyVars.toString()) as Record<string, string>)
 			: process.env.MODIFYVARS
-				? (querystring.parse(process.env.MODIFYVARS) as Record<string, string>)
-				: lessOptions.modifyVars || {};
+			? (querystring.parse(process.env.MODIFYVARS) as Record<string, string>)
+			: lessOptions.modifyVars || {};
 		this.options.math = lessOptions.math;
 	}
 
 	// 解析优先级, 配置文件>连字符>less文件查找>静态文件
-	// 连字符这一步:如果带连字符的文件确实存在,则不按照连字符拆分
 	private async resolveLess(): Promise<Array<string>> {
-		const pathname = this.pathname.replace('.css', '').replace(/^\//, '');
-		const css = this.opts.opts.static ? Object.keys(this.opts.opts.static.css || {}) || [] : [];
+		const pathname = this.pathname.replace(/\.css$/, '').replace(/^\//, '');
+		const css = Object.keys(this.opts.opts.static.css || {});
 		// dirname存在说明有配置文件,无配置文件时按照原始地址
 		const curr = this.opts.dirname ? pathname.replace(/.*static\//, '') : pathname;
 		if (this.opts.dirname && css.includes(curr + '.css')) {
-			return (this.opts.opts.static.css || {})[curr + '.css'].map((item: string) =>
-				path.join(this.opts.dirname, item)
-			);
+			return this.opts.opts.static.css[curr + '.css'].map((item: string) => path.join(this.opts.dirname, item));
 		}
-
 		if (/-/.test(curr)) {
-			// 如果带有连字符,先看连字符的文件确实不存在再拆分
-			try {
-				const f = path.join(this.opts.dirname, curr) + '.css';
-				await fsAccess(f, fs.constants.R_OK);
-				// return 单个css地址,后面会当做静态文件输出
-				return [f];
-			} catch (_e) {
-				const dirs = curr.split('/');
-				const segment = dirs.pop() || '';
-				return segment
-					.split('-')
-					.filter((item) => item)
-					.map((item) => {
-						return path.join(this.opts.dirname, ...dirs, item) + '.less';
-					});
-			}
+			return await this.hyphenSplit(curr, '.css', '.less');
 		}
 		// 先尝试less文件,无less文件fallback到css
 		let target = path.join(this.opts.dirname, curr) + '.less';
@@ -80,42 +67,39 @@ export default class {
 	}
 
 	// 解析优先级, 配置文件>连字符>静态文件
-	// 连字符这一步:如果带连字符的文件确实存在,则不按照连字符拆分
 	async resolveJs(): Promise<Array<string>> {
-		const pathname = this.pathname.replace('.js', '').replace(/^\//, '');
-		const js = this.opts.opts.static ? Object.keys(this.opts.opts.static.js || {}) || [] : [];
-		// this.opts.dirname存在说明有配置文件,无配置文件按照原始地址
+		const pathname = this.pathname.replace(/\.js$/, '').replace(/^\//, '');
+		const js = Object.keys(this.opts.opts.static.js || {});
 		const curr = this.opts.dirname ? pathname.replace(/.*static\//, '') : pathname;
 		if (this.opts.dirname && js.includes(curr + '.js')) {
-			return (this.opts.opts.static.js || {})[curr + '.js'].map((item: string) =>
-				path.join(this.opts.dirname, item)
-			);
+			return this.opts.opts.static.js[curr + '.js'].map((item: string) => path.join(this.opts.dirname, item));
 		}
 		if (/-/.test(curr)) {
-			try {
-				const f = path.join(this.opts.dirname, curr) + '.js';
-				await fsAccess(f, fs.constants.R_OK);
-				// return 单个js地址,后面会当做静态文件输出
-				return [f];
-			} catch (_e) {
-				const dirs = curr.split('/');
-				const segment = dirs.pop() || '';
-				return segment
-					.split('-')
-					.filter((item) => item)
-					.map((item) => {
-						return path.join(this.opts.dirname, ...dirs, item) + '.js';
-					});
-			}
+			return await this.hyphenSplit(curr, '.js', '.js');
 		}
-
 		return [path.join(this.opts.dirname, curr) + '.js'];
+	}
+
+	// 连字符拆分: a-b.css -> a.less + b.less; 若带连字符的文件确实存在则整体返回
+	private async hyphenSplit(curr: string, ext: string, outExt: string): Promise<Array<string>> {
+		const f = path.join(this.opts.dirname, curr) + ext;
+		try {
+			await fsAccess(f, fs.constants.R_OK);
+			return [f];
+		} catch (_e) {
+			const dirs = curr.split('/');
+			const segment = dirs.pop() || '';
+			return segment
+				.split('-')
+				.filter((item) => item)
+				.map((item) => path.join(this.opts.dirname, ...dirs, item) + outExt);
+		}
 	}
 
 	async less() {
 		const files = await this.resolveLess();
-		if (files.length == 1 && files[0].match(/\.css$/)) {
-			// 收到标记使用一个css静态文件
+		if (files.length == 1 && /\.css$/.test(files[0])) {
+			// 单个css静态文件,直接输出
 			const text = await fsReadFile(files[0]);
 			return {
 				ret: {
@@ -126,16 +110,41 @@ export default class {
 		}
 
 		const time = await util.getUpdateTime(files);
-
+		const filesKey = files.join();
 		const ret = cache.get(this.pathname);
-		if (ret && ret.time == time && ret.urlArgs == this.options.urlArgs) {
+		if (ret && ret.time == time && ret.urlArgs == this.options.urlArgs && ret.files == filesKey) {
 			return { ret, hit: true };
 		}
 
 		const r = await this.compileLess(files);
-		const res = { css: r, time, urlArgs: this.options.urlArgs };
-		cache.set(this.pathname, res);
+		const res = { css: r, time, urlArgs: this.options.urlArgs, files: filesKey };
+		cacheSet(this.pathname, res);
 
+		return { ret: res, hit: false };
+	}
+
+	async Js() {
+		const files = await this.resolveJs();
+		if (files.length == 1) {
+			// 单个js静态文件,直接输出(这里是http响应)
+			const text = await fsReadFile(files[0]);
+			return {
+				ret: {
+					js: text,
+				},
+				hit: false,
+			};
+		}
+
+		const time = await util.getUpdateTime(files);
+		const filesKey = files.join();
+		const ret = cache.get(this.pathname);
+		if (ret && ret.time == time && ret.files == filesKey) {
+			return { ret, hit: true };
+		}
+		const r = await this.compileJs(files);
+		const res = { js: r, time, files: filesKey };
+		cacheSet(this.pathname, res);
 		return { ret: res, hit: false };
 	}
 
@@ -160,32 +169,12 @@ export default class {
 			env,
 			math,
 		};
-		const ret: any = await less.render(lessInput, option);
-		return ret.css;
-	}
-
-	async Js() {
-		const files = await this.resolveJs();
-		if (files.length == 1) {
-			// 收到标记使用一个js静态文件,没有什么好合并的,直接输出(这里是http响应)
-			const text = await fsReadFile(files[0]);
-			return {
-				ret: {
-					js: text,
-				},
-				hit: false,
-			};
+		try {
+			const ret: any = await less.render(lessInput, option);
+			return ret.css;
+		} catch (e: any) {
+			throw new Error('less 编译失败 ' + (e.message || e));
 		}
-
-		const time = await util.getUpdateTime(files);
-		const ret = cache.get(this.pathname);
-		if (ret && ret.time == time) {
-			return { ret, hit: true };
-		}
-		const r = await this.compileJs(files);
-		const res = { js: r, time };
-		cache.set(this.pathname, res);
-		return { ret: res, hit: false };
 	}
 
 	private async compileJs(files: Array<string>) {
@@ -224,20 +213,16 @@ export default class {
 		}
 		const filesMap = await util.getContent(files);
 		const terser = require('terser');
-		const ret: any = await new Promise((resolve, reject) => {
-			const result = terser.minify(filesMap, options);
-			const er = result.error;
-			if (er) {
-				const s = er.toString();
-				const { filename, line, col, pos } = er;
-				er.toString = () => {
-					return `${filename}: ${s} on line ${line}, ${col}:${pos}`;
-				};
-				return reject(er);
+		try {
+			const ret: any = await terser.minify(filesMap, options);
+			if (ret.error) {
+				throw ret.error;
 			}
-			resolve(result);
-		});
-		return ret.code;
+			return ret.code;
+		} catch (e: any) {
+			const loc = e.filename ? ` ${e.filename}:${e.line},${e.col}` : '';
+			throw new Error('js 压缩失败' + loc + ' ' + (e.message || e));
+		}
 	}
 
 	async compress(cliargs: cliArgs) {

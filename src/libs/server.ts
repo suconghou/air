@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import nodeserve, { cors } from '../nodeserve/index';
 import compress from './compress';
 import ssi from './ssi';
+import util from './util';
 import { serverArgs, cliArgs } from '../types';
 import { requestctx, responsectx } from '../nodeserve/types';
 
@@ -21,11 +22,11 @@ export default class server {
 		this.route();
 		this.app
 			.listen(this.args.port, this.args.host, () => {
-				console.info('Server listening on port %d', this.args.port);
+				console.info('服务已启动, 监听端口 %d', this.args.port);
 				this.watch();
 			})
 			.on('error', (err) => {
-				console.error(err.toString());
+				console.error('服务启动失败', err.toString());
 			});
 	}
 
@@ -69,13 +70,13 @@ export default class server {
 		if (!f) {
 			return;
 		}
-		console.info('load config file ' + f);
+		console.info('已加载配置文件 %s', f);
 		fs.watchFile(f, () => {
 			try {
-				this.args.staticCfg.opts = JSON.parse(fs.readFileSync(f, 'utf-8'));
-				console.info('config reload success ', f);
+				this.args.staticCfg.opts = util.normalize(JSON.parse(fs.readFileSync(f, 'utf-8')));
+				console.info('配置已热更新 %s', f);
 			} catch (e) {
-				console.error('config reload error ', f, e);
+				console.error('配置热更新失败 %s', f, e);
 			}
 		});
 	}

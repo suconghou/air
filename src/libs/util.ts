@@ -10,10 +10,10 @@ const fsReadFile = promisify(fs.readFile);
 export { fsStat, fsAccess, fsWriteFile, fsReadFile };
 
 export default class {
-	public static resolveLookupPaths(pathstr: string, file: string): Array<string> {
+	public static resolveLookupPaths(dir: string, file: string): Array<string> {
 		const arr: Array<string> = [];
 		const tmp: Array<string> = [];
-		pathstr.split(path.sep).forEach((item) => {
+		dir.split(path.sep).forEach((item) => {
 			if (/^[a-zA-Z]:$/.test(item)) {
 				// for windows
 				return;
@@ -25,8 +25,7 @@ export default class {
 	}
 
 	public static async tryFiles(paths: Array<string>) {
-		for (let i = 0, j = paths.length; i < j; i++) {
-			const file = paths[i];
+		for (const file of paths) {
 			try {
 				await fsAccess(file, fs.constants.R_OK);
 				return file;
@@ -37,18 +36,32 @@ export default class {
 		return '';
 	}
 
+	// 补齐配置缺省字段, 防止畸形配置(如热更新写入)导致运行期取值崩溃
+	public static normalize(json: any) {
+		json = json && typeof json == 'object' ? json : {};
+		json.lessOptions = json.lessOptions || {};
+		json.static = json.static || {};
+		json.static.css = json.static.css || {};
+		json.static.js = json.static.js || {};
+		return json;
+	}
+
 	public static async getConfig(cwd: string, name = 'static.json') {
 		if (!/static\/?$/.test(cwd)) {
 			cwd = path.join(cwd, 'static');
 		}
 		const paths = this.resolveLookupPaths(cwd, name);
 		let f = '',
-			json = {},
+			json: any = {},
 			fpath = '',
 			dirname = '';
 		f = await this.tryFiles(paths);
 		if (f) {
-			json = JSON.parse(fs.readFileSync(f, 'utf-8'));
+			try {
+				json = this.normalize(JSON.parse(fs.readFileSync(f, 'utf-8')));
+			} catch (e: any) {
+				throw new Error('配置文件解析失败 ' + f + ' ' + (e.message || e));
+			}
 			fpath = f;
 			dirname = path.dirname(f);
 		}
@@ -56,19 +69,12 @@ export default class {
 	}
 
 	public static async getUpdateTime(files: Array<string>) {
-		const mtimes: Array<number> = [];
-		for (let i = 0, j = files.length; i < j; i++) {
-			const v = files[i];
-			const stat = await fsStat(v);
-			mtimes.push(stat.mtime.getTime());
-		}
-		const updateTime = Math.max.apply(this, mtimes);
-		return updateTime;
+		const stats = await Promise.all(files.map((file) => fsStat(file)));
+		return Math.max(...stats.map((s) => s.mtime.getTime()));
 	}
 
 	public static async getContent(files: Array<string>) {
-		const arr = files.map((file) => fsReadFile(file, 'utf-8'));
-		const res = await Promise.all(arr);
+		const res = await Promise.all(files.map((file) => fsReadFile(file, 'utf-8')));
 		const objs: Record<string, string> = {};
 		files.forEach((file, index) => {
 			objs[file] = res[index];

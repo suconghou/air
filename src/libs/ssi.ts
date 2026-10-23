@@ -4,9 +4,6 @@ import { promisify } from 'util';
 
 const readFile = promisify(fs.readFile);
 
-// SSI 语法: <!--# include file="foo/bar.html" --> 嵌套层级上限 6
-const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.-]{3,50})"\s{1,5}-->/g;
-
 export default class {
 	constructor(
 		private cwd: string,
@@ -17,7 +14,10 @@ export default class {
 		return await this.parseHtml(path.join(this.cwd, this.pathname), this.cwd);
 	}
 
+	// SSI 语法: <!--# include file="foo/bar.html" --> 嵌套层级上限 6
 	private async parseHtml(mainfile: string, cwd: string): Promise<string> {
+		// 全局正则的 lastIndex 会被并发请求互相干扰, 必须每次调用新建
+		const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.-]{3,50})"\s{1,5}-->/g;
 		const filedir = path.dirname(mainfile);
 		let html = (await readFile(mainfile)).toString();
 		const filesMap: Record<string, string> = {};
@@ -37,16 +37,16 @@ export default class {
 			while ((res = includefile.exec(html))) {
 				matches[res[0]] = res[1];
 			}
-			includefile.lastIndex = 0;
 			if (Object.keys(matches).length === 0) {
 				// 无 include 语法,直接返回
 				return html;
 			}
 			await fillContents(Array.from(new Set(Object.values(matches))).filter((file) => !filesMap[file]));
+			// split/join 替换全部同名 include, 且不受内容中 $& 等替换模式影响
 			Object.keys(matches).forEach((holder) => {
-				html = html.replace(holder, filesMap[matches[holder]]);
+				html = html.split(holder).join(filesMap[matches[holder]]);
 			});
 		}
-		throw new Error('include file too deep');
+		throw new Error('include 嵌套层级超过 6 层');
 	}
 }

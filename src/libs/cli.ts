@@ -41,7 +41,7 @@ export default class {
 				this.runInit();
 			}
 		} catch (e: any) {
-			console.error(e.stack || e.message || e);
+			console.error('执行出错:', e.stack || e.message || e);
 			process.exit(1);
 		}
 	}
