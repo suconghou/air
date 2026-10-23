@@ -7,13 +7,13 @@
 		"check": "tsc --noEmit"
 	},
 	"dependencies": {
-		"less": "^4.2.0",
+		"less": "^4.9.1",
 		"less-plugin-autoprefix": "^2.0.0",
-		"terser": "^5.21.0"
+		"terser": "^5.51.2"
 	},
 	"devDependencies": {
-		"@types/node": "^20.8.4",
-		"esbuild": "^0.25.0",
-		"typescript": "^5.2.2"
+		"@types/node": "^26.6.5",
+		"esbuild": "^0.28.2",
+		"typescript": "^5.9.3"
 	}
 }
