@@ -6,5 +6,8 @@ build:
 check:
 	npx tsc --noEmit
 
+release: build
+	cp air /Users/inmu/data/git/repo/air/air
+
 clean:
 	rm -f air
