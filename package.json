@@ -1,38 +1,32 @@
 {
 	"name": "airs",
-	"version": "0.7.23",
-	"description": "serve static files in the air",
-	"dependencies": {
-		"@babel/core": "^7.23.0",
-		"@babel/eslint-parser": "^7.22.15",
-		"@types/node": "^20.8.4",
-		"@typescript-eslint/parser": "^6.7.5",
-		"art-template": "^4.13.2",
-		"eslint": "^7",
-		"eslint-plugin-vue": "^9.17.0",
-		"less": "^4.2.0",
-		"less-plugin-autoprefix": "^2.0.0",
-		"prettier": "^3.0.3",
-		"terser": "^5.21.0",
-		"typescript": "^5.2.2",
-		"vue-eslint-parser": "^9.3.2"
-	},
-	"engines": {
-		"node": ">=12.0"
-	},
+	"version": "0.8.0",
+	"description": "serve static files in the air, on-the-fly less compile and js minify, single file with no dependencies",
+	"files": [
+		"air",
+		"README.md"
+	],
 	"bin": {
 		"air": "./air"
 	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/suconghou/air.git"
+	"engines": {
+		"node": ">=18"
 	},
 	"keywords": [
+		"static",
+		"server",
+		"less",
+		"terser",
+		"ssi",
 		"fed",
 		"development"
 	],
 	"author": "suconghou",
 	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/suconghou/air.git"
+	},
 	"bugs": {
 		"url": "https://github.com/suconghou/air/issues"
 	},
