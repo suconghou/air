@@ -1,5 +1,5 @@
 build:
-	npx esbuild src/index.ts --bundle --platform=node --format=cjs --target=node18 \
+	esbuild src/index.ts --bundle --platform=node --format=cjs --target=node18 \
 		--banner:js='#!/usr/bin/env node' --outfile=air
 	chmod +x air
 
