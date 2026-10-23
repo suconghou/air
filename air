@@ -69139,10 +69139,10 @@ var fsAccess = (0, import_util.promisify)(fs.access);
 var fsWriteFile = (0, import_util.promisify)(fs.writeFile);
 var fsReadFile = (0, import_util.promisify)(fs.readFile);
 var util_default = class {
-  static resolveLookupPaths(pathstr, file) {
+  static resolveLookupPaths(dir, file) {
     const arr = [];
     const tmp = [];
-    pathstr.split(path.sep).forEach((item) => {
+    dir.split(path.sep).forEach((item) => {
       if (/^[a-zA-Z]:$/.test(item)) {
         return;
       }
@@ -69152,8 +69152,7 @@ var util_default = class {
     return arr.reverse();
   }
   static async tryFiles(paths) {
-    for (let i = 0, j = paths.length; i < j; i++) {
-      const file = paths[i];
+    for (const file of paths) {
       try {
         await fsAccess(file, fs.constants.R_OK);
         return file;
@@ -69161,6 +69160,15 @@ var util_default = class {
       }
     }
     return "";
+  }
+  // 补齐配置缺省字段, 防止畸形配置(如热更新写入)导致运行期取值崩溃
+  static normalize(json) {
+    json = json && typeof json == "object" ? json : {};
+    json.lessOptions = json.lessOptions || {};
+    json.static = json.static || {};
+    json.static.css = json.static.css || {};
+    json.static.js = json.static.js || {};
+    return json;
   }
   static async getConfig(cwd2, name = "static.json") {
     if (!/static\/?$/.test(cwd2)) {
@@ -69170,25 +69178,22 @@ var util_default = class {
     let f = "", json = {}, fpath = "", dirname3 = "";
     f = await this.tryFiles(paths);
     if (f) {
-      json = JSON.parse(fs.readFileSync(f, "utf-8"));
+      try {
+        json = this.normalize(JSON.parse(fs.readFileSync(f, "utf-8")));
+      } catch (e) {
+        throw new Error("\u914D\u7F6E\u6587\u4EF6\u89E3\u6790\u5931\u8D25 " + f + " " + (e.message || e));
+      }
       fpath = f;
       dirname3 = path.dirname(f);
     }
     return { json, fpath, dirname: dirname3 };
   }
   static async getUpdateTime(files) {
-    const mtimes = [];
-    for (let i = 0, j = files.length; i < j; i++) {
-      const v = files[i];
-      const stat3 = await fsStat(v);
-      mtimes.push(stat3.mtime.getTime());
-    }
-    const updateTime = Math.max.apply(this, mtimes);
-    return updateTime;
+    const stats = await Promise.all(files.map((file) => fsStat(file)));
+    return Math.max(...stats.map((s) => s.mtime.getTime()));
   }
   static async getContent(files) {
-    const arr = files.map((file) => fsReadFile(file, "utf-8"));
-    const res = await Promise.all(arr);
+    const res = await Promise.all(files.map((file) => fsReadFile(file, "utf-8")));
     const objs = {};
     files.forEach((file, index) => {
       objs[file] = res[index];
@@ -69895,6 +69900,13 @@ var fs4 = __toESM(require("fs"));
 var querystring = __toESM(require("querystring"));
 var path3 = __toESM(require("path"));
 var cache = /* @__PURE__ */ new Map();
+var cacheMax = 1e3;
+var cacheSet = (k, v) => {
+  if (cache.size >= cacheMax) {
+    cache.clear();
+  }
+  cache.set(k, v);
+};
 var compress_default = class {
   constructor(opts, pathname, query) {
     this.opts = opts;
@@ -69914,33 +69926,19 @@ var compress_default = class {
     globalVars: {},
     modifyVars: {},
     compress: false,
-    math: "",
     env: "development"
   };
   jopts = { debug: true, clean: false };
   // 解析优先级, 配置文件>连字符>less文件查找>静态文件
-  // 连字符这一步:如果带连字符的文件确实存在,则不按照连字符拆分
   async resolveLess() {
-    const pathname = this.pathname.replace(".css", "").replace(/^\//, "");
-    const css = this.opts.opts.static ? Object.keys(this.opts.opts.static.css || {}) || [] : [];
+    const pathname = this.pathname.replace(/\.css$/, "").replace(/^\//, "");
+    const css = Object.keys(this.opts.opts.static.css || {});
     const curr = this.opts.dirname ? pathname.replace(/.*static\//, "") : pathname;
     if (this.opts.dirname && css.includes(curr + ".css")) {
-      return (this.opts.opts.static.css || {})[curr + ".css"].map(
-        (item) => path3.join(this.opts.dirname, item)
-      );
+      return this.opts.opts.static.css[curr + ".css"].map((item) => path3.join(this.opts.dirname, item));
     }
     if (/-/.test(curr)) {
-      try {
-        const f = path3.join(this.opts.dirname, curr) + ".css";
-        await fsAccess(f, fs4.constants.R_OK);
-        return [f];
-      } catch (_e) {
-        const dirs = curr.split("/");
-        const segment = dirs.pop() || "";
-        return segment.split("-").filter((item) => item).map((item) => {
-          return path3.join(this.opts.dirname, ...dirs, item) + ".less";
-        });
-      }
+      return await this.hyphenSplit(curr, ".css", ".less");
     }
     let target = path3.join(this.opts.dirname, curr) + ".less";
     try {
@@ -69951,34 +69949,33 @@ var compress_default = class {
     return [target];
   }
   // 解析优先级, 配置文件>连字符>静态文件
-  // 连字符这一步:如果带连字符的文件确实存在,则不按照连字符拆分
   async resolveJs() {
-    const pathname = this.pathname.replace(".js", "").replace(/^\//, "");
-    const js = this.opts.opts.static ? Object.keys(this.opts.opts.static.js || {}) || [] : [];
+    const pathname = this.pathname.replace(/\.js$/, "").replace(/^\//, "");
+    const js = Object.keys(this.opts.opts.static.js || {});
     const curr = this.opts.dirname ? pathname.replace(/.*static\//, "") : pathname;
     if (this.opts.dirname && js.includes(curr + ".js")) {
-      return (this.opts.opts.static.js || {})[curr + ".js"].map(
-        (item) => path3.join(this.opts.dirname, item)
-      );
+      return this.opts.opts.static.js[curr + ".js"].map((item) => path3.join(this.opts.dirname, item));
     }
     if (/-/.test(curr)) {
-      try {
-        const f = path3.join(this.opts.dirname, curr) + ".js";
-        await fsAccess(f, fs4.constants.R_OK);
-        return [f];
-      } catch (_e) {
-        const dirs = curr.split("/");
-        const segment = dirs.pop() || "";
-        return segment.split("-").filter((item) => item).map((item) => {
-          return path3.join(this.opts.dirname, ...dirs, item) + ".js";
-        });
-      }
+      return await this.hyphenSplit(curr, ".js", ".js");
     }
     return [path3.join(this.opts.dirname, curr) + ".js"];
   }
+  // 连字符拆分: a-b.css -> a.less + b.less; 若带连字符的文件确实存在则整体返回
+  async hyphenSplit(curr, ext, outExt) {
+    const f = path3.join(this.opts.dirname, curr) + ext;
+    try {
+      await fsAccess(f, fs4.constants.R_OK);
+      return [f];
+    } catch (_e) {
+      const dirs = curr.split("/");
+      const segment = dirs.pop() || "";
+      return segment.split("-").filter((item) => item).map((item) => path3.join(this.opts.dirname, ...dirs, item) + outExt);
+    }
+  }
   async less() {
     const files = await this.resolveLess();
-    if (files.length == 1 && files[0].match(/\.css$/)) {
+    if (files.length == 1 && /\.css$/.test(files[0])) {
       const text = await fsReadFile(files[0]);
       return {
         ret: {
@@ -69988,13 +69985,36 @@ var compress_default = class {
       };
     }
     const time = await util_default.getUpdateTime(files);
+    const filesKey = files.join();
     const ret = cache.get(this.pathname);
-    if (ret && ret.time == time && ret.urlArgs == this.options.urlArgs) {
+    if (ret && ret.time == time && ret.urlArgs == this.options.urlArgs && ret.files == filesKey) {
       return { ret, hit: true };
     }
     const r = await this.compileLess(files);
-    const res = { css: r, time, urlArgs: this.options.urlArgs };
-    cache.set(this.pathname, res);
+    const res = { css: r, time, urlArgs: this.options.urlArgs, files: filesKey };
+    cacheSet(this.pathname, res);
+    return { ret: res, hit: false };
+  }
+  async Js() {
+    const files = await this.resolveJs();
+    if (files.length == 1) {
+      const text = await fsReadFile(files[0]);
+      return {
+        ret: {
+          js: text
+        },
+        hit: false
+      };
+    }
+    const time = await util_default.getUpdateTime(files);
+    const filesKey = files.join();
+    const ret = cache.get(this.pathname);
+    if (ret && ret.time == time && ret.files == filesKey) {
+      return { ret, hit: true };
+    }
+    const r = await this.compileJs(files);
+    const res = { js: r, time, files: filesKey };
+    cacheSet(this.pathname, res);
     return { ret: res, hit: false };
   }
   async compileLess(files) {
@@ -70014,29 +70034,12 @@ var compress_default = class {
       env,
       math
     };
-    const ret = await less.render(lessInput, option);
-    return ret.css;
-  }
-  async Js() {
-    const files = await this.resolveJs();
-    if (files.length == 1) {
-      const text = await fsReadFile(files[0]);
-      return {
-        ret: {
-          js: text
-        },
-        hit: false
-      };
+    try {
+      const ret = await less.render(lessInput, option);
+      return ret.css;
+    } catch (e) {
+      throw new Error("less \u7F16\u8BD1\u5931\u8D25 " + (e.message || e));
     }
-    const time = await util_default.getUpdateTime(files);
-    const ret = cache.get(this.pathname);
-    if (ret && ret.time == time) {
-      return { ret, hit: true };
-    }
-    const r = await this.compileJs(files);
-    const res = { js: r, time };
-    cache.set(this.pathname, res);
-    return { ret: res, hit: false };
   }
   async compileJs(files) {
     let options;
@@ -70074,20 +70077,16 @@ var compress_default = class {
     }
     const filesMap = await util_default.getContent(files);
     const terser = require_bundle_min();
-    const ret = await new Promise((resolve3, reject) => {
-      const result = terser.minify(filesMap, options);
-      const er = result.error;
-      if (er) {
-        const s = er.toString();
-        const { filename, line, col, pos } = er;
-        er.toString = () => {
-          return `${filename}: ${s} on line ${line}, ${col}:${pos}`;
-        };
-        return reject(er);
+    try {
+      const ret = await terser.minify(filesMap, options);
+      if (ret.error) {
+        throw ret.error;
       }
-      resolve3(result);
-    });
-    return ret.code;
+      return ret.code;
+    } catch (e) {
+      const loc = e.filename ? ` ${e.filename}:${e.line},${e.col}` : "";
+      throw new Error("js \u538B\u7F29\u5931\u8D25" + loc + " " + (e.message || e));
+    }
   }
   async compress(cliargs) {
     this.options.env = "production";
@@ -70129,7 +70128,6 @@ var path4 = __toESM(require("path"));
 var fs5 = __toESM(require("fs"));
 var import_util4 = require("util");
 var readFile3 = (0, import_util4.promisify)(fs5.readFile);
-var includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.-]{3,50})"\s{1,5}-->/g;
 var ssi_default = class {
   constructor(cwd2, pathname) {
     this.cwd = cwd2;
@@ -70140,7 +70138,9 @@ var ssi_default = class {
   async html() {
     return await this.parseHtml(path4.join(this.cwd, this.pathname), this.cwd);
   }
+  // SSI 语法: <!--# include file="foo/bar.html" --> 嵌套层级上限 6
   async parseHtml(mainfile, cwd2) {
+    const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.-]{3,50})"\s{1,5}-->/g;
     const filedir = path4.dirname(mainfile);
     let html = (await readFile3(mainfile)).toString();
     const filesMap = {};
@@ -70158,16 +70158,15 @@ var ssi_default = class {
       while (res = includefile.exec(html)) {
         matches[res[0]] = res[1];
       }
-      includefile.lastIndex = 0;
       if (Object.keys(matches).length === 0) {
         return html;
       }
       await fillContents(Array.from(new Set(Object.values(matches))).filter((file) => !filesMap[file]));
       Object.keys(matches).forEach((holder) => {
-        html = html.replace(holder, filesMap[matches[holder]]);
+        html = html.split(holder).join(filesMap[matches[holder]]);
       });
     }
-    throw new Error("include file too deep");
+    throw new Error("include \u5D4C\u5957\u5C42\u7EA7\u8D85\u8FC7 6 \u5C42");
   }
 };
 
@@ -70186,10 +70185,10 @@ var server = class {
   serve() {
     this.route();
     this.app.listen(this.args.port, this.args.host, () => {
-      console.info("Server listening on port %d", this.args.port);
+      console.info("\u670D\u52A1\u5DF2\u542F\u52A8, \u76D1\u542C\u7AEF\u53E3 %d", this.args.port);
       this.watch();
     }).on("error", (err) => {
-      console.error(err.toString());
+      console.error("\u670D\u52A1\u542F\u52A8\u5931\u8D25", err.toString());
     });
   }
   route() {
@@ -70231,13 +70230,13 @@ var server = class {
     if (!f) {
       return;
     }
-    console.info("load config file " + f);
+    console.info("\u5DF2\u52A0\u8F7D\u914D\u7F6E\u6587\u4EF6 %s", f);
     fs6.watchFile(f, () => {
       try {
-        this.args.staticCfg.opts = JSON.parse(fs6.readFileSync(f, "utf-8"));
-        console.info("config reload success ", f);
+        this.args.staticCfg.opts = util_default.normalize(JSON.parse(fs6.readFileSync(f, "utf-8")));
+        console.info("\u914D\u7F6E\u5DF2\u70ED\u66F4\u65B0 %s", f);
       } catch (e) {
-        console.error("config reload error ", f, e);
+        console.error("\u914D\u7F6E\u70ED\u66F4\u65B0\u5931\u8D25 %s", f, e);
       }
     });
   }
@@ -70317,23 +70316,23 @@ var utiljs_default = {
 
 // src/config.ts
 var config_default = `
-Usage:
-    air [command] [flag]
-Commands:
-    serve           start air http server
-    compress        compress less or javascript files
+\u7528\u6CD5:
+    air [\u547D\u4EE4] [\u53C2\u6570]
+\u547D\u4EE4:
+    serve           \u542F\u52A8 http server
+    compress        \u538B\u7F29 less \u6216 javascript \u6587\u4EF6
 
-Flags:
-    -v              show air version
-    -h              show this help information
-    -p              set server listen port
-    -d              document root , work dir
-    -q              urlArgs params in less render
-    -m              modifyVars params in less render, eg: env=beta
-    --debug         compress with debug mode
-    --clean         compress with clean mode,remove console debugger
-    --dry           just run as a static server
-    --cors          send Access-Control-Allow-Origin
+\u53C2\u6570:
+    -v              \u67E5\u770B\u7248\u672C
+    -h              \u67E5\u770B\u5E2E\u52A9
+    -p              \u670D\u52A1\u76D1\u542C\u7AEF\u53E3, \u9ED8\u8BA4 8088
+    -d              \u5DE5\u4F5C\u76EE\u5F55
+    -q              less \u6E32\u67D3 urlArgs \u53C2\u6570
+    -m              less \u6E32\u67D3 modifyVars \u53C2\u6570, \u5982: env=beta
+    --debug         compress \u8C03\u8BD5\u6A21\u5F0F(\u4EC5\u5408\u5E76\u4E0D\u538B\u7F29)
+    --clean         compress \u6E05\u7406\u6A21\u5F0F(\u79FB\u9664 console/debugger)
+    --dry           \u7EAF\u9759\u6001\u670D\u52A1, \u4E0D\u7F16\u8BD1 less/js
+    --cors          \u54CD\u5E94\u643A\u5E26 Access-Control-Allow-Origin
 `;
 var version = "0.8.0";
 
@@ -70375,7 +70374,7 @@ var cli_default = class {
         this.runInit();
       }
     } catch (e) {
-      console.error(e.stack || e.message || e);
+      console.error("\u6267\u884C\u51FA\u9519:", e.stack || e.message || e);
       process.exit(1);
     }
   }
