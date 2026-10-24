@@ -2,7 +2,6 @@ import * as http from 'http';
 import * as https from 'https';
 import * as net from 'net';
 import * as tls from 'tls';
-import * as url from 'url';
 import { requestctx, responsectx } from '../nodeserve/types';
 
 export interface proxyRule {
@@ -22,18 +21,23 @@ export function parseProxy(list: Array<string> = []): Array<proxyRule> {
 		if (i <= 0) {
 			throw new Error('代理参数格式错误: ' + item + ' , 应为 /前缀=http(s)://目标地址');
 		}
-		const target = url.parse(item.slice(i + 1));
-		if (!target.hostname || !/^https?:$/.test(target.protocol || '')) {
+		let target: URL;
+		try {
+			target = new URL(item.slice(i + 1));
+		} catch (_e) {
 			throw new Error('代理目标地址无效: ' + item.slice(i + 1));
+		}
+		if (target.protocol != 'http:' && target.protocol != 'https:') {
+			throw new Error('代理目标地址无效: ' + item.slice(i + 1) + ' , 仅支持 http/https');
 		}
 		return {
 			prefix: item.slice(0, i).startsWith('/') ? item.slice(0, i) : '/' + item.slice(0, i),
-			href: target.href || '',
-			protocol: target.protocol as string,
+			href: target.href,
+			protocol: target.protocol,
 			hostname: target.hostname,
-			port: Number(target.port) || (target.protocol == 'https:' ? 443 : 80),
-			host: target.host || target.hostname,
-			base: (target.path || '/').replace(/\/$/, ''),
+			port: target.port ? Number(target.port) : target.protocol == 'https:' ? 443 : 80,
+			host: target.host,
+			base: target.pathname.replace(/\/$/, ''),
 		};
 	});
 }
