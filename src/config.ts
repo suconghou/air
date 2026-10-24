@@ -19,4 +19,4 @@ export default `
     --cors          响应携带 Access-Control-Allow-Origin
 `;
 
-export const version = '0.8.0';
+export const version = '0.8.1';
