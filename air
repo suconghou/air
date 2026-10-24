@@ -35,13 +35,13 @@ var require_less_node = __commonJS({
     "use strict";
     var path5 = require("path");
     var nodeFs = require("fs");
-    var url2 = require("url");
+    var url = require("url");
     function _interopDefaultLegacy(e) {
       return e && typeof e === "object" && "default" in e ? e : { "default": e };
     }
     var path__default = /* @__PURE__ */ _interopDefaultLegacy(path5);
     var nodeFs__default = /* @__PURE__ */ _interopDefaultLegacy(nodeFs);
-    var url__default = /* @__PURE__ */ _interopDefaultLegacy(url2);
+    var url__default = /* @__PURE__ */ _interopDefaultLegacy(url);
     function createRequire() {
       return require;
     }
@@ -130,8 +130,8 @@ var require_less_node = __commonJS({
         }
         return basePath + laterPath;
       }
-      pathDiff(url3, baseUrl) {
-        const urlParts = this.extractUrlParts(url3);
+      pathDiff(url2, baseUrl) {
+        const urlParts = this.extractUrlParts(url2);
         const baseUrlParts = this.extractUrlParts(baseUrl);
         let i;
         let max;
@@ -164,16 +164,16 @@ var require_less_node = __commonJS({
        * @param {string} url 
        * @param {string} baseUrl
        */
-      extractUrlParts(url3, baseUrl) {
+      extractUrlParts(url2, baseUrl) {
         const urlPartsRegex = /^((?:[a-z-]+:)?\/{2}(?:[^/?#]*\/)|([/\\]))?((?:[^/\\?#]*[/\\])*)([^/\\?#]*)([#?].*)?$/i;
-        const urlParts = url3.match(urlPartsRegex);
+        const urlParts = url2.match(urlPartsRegex);
         const returner = {};
         let rawDirectories = [];
         const directories = [];
         let i;
         let baseUrlParts;
         if (!urlParts) {
-          throw new Error(`Could not parse sheet href - '${url3}'`);
+          throw new Error(`Could not parse sheet href - '${url2}'`);
         }
         if (baseUrl && (!urlParts[1] || urlParts[2])) {
           baseUrlParts = baseUrl.match(urlPartsRegex);
@@ -5897,9 +5897,9 @@ ${Parser2.serializeVars(additionalData.modifyVars)}` : "";
                 boolean: f(condition),
                 "if": f(condition)
               }[name.toLowerCase()];
-              function f(parse3, stop) {
+              function f(parse2, stop) {
                 return {
-                  parse: parse3,
+                  parse: parse2,
                   // parsing function
                   stop
                   // when true - stop after parse() and return its result,
@@ -7995,10 +7995,10 @@ ${Parser2.serializeVars(additionalData.modifyVars)}` : "";
         }
         if (typeof els === "string") {
           const fileInfo = this._fileInfo;
-          const parse3 = this.parse;
+          const parse2 = this.parse;
           new /** @type {new (...args: unknown[]) => { parseNode: Function }} */
           /** @type {unknown} */
-          Parser(parse3.context, parse3.importManager, fileInfo, this._index).parseNode(
+          Parser(parse2.context, parse2.importManager, fileInfo, this._index).parseNode(
             els,
             ["selector"],
             function(err, result) {
@@ -8008,7 +8008,7 @@ ${Parser2.serializeVars(additionalData.modifyVars)}` : "";
                     index: err.index,
                     message: err.message
                   },
-                  parse3.imports,
+                  parse2.imports,
                   /** @type {string} */
                   /** @type {FileInfo} */
                   fileInfo.filename
@@ -8936,7 +8936,7 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
         return `\\${match}`;
       });
     }
-    var URL = class _URL extends Node {
+    var URL2 = class _URL extends Node {
       get type() {
         return "Url";
       }
@@ -9197,7 +9197,7 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
       }
       /** @returns {string | undefined} */
       getPath() {
-        return this.path instanceof URL ? (
+        return this.path instanceof URL2 ? (
           /** @type {string} */
           /** @type {Node} */
           this.path.value.value
@@ -9209,7 +9209,7 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
       /** @returns {boolean | RegExpMatchArray | null} */
       isVariableImport() {
         let path6 = this.path;
-        if (path6 instanceof URL) {
+        if (path6 instanceof URL2) {
           path6 = /** @type {Node} */
           path6.value;
         }
@@ -9221,7 +9221,7 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
       /** @param {EvalContext} context */
       evalForImport(context) {
         let path6 = this.path;
-        if (path6 instanceof URL) {
+        if (path6 instanceof URL2) {
           path6 = /** @type {Node} */
           path6.value;
         }
@@ -9231,7 +9231,7 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
       evalPath(context) {
         const path6 = this.path.eval(context);
         const fileInfo = this._fileInfo;
-        if (!(path6 instanceof URL)) {
+        if (!(path6 instanceof URL2)) {
           const pathValue = (
             /** @type {string} */
             path6.value
@@ -10546,7 +10546,7 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
       Expression,
       Declaration,
       Call,
-      URL,
+      URL: URL2,
       Import,
       Comment,
       Anonymous,
@@ -11190,7 +11190,7 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
       }
     }
     var dataUri = (environment2) => {
-      const fallback = (functionThis, node) => new URL(node, functionThis.index, functionThis.currentFileInfo).eval(functionThis.context);
+      const fallback = (functionThis, node) => new URL2(node, functionThis.index, functionThis.currentFileInfo).eval(functionThis.context);
       return { "data-uri": function(mimetypeNode, filePathNode) {
         if (!filePathNode) {
           filePathNode = mimetypeNode;
@@ -11238,7 +11238,7 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
         }
         buf = useBase64 ? environment2.encodeBase64(buf) : encodeURIComponent(buf);
         const uri = `data:${mimetype},${buf}${fragment}`;
-        return new URL(new Quoted(`"${uri}"`, uri, false, this.index, this.currentFileInfo), this.index, this.currentFileInfo);
+        return new URL2(new Quoted(`"${uri}"`, uri, false, this.index, this.currentFileInfo), this.index, this.currentFileInfo);
       } };
     };
     var getItemsFromNode = (node) => {
@@ -11611,7 +11611,7 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
         returner += `</${gradientType}Gradient><rect ${rectangleDimension} fill="url(#g)" /></svg>`;
         returner = encodeURIComponent(returner);
         returner = `data:image/svg+xml,${returner}`;
-        return new URL(new Quoted(`'${returner}'`, returner, false, this.index, this.currentFileInfo), this.index, this.currentFileInfo);
+        return new URL2(new Quoted(`'${returner}'`, returner, false, this.index, this.currentFileInfo), this.index, this.currentFileInfo);
       } };
     };
     var isa = (n, Type) => n instanceof Type ? Keyword.True : Keyword.False;
@@ -11642,7 +11642,7 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
         return isa(n, Keyword);
       },
       isurl: function(n) {
-        return isa(n, URL);
+        return isa(n, URL2);
       },
       ispixel: function(n) {
         return isunit(n, "px");
@@ -12347,7 +12347,7 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
       return ImportManager2;
     }
     function Parse(environment2, ParseTree2, ImportManager2) {
-      const parse3 = function(input, options, callback) {
+      const parse2 = function(input, options, callback) {
         if (typeof options === "function") {
           callback = options;
           options = copyOptions(this.options, {});
@@ -12357,7 +12357,7 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
         if (!callback) {
           const self2 = this;
           return new Promise(function(resolve3, reject) {
-            parse3.call(self2, input, options, function(err, output) {
+            parse2.call(self2, input, options, function(err, output) {
               if (err) {
                 reject(err);
               } else {
@@ -12412,7 +12412,7 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
           }, options);
         }
       };
-      return parse3;
+      return parse2;
     }
     function Render(environment2, ParseTree2) {
       const render = function(input, options, callback) {
@@ -12474,7 +12474,7 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
       parseTree = ParseTree(sourceMapBuilder);
       importManager = ImportManager(environment2);
       const render = Render(environment2, parseTree);
-      const parse3 = Parse(environment2, parseTree, importManager);
+      const parse2 = Parse(environment2, parseTree, importManager);
       const v = parseNodeVersion_1(`v${version3}`);
       const initial = {
         version: [v.major, v.minor, v.patch],
@@ -12493,7 +12493,7 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
         ParseTree: parseTree,
         ImportManager: importManager,
         render,
-        parse: parse3,
+        parse: parse2,
         LessError,
         transformTree,
         utils,
@@ -15811,34 +15811,34 @@ var require_util = __commonJS({
     }
     exports2.urlParse = urlParse;
     function urlGenerate(aParsedUrl) {
-      var url2 = "";
+      var url = "";
       if (aParsedUrl.scheme) {
-        url2 += aParsedUrl.scheme + ":";
+        url += aParsedUrl.scheme + ":";
       }
-      url2 += "//";
+      url += "//";
       if (aParsedUrl.auth) {
-        url2 += aParsedUrl.auth + "@";
+        url += aParsedUrl.auth + "@";
       }
       if (aParsedUrl.host) {
-        url2 += aParsedUrl.host;
+        url += aParsedUrl.host;
       }
       if (aParsedUrl.port) {
-        url2 += ":" + aParsedUrl.port;
+        url += ":" + aParsedUrl.port;
       }
       if (aParsedUrl.path) {
-        url2 += aParsedUrl.path;
+        url += aParsedUrl.path;
       }
-      return url2;
+      return url;
     }
     exports2.urlGenerate = urlGenerate;
     function normalize(aPath) {
       var path5 = aPath;
-      var url2 = urlParse(aPath);
-      if (url2) {
-        if (!url2.path) {
+      var url = urlParse(aPath);
+      if (url) {
+        if (!url.path) {
           return aPath;
         }
-        path5 = url2.path;
+        path5 = url.path;
       }
       var isAbsolute2 = exports2.isAbsolute(path5);
       var parts = path5.split(/\/+/);
@@ -15862,9 +15862,9 @@ var require_util = __commonJS({
       if (path5 === "") {
         path5 = isAbsolute2 ? "/" : ".";
       }
-      if (url2) {
-        url2.path = path5;
-        return urlGenerate(url2);
+      if (url) {
+        url.path = path5;
+        return urlGenerate(url);
       }
       return path5;
     }
@@ -16942,13 +16942,13 @@ var require_source_map_consumer = __commonJS({
       if (this.sourceRoot != null) {
         relativeSource = util.relative(this.sourceRoot, relativeSource);
       }
-      var url2;
-      if (this.sourceRoot != null && (url2 = util.urlParse(this.sourceRoot))) {
+      var url;
+      if (this.sourceRoot != null && (url = util.urlParse(this.sourceRoot))) {
         var fileUriAbsPath = relativeSource.replace(/^file:\/\//, "");
-        if (url2.scheme == "file" && this._sources.has(fileUriAbsPath)) {
+        if (url.scheme == "file" && this._sources.has(fileUriAbsPath)) {
           return this.sourcesContent[this._sources.indexOf(fileUriAbsPath)];
         }
-        if ((!url2.path || url2.path == "/") && this._sources.has("/" + relativeSource)) {
+        if ((!url.path || url.path == "/") && this._sources.has("/" + relativeSource)) {
           return this.sourcesContent[this._sources.indexOf("/" + relativeSource)];
         }
       }
@@ -19539,8 +19539,8 @@ var require_container = __commonJS({
       Container2.prototype.normalize = function normalize(nodes, sample) {
         var _this2 = this;
         if (typeof nodes === "string") {
-          var parse3 = require_parse();
-          nodes = cleanSource(parse3(nodes).nodes);
+          var parse2 = require_parse();
+          nodes = cleanSource(parse2(nodes).nodes);
         } else if (Array.isArray(nodes)) {
           nodes = nodes.slice(0);
           for (var _iterator9 = nodes, _isArray9 = Array.isArray(_iterator9), _i9 = 0, _iterator9 = _isArray9 ? _iterator9 : _iterator9[Symbol.iterator](); ; ) {
@@ -19760,7 +19760,7 @@ var require_parser = __commonJS({
       Parser2.prototype.createTokenizer = function createTokenizer() {
         this.tokenizer = (0, _tokenize2.default)(this.input);
       };
-      Parser2.prototype.parse = function parse3() {
+      Parser2.prototype.parse = function parse2() {
         var token = void 0;
         while (!this.tokenizer.endOfFile()) {
           token = this.tokenizer.nextToken();
@@ -20189,7 +20189,7 @@ var require_parse = __commonJS({
   "node_modules/postcss/lib/parse.js"(exports2, module2) {
     "use strict";
     exports2.__esModule = true;
-    exports2.default = parse3;
+    exports2.default = parse2;
     var _parser = require_parser();
     var _parser2 = _interopRequireDefault(_parser);
     var _input = require_input();
@@ -20197,7 +20197,7 @@ var require_parse = __commonJS({
     function _interopRequireDefault(obj) {
       return obj && obj.__esModule ? obj : { default: obj };
     }
-    function parse3(css, opts) {
+    function parse2(css, opts) {
       if (opts && opts.safe) {
         throw new Error('Option safe was removed. Use parser: require("postcss-safe-parser")');
       }
@@ -24730,7 +24730,7 @@ var require_browsers3 = __commonJS({
         this.browserslistOpts = browserslistOpts || {};
         this.selected = this.parse(requirements);
       }
-      Browsers2.prototype.parse = function parse3(requirements) {
+      Browsers2.prototype.parse = function parse2(requirements) {
         var opts = {};
         for (var i in this.browserslistOpts) {
           opts[i] = this.browserslistOpts[i];
@@ -25570,12 +25570,12 @@ var require_unit = __commonJS({
 // node_modules/postcss-value-parser/lib/index.js
 var require_lib = __commonJS({
   "node_modules/postcss-value-parser/lib/index.js"(exports2, module2) {
-    var parse3 = require_parse2();
+    var parse2 = require_parse2();
     var walk = require_walk();
     var stringify = require_stringify2();
     function ValueParser(value) {
       if (this instanceof ValueParser) {
-        this.nodes = parse3(value);
+        this.nodes = parse2(value);
         return this;
       }
       return new ValueParser(value);
@@ -25762,7 +25762,7 @@ var require_transition = __commonJS({
         }
         decl.value = value;
       };
-      Transition2.prototype.parse = function parse3(value) {
+      Transition2.prototype.parse = function parse2(value) {
         var ast = parser(value);
         var result = [];
         var param = [];
@@ -26480,7 +26480,7 @@ var require_brackets = __commonJS({
       /**
        * Parse string to nodes tree
        */
-      parse: function parse3(str) {
+      parse: function parse2(str) {
         var current = [""];
         var stack = [current];
         for (var i = 0; i < str.length; i++) {
@@ -26581,7 +26581,7 @@ var require_supports = __commonJS({
         this.prefixerCache = new this.Prefixes(this.all.data, browsers, this.all.options);
         return this.prefixerCache;
       };
-      Supports2.prototype.parse = function parse3(str) {
+      Supports2.prototype.parse = function parse2(str) {
         var _str$split = str.split(":"), prop = _str$split[0], value = _str$split[1];
         if (!value) value = "";
         return [prop.trim(), value.trim()];
@@ -27823,7 +27823,7 @@ var require_grid_utils = __commonJS({
       }
       return [false, false];
     }
-    function parse3(decl) {
+    function parse2(decl) {
       var node = parser(decl.value);
       var values = [];
       var current = 0;
@@ -28086,7 +28086,7 @@ var require_grid_utils = __commonJS({
       }
     }
     module2.exports = {
-      parse: parse3,
+      parse: parse2,
       translate,
       parseTemplate,
       parseGridAreas,
@@ -32792,25 +32792,25 @@ var require_source_map_umd = __commonJS({
       }
       function parseUrl(input) {
         if (isSchemeRelativeUrl(input)) {
-          const url3 = parseAbsoluteUrl("http:" + input);
-          url3.scheme = "";
-          return url3;
+          const url2 = parseAbsoluteUrl("http:" + input);
+          url2.scheme = "";
+          return url2;
         }
         if (isAbsolutePath(input)) {
-          const url3 = parseAbsoluteUrl("http://foo.com" + input);
-          url3.scheme = "";
-          url3.host = "";
-          return url3;
+          const url2 = parseAbsoluteUrl("http://foo.com" + input);
+          url2.scheme = "";
+          url2.host = "";
+          return url2;
         }
         if (isFileUrl(input))
           return parseFileUrl(input);
         if (isAbsoluteUrl(input))
           return parseAbsoluteUrl(input);
-        const url2 = parseAbsoluteUrl("http://foo.com/" + input);
-        url2.scheme = "";
-        url2.host = "";
-        url2.relativePath = true;
-        return url2;
+        const url = parseAbsoluteUrl("http://foo.com/" + input);
+        url.scheme = "";
+        url.host = "";
+        url.relativePath = true;
+        return url;
       }
       function stripPathFilename(path5) {
         if (path5.endsWith("/.."))
@@ -32818,20 +32818,20 @@ var require_source_map_umd = __commonJS({
         const index = path5.lastIndexOf("/");
         return path5.slice(0, index + 1);
       }
-      function mergePaths(url2, base) {
-        if (!url2.relativePath)
+      function mergePaths(url, base) {
+        if (!url.relativePath)
           return;
         normalizePath(base);
-        if (url2.path === "/") {
-          url2.path = base.path;
+        if (url.path === "/") {
+          url.path = base.path;
         } else {
-          url2.path = stripPathFilename(base.path) + url2.path;
+          url.path = stripPathFilename(base.path) + url.path;
         }
-        url2.relativePath = base.relativePath;
+        url.relativePath = base.relativePath;
       }
-      function normalizePath(url2) {
-        const { relativePath } = url2;
-        const pieces = url2.path.split("/");
+      function normalizePath(url) {
+        const { relativePath } = url;
+        const pieces = url.path.split("/");
         let pointer = 1;
         let positive = 0;
         let addTrailingSlash = false;
@@ -32864,33 +32864,33 @@ var require_source_map_umd = __commonJS({
         if (!path5 || addTrailingSlash && !path5.endsWith("/..")) {
           path5 += "/";
         }
-        url2.path = path5;
+        url.path = path5;
       }
       function resolve$1(input, base) {
         if (!input && !base)
           return "";
-        const url2 = parseUrl(input);
-        if (base && !url2.scheme) {
+        const url = parseUrl(input);
+        if (base && !url.scheme) {
           const baseUrl = parseUrl(base);
-          url2.scheme = baseUrl.scheme;
-          if (!url2.host) {
-            url2.user = baseUrl.user;
-            url2.host = baseUrl.host;
-            url2.port = baseUrl.port;
+          url.scheme = baseUrl.scheme;
+          if (!url.host) {
+            url.user = baseUrl.user;
+            url.host = baseUrl.host;
+            url.port = baseUrl.port;
           }
-          mergePaths(url2, baseUrl);
+          mergePaths(url, baseUrl);
         }
-        normalizePath(url2);
-        if (url2.relativePath) {
-          const path5 = url2.path.slice(1);
+        normalizePath(url);
+        if (url.relativePath) {
+          const path5 = url.path.slice(1);
           if (!path5)
             return ".";
           const keepRelative = (base || input).startsWith(".");
           return !keepRelative || path5.startsWith(".") ? path5 : "./" + path5;
         }
-        if (!url2.scheme && !url2.host)
-          return url2.path;
-        return `${url2.scheme}//${url2.user}${url2.host}${url2.port}${url2.path}`;
+        if (!url.scheme && !url.host)
+          return url.path;
+        return `${url.scheme}//${url.user}${url.host}${url.port}${url.path}`;
       }
       function resolve3(input, base) {
         if (base && !base.endsWith("/"))
@@ -33831,7 +33831,7 @@ var require_acorn = __commonJS({
         this.privateNameStack = [];
       };
       var prototypeAccessors = { inFunction: { configurable: true }, inGenerator: { configurable: true }, inAsync: { configurable: true }, canAwait: { configurable: true }, allowReturn: { configurable: true }, allowSuper: { configurable: true }, allowDirectSuper: { configurable: true }, treatFunctionsAsVar: { configurable: true }, allowNewDotTarget: { configurable: true }, allowUsing: { configurable: true }, inClassStaticBlock: { configurable: true } };
-      Parser.prototype.parse = function parse4() {
+      Parser.prototype.parse = function parse3() {
         var this$1$1 = this;
         var node = this.options.program || this.startNode();
         this.nextToken();
@@ -33914,7 +33914,7 @@ var require_acorn = __commonJS({
         }
         return cls;
       };
-      Parser.parse = function parse4(input, options) {
+      Parser.parse = function parse3(input, options) {
         return new this(options, input).parse();
       };
       Parser.parseExpressionAt = function parseExpressionAt2(input, pos, options) {
@@ -39049,7 +39049,7 @@ var require_acorn = __commonJS({
         lineBreakG,
         nonASCIIwhitespace
       };
-      function parse3(input, options) {
+      function parse2(input, options) {
         return Parser.parse(input, options);
       }
       function parseExpressionAt(input, pos, options) {
@@ -39074,7 +39074,7 @@ var require_acorn = __commonJS({
       exports3.lineBreak = lineBreak;
       exports3.lineBreakG = lineBreakG;
       exports3.nonASCIIwhitespace = nonASCIIwhitespace;
-      exports3.parse = parse3;
+      exports3.parse = parse2;
       exports3.parseExpressionAt = parseExpressionAt;
       exports3.tokContexts = types2;
       exports3.tokTypes = types$1;
@@ -40211,7 +40211,7 @@ var require_bundle_min = __commonJS({
         {}
       );
       var ATOMIC_START_TOKEN = makePredicate(["atom", "num", "big_int", "string", "regexp", "name"]);
-      function parse3($TEXT, options) {
+      function parse2($TEXT, options) {
         const outer_comments_before_counts = /* @__PURE__ */ new WeakMap();
         options = defaults(options, {
           bare_returns: false,
@@ -43424,7 +43424,7 @@ var require_bundle_min = __commonJS({
         wrap_commonjs: function(name) {
           var body = this.body;
           var wrapped_tl = "(function(exports){'$ORIG';})(typeof " + name + "=='undefined'?(" + name + "={}):" + name + ");";
-          wrapped_tl = parse3(wrapped_tl);
+          wrapped_tl = parse2(wrapped_tl);
           wrapped_tl = wrapped_tl.transform(new TreeTransformer(function(node) {
             if (node instanceof AST_Directive && node.value == "$ORIG") {
               return MAP.splice(body);
@@ -43437,7 +43437,7 @@ var require_bundle_min = __commonJS({
           var index = args_values.indexOf(":");
           if (index < 0) index = args_values.length;
           var body = this.body;
-          return parse3([
+          return parse2([
             "(function(",
             args_values.slice(0, index),
             '){"$ORIG"})(',
@@ -55741,7 +55741,7 @@ var require_bundle_min = __commonJS({
           var global_defs = this.options["global_defs"];
           if (typeof global_defs == "object") for (var key in global_defs) {
             if (key[0] === "@" && HOP(global_defs, key)) {
-              global_defs[key.slice(1)] = parse3(global_defs[key], {
+              global_defs[key.slice(1)] = parse2(global_defs[key], {
                 expression: true
               });
             }
@@ -57153,7 +57153,7 @@ var require_bundle_min = __commonJS({
               var code = "n(function(" + self2.args.slice(0, -1).map(function(arg2) {
                 return arg2.value;
               }).join(",") + "){" + self2.args[self2.args.length - 1].value + "})";
-              var ast = parse3(code);
+              var ast = parse2(code);
               var mangle = compressor.mangle_options();
               ast.figure_out_scope(mangle);
               var comp = new Compressor(compressor.options, {
@@ -68510,7 +68510,7 @@ var require_bundle_min = __commonJS({
             delete options.parse.spidermonkey;
             for (var name in files) if (HOP(files, name)) {
               options.parse.filename = name;
-              options.parse.toplevel = parse3(files[name], options.parse);
+              options.parse.toplevel = parse2(files[name], options.parse);
               if (options.sourceMap && options.sourceMap.content == "inline") {
                 if (Object.keys(files).length > 1)
                   throw new Error("inline source map only works with singular input");
@@ -69004,7 +69004,7 @@ var require_bundle_min = __commonJS({
           return function(value, options2) {
             options2 = options2 || {};
             try {
-              walk(parse3(value, { expression: true }), (node) => {
+              walk(parse2(value, { expression: true }), (node) => {
                 if (node instanceof AST_Assign) {
                   var name = node.left.print_to_string();
                   var value2 = node.right;
@@ -70175,25 +70175,29 @@ var http2 = __toESM(require("http"));
 var https = __toESM(require("https"));
 var net = __toESM(require("net"));
 var tls = __toESM(require("tls"));
-var url = __toESM(require("url"));
 function parseProxy(list = []) {
   return list.map((item) => {
     const i = item.indexOf("=");
     if (i <= 0) {
       throw new Error("\u4EE3\u7406\u53C2\u6570\u683C\u5F0F\u9519\u8BEF: " + item + " , \u5E94\u4E3A /\u524D\u7F00=http(s)://\u76EE\u6807\u5730\u5740");
     }
-    const target = url.parse(item.slice(i + 1));
-    if (!target.hostname || !/^https?:$/.test(target.protocol || "")) {
+    let target;
+    try {
+      target = new URL(item.slice(i + 1));
+    } catch (_e) {
       throw new Error("\u4EE3\u7406\u76EE\u6807\u5730\u5740\u65E0\u6548: " + item.slice(i + 1));
+    }
+    if (target.protocol != "http:" && target.protocol != "https:") {
+      throw new Error("\u4EE3\u7406\u76EE\u6807\u5730\u5740\u65E0\u6548: " + item.slice(i + 1) + " , \u4EC5\u652F\u6301 http/https");
     }
     return {
       prefix: item.slice(0, i).startsWith("/") ? item.slice(0, i) : "/" + item.slice(0, i),
-      href: target.href || "",
+      href: target.href,
       protocol: target.protocol,
       hostname: target.hostname,
-      port: Number(target.port) || (target.protocol == "https:" ? 443 : 80),
-      host: target.host || target.hostname,
-      base: (target.path || "/").replace(/\/$/, "")
+      port: target.port ? Number(target.port) : target.protocol == "https:" ? 443 : 80,
+      host: target.host,
+      base: target.pathname.replace(/\/$/, "")
     };
   });
 }
