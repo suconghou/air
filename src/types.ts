@@ -45,5 +45,4 @@ export interface cliArgs {
 	clean?: boolean;
 	dry?: boolean;
 	cors?: boolean;
-	help?: boolean;
 }

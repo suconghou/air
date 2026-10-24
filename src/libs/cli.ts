@@ -16,7 +16,6 @@ function getParams(args: Array<string>): cliArgs {
 		'--clean': 'clean',
 		'--dry': 'dry',
 		'--cors': 'cors',
-		'--help': 'help',
 	};
 	// 这些旗标需要取值且可重复出现, 收集为数组
 	const multi: Record<string, boolean> = { proxy: true };

@@ -2,7 +2,7 @@ import * as net from 'net';
 import * as fs from 'fs';
 import nodeserve, { cors } from '../nodeserve/index';
 import file from '../nodeserve/lib/file';
-import compress from './compress';
+import compress, { renderArgs } from './compress';
 import ssi from './ssi';
 import util from './util';
 import { parseProxy, matchProxy, forward, proxyUpgrade, localPath, proxyRule } from './proxy';
@@ -12,6 +12,8 @@ import { requestctx, responsectx } from '../nodeserve/types';
 export default class server {
 	private app: nodeserve;
 	private proxies: Array<proxyRule>;
+	// nodeserve 的中间件默认 5s 超时, 代理与路径校验不受此限制
+	private readonly unlimited = 2147483647;
 
 	constructor(
 		private args: serverArgs,
@@ -59,7 +61,7 @@ export default class server {
 				next();
 			},
 			null,
-			2147483647
+			this.unlimited
 		);
 		if (this.cliargs.cors) {
 			this.app.use(cors);
@@ -87,16 +89,21 @@ export default class server {
 					stop();
 				},
 				null,
-				2147483647
+				this.unlimited
 			);
 		}
 		if (this.cliargs.dry) {
 			return;
 		}
+		// 请求参数优先, 其次命令行 -q/-m, 最后 static.json
+		const render = (query: URLSearchParams): renderArgs => ({
+			urlArgs: query.get('urlArgs') || this.cliargs.query,
+			modifyVars: query.get('modifyVars') || this.cliargs.modifyVars,
+		});
 		this.app.add(
 			/^[\w\-/.]+\.css$/,
 			async (req: requestctx, res: responsectx, pathname: string, query: URLSearchParams) => {
-				const ret = await new compress(this.args.staticCfg, pathname, query).less();
+				const ret = await new compress(this.args.staticCfg, pathname, render(query)).less();
 				res.setHeader('Cache-Control', ret.hit ? 'max-age=5' : 'max-age=1');
 				res.send(ret.ret.css, 'text/css');
 			},
@@ -105,23 +112,21 @@ export default class server {
 		this.app.add(
 			/^[\w\-/.]+\.js$/,
 			async (req: requestctx, res: responsectx, pathname: string, query: URLSearchParams) => {
-				const ret = await new compress(this.args.staticCfg, pathname, query).Js();
+				const ret = await new compress(this.args.staticCfg, pathname, render(query)).Js();
 				res.setHeader('Cache-Control', ret.hit ? 'max-age=5' : 'max-age=1');
 				res.send(ret.ret.js, 'text/javascript');
 			},
 			['GET', 'HEAD']
 		);
-		const tpl = async (req: requestctx, res: responsectx, pathname: string, query: URLSearchParams) => {
+		const tpl = async (res: responsectx, pathname: string) => {
 			res.send(await new ssi(this.cwd, pathname).html());
 		};
-		this.app.add(/^[\w\-/.]+\.html$/, tpl, ['GET', 'HEAD']);
 		this.app.add(
-			/^\/$/,
-			(req: requestctx, res: responsectx, pathname: string, query: URLSearchParams) => {
-				return tpl(req, res, '/index.html', query);
-			},
+			/^[\w\-/.]+\.html$/,
+			(req: requestctx, res: responsectx, pathname: string) => tpl(res, pathname),
 			['GET', 'HEAD']
 		);
+		this.app.add(/^\/$/, (req: requestctx, res: responsectx) => tpl(res, '/index.html'), ['GET', 'HEAD']);
 	}
 
 	private watch() {

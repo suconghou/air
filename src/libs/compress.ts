@@ -4,22 +4,8 @@ import util, { fsWriteFile, fsReadFile, fsAccess } from './util';
 import * as path from 'path';
 import { staticOpts, cliArgs, lessopts, jsopts } from '../types';
 
-// serve 模式拿到的是 URLSearchParams, 命令行传入的是普通对象, 两种都要能取值
-type queryInput = URLSearchParams | Record<string, unknown>;
-
-function readQuery(query: queryInput | undefined, key: string): string {
-	if (!query) {
-		return '';
-	}
-	if (query instanceof URLSearchParams) {
-		return query.get(key) || '';
-	}
-	const value = (query as Record<string, unknown>)[key];
-	if (Array.isArray(value)) {
-		return value.length > 0 ? String(value[0]) : '';
-	}
-	return value == null ? '' : String(value);
-}
+// 渲染参数: serve 由请求参数合并命令行 -q/-m 得到, compress 直接由命令行构造
+export type renderArgs = { urlArgs?: string; modifyVars?: string };
 
 function parseVars(str: string): Record<string, string> {
 	return querystring.parse(str) as Record<string, string>;
@@ -48,17 +34,15 @@ export default class {
 	constructor(
 		private opts: staticOpts,
 		private pathname: string,
-		private query: queryInput
+		render: renderArgs = {}
 	) {
 		const lessOptions = opts.opts.lessOptions || {};
-		const qUrlArgs = readQuery(query, 'urlArgs');
-		const qModifyVars = readQuery(query, 'modifyVars');
-		this.options.urlArgs = qUrlArgs || process.env.URLARGS || lessOptions.urlArgs || '';
+		this.options.urlArgs = render.urlArgs || process.env.URLARGS || lessOptions.urlArgs || '';
 		this.options.globalVars = process.env.GLOBALVARS
 			? parseVars(process.env.GLOBALVARS)
 			: lessOptions.globalVars || {};
-		this.options.modifyVars = qModifyVars
-			? parseVars(qModifyVars)
+		this.options.modifyVars = render.modifyVars
+			? parseVars(render.modifyVars)
 			: process.env.MODIFYVARS
 			? parseVars(process.env.MODIFYVARS)
 			: lessOptions.modifyVars || {};
@@ -140,7 +124,8 @@ export default class {
 
 		const r = await this.compileLess(files);
 		const deps = Array.from(new Set(files.concat(r.deps)));
-		const time = await util.getUpdateTime(deps);
+		// 编译期间文件被编辑器替换/删除时不要 500, 记 0 让下次请求重新编译
+		const time = await util.getUpdateTime(deps).catch(() => 0);
 		const res = { css: r.css, time, vars, files: filesKey, deps };
 		cacheSet(this.pathname, res);
 
@@ -166,14 +151,20 @@ export default class {
 			return { ret, hit: true };
 		}
 		const js = await this.compileJs(files);
-		const time = await util.getUpdateTime(files);
+		const time = await util.getUpdateTime(files).catch(() => 0);
 		const res = { js, time, files: filesKey, deps: files };
 		cacheSet(this.pathname, res);
 		return { ret: res, hit: false };
 	}
 
 	private varsKey() {
-		return JSON.stringify([this.options.urlArgs, this.options.globalVars, this.options.modifyVars]);
+		// 影响 less 产物的全部渲染参数, 含配置热更新可变的 math
+		return JSON.stringify([
+			this.options.urlArgs,
+			this.options.globalVars,
+			this.options.modifyVars,
+			this.options.math,
+		]);
 	}
 
 	private async compileLess(files: Array<string>) {

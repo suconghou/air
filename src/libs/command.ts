@@ -13,7 +13,7 @@ export default class {
 	 * air compress -d path/to/static     按 static.json 批量产出
 	 */
 	static async compress(args: Array<string>, cwd: string, opts: cliArgs) {
-		const fakequery = { urlArgs: opts.query, modifyVars: opts.modifyVars };
+		const render = { urlArgs: opts.query, modifyVars: opts.modifyVars };
 		const less: Array<string> = [];
 		const js: Array<string> = [];
 		args.forEach((item) => {
@@ -27,13 +27,13 @@ export default class {
 			}
 		});
 		if (less.length > 0 || js.length > 0) {
-			return await new compress(emptyCfg(), '', fakequery).compressLessOrJs(opts, less, js);
+			return await new compress(emptyCfg(), '', render).compressLessOrJs(opts, less, js);
 		}
 		const { json, fpath, dirname } = await util.getConfig(cwd);
 		if (!fpath) {
 			console.log('未找到配置文件 static.json');
 			return;
 		}
-		await new compress({ dirname, fpath, opts: json }, '', fakequery).compress(opts);
+		await new compress({ dirname, fpath, opts: json }, '', render).compress(opts);
 	}
 }
