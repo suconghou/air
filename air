@@ -70212,11 +70212,16 @@ var ssi_default = class {
       return util_default.resolveIn(root, target);
     }
     const direct = path4.resolve(dir, target);
-    const local = direct === root || direct.startsWith(root + path4.sep) ? direct : util_default.resolveIn(root, target);
+    if (direct !== root && !direct.startsWith(root + path4.sep)) {
+      throw new Error("403 forbidden");
+    }
     try {
-      await fsAccess(local, fs5.constants.R_OK);
-      return local;
+      await fsAccess(direct, fs5.constants.R_OK);
+      return direct;
     } catch (_e) {
+      if (/(^|[/\\])\.\.($|[/\\])/.test(target)) {
+        return direct;
+      }
       return util_default.resolveIn(root, target);
     }
   }
