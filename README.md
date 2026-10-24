@@ -70,16 +70,25 @@ SSI 语法：`<!--# include file="inc/header.html" -->`，嵌套上限 6 层。
 
 # 反向代理
 
-前端与接口同域，`--proxy /前缀=http(s)://目标地址`，可多次指定挂载不同前缀：
+`--proxy /前缀=目标`，可多次指定挂载不同前缀。目标有两种：
+
+**http(s) 地址**——转发到远端，前端与接口同域：
 
 ```bash
 air serve --proxy /api=http://localhost:3000 --proxy /wx=https://api.example.com
 ```
 
-- 匹配规则：前缀整段匹配（`/api` 命中 `/api/users`，不命中 `/api2`），目标地址可带基础路径
-- 请求路径原样透传（与 vite/webpack 代理默认行为一致），POST body 流式转发
-- Host 改写为目标地址，支持 websocket upgrade 透传
-- 上游不可达时返回 502 与错误说明
+**本地目录**（相对工作目录或绝对路径）——按前缀映射本地文件，适合 mock 数据或挂载静态目录：
+
+```bash
+air serve --proxy /api=./mock
+```
+
+`/api/user.json` 将返回 `./mock/user.json`；目录请求返回其中 `index.html`。
+
+- 匹配规则：前缀整段匹配（`/api` 命中 `/api/users`，不命中 `/api2`）
+- http 目标：路径原样透传（与 vite/webpack 代理默认行为一致），POST body 流式转发，Host 改写为目标，支持 websocket upgrade 透传，上游不可达返回 502
+- 本地目录：mime/304/range/路径穿越防护与静态服务一致，GET/POST 均返回文件
 
 # 0.8.0 破坏性变更
 
