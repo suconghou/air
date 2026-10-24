@@ -67,7 +67,7 @@ export default class {
 	}
 
 	// 解析优先级, 配置文件>连字符>静态文件
-	async resolveJs(): Promise<Array<string>> {
+	private async resolveJs(): Promise<Array<string>> {
 		const pathname = this.pathname.replace(/\.js$/, '').replace(/^\//, '');
 		const js = Object.keys(this.opts.opts.static.js || {});
 		const curr = this.opts.dirname ? pathname.replace(/.*static\//, '') : pathname;

@@ -79,9 +79,11 @@ css/js 合并规则: 配置文件优先;其次连字符拆分(`a-b.css` → `a.l
 src/index.ts            入口
 src/libs/cli.ts         参数解析与命令分发
 src/libs/command.ts     子命令 (compress)
-src/libs/server.ts      路由与配置热更新
+src/libs/server.ts      路由/热更新/反代接线
 src/libs/compress.ts    less/js 编译 (less + less-plugin-autoprefix + terser)
+src/libs/proxy.ts       反向代理与本地目录挂载
 src/libs/ssi.ts         SSI 解析
+src/libs/util.ts        配置加载与文件工具
 src/nodeserve           HTTP 框架 (软链至本机 nodeserve 仓库, github.com/suconghou/nodeserve)
 ```
 

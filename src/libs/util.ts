@@ -7,10 +7,10 @@ const fsAccess = promisify(fs.access);
 const fsWriteFile = promisify(fs.writeFile);
 const fsReadFile = promisify(fs.readFile);
 
-export { fsStat, fsAccess, fsWriteFile, fsReadFile };
+export { fsAccess, fsWriteFile, fsReadFile };
 
 export default class {
-	public static resolveLookupPaths(dir: string, file: string): Array<string> {
+	private static resolveLookupPaths(dir: string, file: string): Array<string> {
 		const arr: Array<string> = [];
 		const tmp: Array<string> = [];
 		dir.split(path.sep).forEach((item) => {
@@ -24,7 +24,7 @@ export default class {
 		return arr.reverse();
 	}
 
-	public static async tryFiles(paths: Array<string>) {
+	private static async tryFiles(paths: Array<string>) {
 		for (const file of paths) {
 			try {
 				await fsAccess(file, fs.constants.R_OK);
