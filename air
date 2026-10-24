@@ -69916,19 +69916,6 @@ var nodeserve_default = serve_default;
 var fs4 = __toESM(require("fs"));
 var querystring = __toESM(require("querystring"));
 var path3 = __toESM(require("path"));
-function readQuery(query, key) {
-  if (!query) {
-    return "";
-  }
-  if (query instanceof URLSearchParams) {
-    return query.get(key) || "";
-  }
-  const value = query[key];
-  if (Array.isArray(value)) {
-    return value.length > 0 ? String(value[0]) : "";
-  }
-  return value == null ? "" : String(value);
-}
 function parseVars(str) {
   return querystring.parse(str);
 }
@@ -69941,21 +69928,17 @@ var cacheSet = (k, v) => {
   cache.set(k, v);
 };
 var compress_default = class {
-  constructor(opts, pathname, query) {
+  constructor(opts, pathname, render = {}) {
     this.opts = opts;
     this.pathname = pathname;
-    this.query = query;
     const lessOptions = opts.opts.lessOptions || {};
-    const qUrlArgs = readQuery(query, "urlArgs");
-    const qModifyVars = readQuery(query, "modifyVars");
-    this.options.urlArgs = qUrlArgs || process.env.URLARGS || lessOptions.urlArgs || "";
+    this.options.urlArgs = render.urlArgs || process.env.URLARGS || lessOptions.urlArgs || "";
     this.options.globalVars = process.env.GLOBALVARS ? parseVars(process.env.GLOBALVARS) : lessOptions.globalVars || {};
-    this.options.modifyVars = qModifyVars ? parseVars(qModifyVars) : process.env.MODIFYVARS ? parseVars(process.env.MODIFYVARS) : lessOptions.modifyVars || {};
+    this.options.modifyVars = render.modifyVars ? parseVars(render.modifyVars) : process.env.MODIFYVARS ? parseVars(process.env.MODIFYVARS) : lessOptions.modifyVars || {};
     this.options.math = lessOptions.math;
   }
   opts;
   pathname;
-  query;
   options = {
     urlArgs: "",
     globalVars: {},
@@ -70027,7 +70010,7 @@ var compress_default = class {
     }
     const r = await this.compileLess(files);
     const deps = Array.from(new Set(files.concat(r.deps)));
-    const time = await util_default.getUpdateTime(deps);
+    const time = await util_default.getUpdateTime(deps).catch(() => 0);
     const res = { css: r.css, time, vars, files: filesKey, deps };
     cacheSet(this.pathname, res);
     return { ret: res, hit: false };
@@ -70049,13 +70032,18 @@ var compress_default = class {
       return { ret, hit: true };
     }
     const js = await this.compileJs(files);
-    const time = await util_default.getUpdateTime(files);
+    const time = await util_default.getUpdateTime(files).catch(() => 0);
     const res = { js, time, files: filesKey, deps: files };
     cacheSet(this.pathname, res);
     return { ret: res, hit: false };
   }
   varsKey() {
-    return JSON.stringify([this.options.urlArgs, this.options.globalVars, this.options.modifyVars]);
+    return JSON.stringify([
+      this.options.urlArgs,
+      this.options.globalVars,
+      this.options.modifyVars,
+      this.options.math
+    ]);
   }
   async compileLess(files) {
     const lessInput = files.map((item) => {
@@ -70353,6 +70341,8 @@ var server = class {
   cwd;
   app;
   proxies;
+  // nodeserve 的中间件默认 5s 超时, 代理与路径校验不受此限制
+  unlimited = 2147483647;
   serve() {
     this.route();
     const httpser = this.app.listen(this.args.port, this.args.host, () => {
@@ -70385,7 +70375,7 @@ var server = class {
         next();
       },
       null,
-      2147483647
+      this.unlimited
     );
     if (this.cliargs.cors) {
       this.app.use(cors);
@@ -70409,16 +70399,20 @@ var server = class {
           stop();
         },
         null,
-        2147483647
+        this.unlimited
       );
     }
     if (this.cliargs.dry) {
       return;
     }
+    const render = (query) => ({
+      urlArgs: query.get("urlArgs") || this.cliargs.query,
+      modifyVars: query.get("modifyVars") || this.cliargs.modifyVars
+    });
     this.app.add(
       /^[\w\-/.]+\.css$/,
       async (req, res, pathname, query) => {
-        const ret = await new compress_default(this.args.staticCfg, pathname, query).less();
+        const ret = await new compress_default(this.args.staticCfg, pathname, render(query)).less();
         res.setHeader("Cache-Control", ret.hit ? "max-age=5" : "max-age=1");
         res.send(ret.ret.css, "text/css");
       },
@@ -70427,23 +70421,21 @@ var server = class {
     this.app.add(
       /^[\w\-/.]+\.js$/,
       async (req, res, pathname, query) => {
-        const ret = await new compress_default(this.args.staticCfg, pathname, query).Js();
+        const ret = await new compress_default(this.args.staticCfg, pathname, render(query)).Js();
         res.setHeader("Cache-Control", ret.hit ? "max-age=5" : "max-age=1");
         res.send(ret.ret.js, "text/javascript");
       },
       ["GET", "HEAD"]
     );
-    const tpl = async (req, res, pathname, query) => {
+    const tpl = async (res, pathname) => {
       res.send(await new ssi_default(this.cwd, pathname).html());
     };
-    this.app.add(/^[\w\-/.]+\.html$/, tpl, ["GET", "HEAD"]);
     this.app.add(
-      /^\/$/,
-      (req, res, pathname, query) => {
-        return tpl(req, res, "/index.html", query);
-      },
+      /^[\w\-/.]+\.html$/,
+      (req, res, pathname) => tpl(res, pathname),
       ["GET", "HEAD"]
     );
+    this.app.add(/^\/$/, (req, res) => tpl(res, "/index.html"), ["GET", "HEAD"]);
   }
   watch() {
     const f = this.args.staticCfg.fpath;
@@ -70472,7 +70464,7 @@ var command_default = class {
    * air compress -d path/to/static     按 static.json 批量产出
    */
   static async compress(args, cwd2, opts) {
-    const fakequery = { urlArgs: opts.query, modifyVars: opts.modifyVars };
+    const render = { urlArgs: opts.query, modifyVars: opts.modifyVars };
     const less = [];
     const js = [];
     args.forEach((item) => {
@@ -70486,14 +70478,14 @@ var command_default = class {
       }
     });
     if (less.length > 0 || js.length > 0) {
-      return await new compress_default(emptyCfg(), "", fakequery).compressLessOrJs(opts, less, js);
+      return await new compress_default(emptyCfg(), "", render).compressLessOrJs(opts, less, js);
     }
     const { json, fpath, dirname: dirname3 } = await util_default.getConfig(cwd2);
     if (!fpath) {
       console.log("\u672A\u627E\u5230\u914D\u7F6E\u6587\u4EF6 static.json");
       return;
     }
-    await new compress_default({ dirname: dirname3, fpath, opts: json }, "", fakequery).compress(opts);
+    await new compress_default({ dirname: dirname3, fpath, opts: json }, "", render).compress(opts);
   }
 };
 
@@ -70531,8 +70523,7 @@ function getParams(args) {
     "--debug": "debug",
     "--clean": "clean",
     "--dry": "dry",
-    "--cors": "cors",
-    "--help": "help"
+    "--cors": "cors"
   };
   const multi = { proxy: true };
   const ret = {};
