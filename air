@@ -4744,7 +4744,7 @@ ${error}`;
         }
         const tabRuleStr = context.compress ? "" : Array(context.tabLevel + 1).join("  ");
         const tabSetStr = context.compress ? "" : Array(context.tabLevel).join("  ");
-        let sep3;
+        let sep4;
         let charsetNodeIndex = 0;
         let importNodeIndex = 0;
         for (i = 0; rule = /** @type {Node[]} */
@@ -4788,7 +4788,7 @@ ${error}`;
           );
           const pathCnt = paths.length;
           let pathSubCnt;
-          sep3 = context.compress ? "," : `,
+          sep4 = context.compress ? "," : `,
 ${tabSetStr}`;
           for (i = 0; i < pathCnt; i++) {
             path7 = paths[i];
@@ -4796,7 +4796,7 @@ ${tabSetStr}`;
               continue;
             }
             if (i > 0) {
-              output.add(sep3);
+              output.add(sep4);
             }
             context.firstSelector = true;
             path7[0].genCSS(context, output);
@@ -12356,12 +12356,12 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
         }
         if (!callback) {
           const self2 = this;
-          return new Promise(function(resolve4, reject) {
+          return new Promise(function(resolve5, reject) {
             parse2.call(self2, input, options, function(err, output) {
               if (err) {
                 reject(err);
               } else {
-                resolve4(output);
+                resolve5(output);
               }
             });
           });
@@ -12424,12 +12424,12 @@ ${Array(context.tabLevel).join("  ")}`, tabRuleStr = `${tabSetStr}  `;
         }
         if (!callback) {
           const self2 = this;
-          return new Promise(function(resolve4, reject) {
+          return new Promise(function(resolve5, reject) {
             render.call(self2, input, options, function(err, output) {
               if (err) {
                 reject(err);
               } else {
-                resolve4(output);
+                resolve5(output);
               }
             });
           });
@@ -13337,7 +13337,7 @@ var require_browserslist = __commonJS({
     function unknownQuery(query) {
       return new BrowserslistError("Unknown browser query `" + query + "`");
     }
-    function resolve4(queries, context) {
+    function resolve5(queries, context) {
       return queries.reduce(function(result, selection, index) {
         selection = selection.trim();
         if (selection === "") return result;
@@ -13402,7 +13402,7 @@ var require_browserslist = __commonJS({
           fillUsage(context.customUsage, browser, stats[browser]);
         }
       }
-      var result = resolve4(queries, context).map(function(i) {
+      var result = resolve5(queries, context).map(function(i) {
         var parts = i.split(" ");
         var name = parts[0];
         var version2 = parts[1];
@@ -13836,7 +13836,7 @@ var require_browserslist = __commonJS({
       {
         regexp: /^extends (.+)$/i,
         select: function(context, name) {
-          return resolve4(env.loadQueries(context, name), context);
+          return resolve5(env.loadQueries(context, name), context);
         }
       },
       {
@@ -13849,7 +13849,7 @@ var require_browserslist = __commonJS({
         regexp: /^dead$/i,
         select: function(context) {
           var dead = ["ie <= 10", "ie_mob <= 10", "bb <= 10", "op_mob <= 12.1"];
-          return resolve4(dead, context);
+          return resolve5(dead, context);
         }
       },
       {
@@ -15840,7 +15840,7 @@ var require_util = __commonJS({
         }
         path6 = url.path;
       }
-      var isAbsolute2 = exports2.isAbsolute(path6);
+      var isAbsolute = exports2.isAbsolute(path6);
       var parts = path6.split(/\/+/);
       for (var part, up = 0, i = parts.length - 1; i >= 0; i--) {
         part = parts[i];
@@ -15860,7 +15860,7 @@ var require_util = __commonJS({
       }
       path6 = parts.join("/");
       if (path6 === "") {
-        path6 = isAbsolute2 ? "/" : ".";
+        path6 = isAbsolute ? "/" : ".";
       }
       if (url) {
         url.path = path6;
@@ -15869,7 +15869,7 @@ var require_util = __commonJS({
       return path6;
     }
     exports2.normalize = normalize;
-    function join5(aRoot, aPath) {
+    function join4(aRoot, aPath) {
       if (aRoot === "") {
         aRoot = ".";
       }
@@ -15901,7 +15901,7 @@ var require_util = __commonJS({
       }
       return joined;
     }
-    exports2.join = join5;
+    exports2.join = join4;
     exports2.isAbsolute = function(aPath) {
       return aPath.charAt(0) === "/" || urlRegexp.test(aPath);
     };
@@ -16074,7 +16074,7 @@ var require_util = __commonJS({
             parsed.path = parsed.path.substring(0, index + 1);
           }
         }
-        sourceURL = join5(urlGenerate(parsed), sourceURL);
+        sourceURL = join4(urlGenerate(parsed), sourceURL);
       }
       return normalize(sourceURL);
     }
@@ -19045,8 +19045,8 @@ var require_rule = __commonJS({
         },
         set: function set(values) {
           var match = this.selector ? this.selector.match(/,\s*/) : null;
-          var sep3 = match ? match[0] : "," + this.raw("between", "beforeOpen");
-          this.selector = values.join(sep3);
+          var sep4 = match ? match[0] : "," + this.raw("between", "beforeOpen");
+          this.selector = values.join(sep4);
         }
         /**
          * @memberof Rule#
@@ -20333,11 +20333,11 @@ var require_lazy_result = __commonJS({
           if (console && console.error) console.error(err);
         }
       };
-      LazyResult2.prototype.asyncTick = function asyncTick(resolve4, reject) {
+      LazyResult2.prototype.asyncTick = function asyncTick(resolve5, reject) {
         var _this = this;
         if (this.plugin >= this.processor.plugins.length) {
           this.processed = true;
-          return resolve4();
+          return resolve5();
         }
         try {
           var plugin = this.processor.plugins[this.plugin];
@@ -20345,14 +20345,14 @@ var require_lazy_result = __commonJS({
           this.plugin += 1;
           if (isPromise(promise)) {
             promise.then(function() {
-              _this.asyncTick(resolve4, reject);
+              _this.asyncTick(resolve5, reject);
             }).catch(function(error) {
               _this.handleError(error, plugin);
               _this.processed = true;
               reject(error);
             });
           } else {
-            this.asyncTick(resolve4, reject);
+            this.asyncTick(resolve5, reject);
           }
         } catch (error) {
           this.processed = true;
@@ -20362,21 +20362,21 @@ var require_lazy_result = __commonJS({
       LazyResult2.prototype.async = function async() {
         var _this2 = this;
         if (this.processed) {
-          return new Promise(function(resolve4, reject) {
+          return new Promise(function(resolve5, reject) {
             if (_this2.error) {
               reject(_this2.error);
             } else {
-              resolve4(_this2.stringify());
+              resolve5(_this2.stringify());
             }
           });
         }
         if (this.processing) {
           return this.processing;
         }
-        this.processing = new Promise(function(resolve4, reject) {
+        this.processing = new Promise(function(resolve5, reject) {
           if (_this2.error) return reject(_this2.error);
           _this2.plugin = 0;
-          _this2.asyncTick(resolve4, reject);
+          _this2.asyncTick(resolve5, reject);
         }).then(function() {
           _this2.processed = true;
           return _this2.stringify();
@@ -20804,9 +20804,9 @@ var require_utils = __commonJS({
         if (origin === changed) {
           return value;
         }
-        var join5 = value.match(/,\s*/);
-        join5 = join5 ? join5[0] : ", ";
-        return changed.join(join5);
+        var join4 = value.match(/,\s*/);
+        join4 = join4 ? join4[0] : ", ";
+        return changed.join(join4);
       }
     };
   }
@@ -32892,7 +32892,7 @@ var require_source_map_umd = __commonJS({
           return url.path;
         return `${url.scheme}//${url.user}${url.host}${url.port}${url.path}`;
       }
-      function resolve4(input, base) {
+      function resolve5(input, base) {
         if (base && !base.endsWith("/"))
           base += "/";
         return resolve$1(input, base);
@@ -33109,8 +33109,8 @@ var require_source_map_umd = __commonJS({
           this.sources = sources;
           this.sourcesContent = sourcesContent;
           if (sourceRoot || mapUrl) {
-            const from = resolve4(sourceRoot || "", stripFilename(mapUrl));
-            this.resolvedSources = sources.map((s) => resolve4(s || "", from));
+            const from = resolve5(sourceRoot || "", stripFilename(mapUrl));
+            this.resolvedSources = sources.map((s) => resolve5(s || "", from));
           } else {
             this.resolvedSources = sources.map((s) => s || "");
           }
@@ -68818,14 +68818,14 @@ var require_bundle_min = __commonJS({
             files[convert_path(name)] = read_file(name);
           });
         } else {
-          await new Promise((resolve4) => {
+          await new Promise((resolve5) => {
             var chunks = [];
             process.stdin.setEncoding("utf8");
             process.stdin.on("data", function(chunk) {
               chunks.push(chunk);
             }).on("end", function() {
               files = [chunks.join("")];
-              resolve4();
+              resolve5();
             });
             process.stdin.resume();
           });
@@ -69161,6 +69161,23 @@ var util_default = class {
     }
     return "";
   }
+  // 把相对路径限制在 root 内; 越界(../ 或指向外部的绝对路径)直接拒绝
+  static resolveIn(root, rel) {
+    const base = path.resolve(root);
+    const target = path.resolve(base, rel.replace(/^[/\\]+/, ""));
+    if (target !== base && !target.startsWith(base + path.sep)) {
+      throw new Error("403 forbidden");
+    }
+    return target;
+  }
+  // 文件清单的 mtime 是否仍与记录一致; 文件缺失视为已变更
+  static async sameTime(files, time) {
+    try {
+      return await this.getUpdateTime(files) === time;
+    } catch (_e) {
+      return false;
+    }
+  }
   // 补齐配置缺省字段, 防止畸形配置(如热更新写入)导致运行期取值崩溃
   static normalize(json) {
     json = json && typeof json == "object" ? json : {};
@@ -69171,11 +69188,11 @@ var util_default = class {
     return json;
   }
   static async getConfig(cwd2, name = "static.json") {
-    if (!/static\/?$/.test(cwd2)) {
+    if (path.basename(cwd2) != "static") {
       cwd2 = path.join(cwd2, "static");
     }
     const paths = this.resolveLookupPaths(cwd2, name);
-    let f = "", json = {}, fpath = "", dirname3 = "";
+    let f = "", json = this.normalize({}), fpath = "", dirname3 = "";
     f = await this.tryFiles(paths);
     if (f) {
       try {
@@ -69639,16 +69656,16 @@ var route_default = class {
     }
     const { fn, params, timeout } = m;
     req.ctx.params = params;
-    return await new Promise(async (resolve4, reject) => {
+    return await new Promise(async (resolve5, reject) => {
       const t = setTimeout(() => {
-        resolve4(false);
+        resolve5(false);
       }, timeout);
       try {
         await fn(req, res, pathname, query);
       } catch (e) {
         reject(e);
       } finally {
-        resolve4(false);
+        resolve5(false);
         clearTimeout(t);
       }
     });
@@ -69673,18 +69690,18 @@ var route_default = class {
     };
     for (let i = 0, j = m.length; i < j; i++) {
       const { handler, params, timeout } = m[i];
-      const ret = await new Promise(async (resolve4, reject) => {
+      const ret = await new Promise(async (resolve5, reject) => {
         req.ctx.params = params;
         const t = setTimeout(() => {
-          resolve4(false);
+          resolve5(false);
         }, timeout);
         const next = () => {
           clearTimeout(t);
-          resolve4(true);
+          resolve5(true);
         };
         const stop = () => {
           clearTimeout(t);
-          resolve4(false);
+          resolve5(false);
         };
         try {
           await handler(req, res, next, stop);
@@ -69728,7 +69745,7 @@ var servefns_default = class extends route_default {
   }
   body(request) {
     return async (max = 8192) => {
-      return await new Promise((resolve4, reject) => {
+      return await new Promise((resolve5, reject) => {
         const buf = [];
         let count = 0;
         request.on("error", reject).on("aborted", reject).on("data", (data) => {
@@ -69738,7 +69755,7 @@ var servefns_default = class extends route_default {
             reject("body too large");
           }
         }).on("end", () => {
-          resolve4(Buffer.concat(buf));
+          resolve5(Buffer.concat(buf));
         });
       });
     };
@@ -69847,17 +69864,17 @@ var serve_default = class extends servefns_default {
     const m = this.getAfter(req.ctx.middlewares, req.method || "GET", pathname);
     for (let i = 0, j = m.length; i < j; i++) {
       const { handler, timeout } = m[i];
-      const ret = await new Promise(async (resolve4, reject) => {
+      const ret = await new Promise(async (resolve5, reject) => {
         const t = setTimeout(() => {
-          resolve4(false);
+          resolve5(false);
         }, timeout);
         const next = () => {
           clearTimeout(t);
-          resolve4(true);
+          resolve5(true);
         };
         const stop = () => {
           clearTimeout(t);
-          resolve4(false);
+          resolve5(false);
         };
         try {
           await handler(req, res, next, stop);
@@ -69899,6 +69916,22 @@ var nodeserve_default = serve_default;
 var fs4 = __toESM(require("fs"));
 var querystring = __toESM(require("querystring"));
 var path3 = __toESM(require("path"));
+function readQuery(query, key) {
+  if (!query) {
+    return "";
+  }
+  if (query instanceof URLSearchParams) {
+    return query.get(key) || "";
+  }
+  const value = query[key];
+  if (Array.isArray(value)) {
+    return value.length > 0 ? String(value[0]) : "";
+  }
+  return value == null ? "" : String(value);
+}
+function parseVars(str) {
+  return querystring.parse(str);
+}
 var cache = /* @__PURE__ */ new Map();
 var cacheMax = 1e3;
 var cacheSet = (k, v) => {
@@ -69913,9 +69946,11 @@ var compress_default = class {
     this.pathname = pathname;
     this.query = query;
     const lessOptions = opts.opts.lessOptions || {};
-    this.options.urlArgs = query.urlArgs ? query.urlArgs.toString() : process.env.URLARGS || lessOptions.urlArgs || "";
-    this.options.globalVars = process.env.GLOBALVARS ? querystring.parse(process.env.GLOBALVARS) : lessOptions.globalVars || {};
-    this.options.modifyVars = query.modifyVars ? querystring.parse(query.modifyVars.toString()) : process.env.MODIFYVARS ? querystring.parse(process.env.MODIFYVARS) : lessOptions.modifyVars || {};
+    const qUrlArgs = readQuery(query, "urlArgs");
+    const qModifyVars = readQuery(query, "modifyVars");
+    this.options.urlArgs = qUrlArgs || process.env.URLARGS || lessOptions.urlArgs || "";
+    this.options.globalVars = process.env.GLOBALVARS ? parseVars(process.env.GLOBALVARS) : lessOptions.globalVars || {};
+    this.options.modifyVars = qModifyVars ? parseVars(qModifyVars) : process.env.MODIFYVARS ? parseVars(process.env.MODIFYVARS) : lessOptions.modifyVars || {};
     this.options.math = lessOptions.math;
   }
   opts;
@@ -69984,14 +70019,16 @@ var compress_default = class {
         hit: false
       };
     }
-    const time = await util_default.getUpdateTime(files);
     const filesKey = files.join();
+    const vars = this.varsKey();
     const ret = cache.get(this.pathname);
-    if (ret && ret.time == time && ret.urlArgs == this.options.urlArgs && ret.files == filesKey) {
+    if (ret && ret.files == filesKey && ret.vars == vars && await util_default.sameTime(ret.deps, ret.time)) {
       return { ret, hit: true };
     }
     const r = await this.compileLess(files);
-    const res = { css: r, time, urlArgs: this.options.urlArgs, files: filesKey };
+    const deps = Array.from(new Set(files.concat(r.deps)));
+    const time = await util_default.getUpdateTime(deps);
+    const res = { css: r.css, time, vars, files: filesKey, deps };
     cacheSet(this.pathname, res);
     return { ret: res, hit: false };
   }
@@ -70006,16 +70043,19 @@ var compress_default = class {
         hit: false
       };
     }
-    const time = await util_default.getUpdateTime(files);
     const filesKey = files.join();
     const ret = cache.get(this.pathname);
-    if (ret && ret.time == time && ret.files == filesKey) {
+    if (ret && ret.files == filesKey && await util_default.sameTime(ret.deps, ret.time)) {
       return { ret, hit: true };
     }
-    const r = await this.compileJs(files);
-    const res = { js: r, time, files: filesKey };
+    const js = await this.compileJs(files);
+    const time = await util_default.getUpdateTime(files);
+    const res = { js, time, files: filesKey, deps: files };
     cacheSet(this.pathname, res);
     return { ret: res, hit: false };
+  }
+  varsKey() {
+    return JSON.stringify([this.options.urlArgs, this.options.globalVars, this.options.modifyVars]);
   }
   async compileLess(files) {
     const lessInput = files.map((item) => {
@@ -70026,7 +70066,7 @@ var compress_default = class {
     const autoprefix = require_lib2();
     const option = {
       plugins: [new autoprefix({ browsers: ["last 5 versions", "ie > 9", "Firefox ESR"] })],
-      paths: this.opts.dirname,
+      paths: this.opts.dirname ? [this.opts.dirname] : [],
       urlArgs,
       globalVars,
       modifyVars,
@@ -70036,7 +70076,7 @@ var compress_default = class {
     };
     try {
       const ret = await less.render(lessInput, option);
-      return ret.css;
+      return { css: ret.css, deps: ret.imports || [] };
     } catch (e) {
       throw new Error("less \u7F16\u8BD1\u5931\u8D25 " + (e.message || e));
     }
@@ -70097,7 +70137,7 @@ var compress_default = class {
     for (const item in css) {
       const files = css[item].map((file) => path3.join(this.opts.dirname, file));
       const ret = await this.compileLess(files);
-      await fsWriteFile(path3.join(this.opts.dirname, item), ret);
+      await fsWriteFile(path3.join(this.opts.dirname, item), ret.css);
     }
     for (const item in js) {
       const files = js[item].map((file) => path3.join(this.opts.dirname, file));
@@ -70113,7 +70153,7 @@ var compress_default = class {
     if (less.length > 0) {
       const cssdst = less[0].replace(/\.less$/, ".min.css");
       const cssret = await this.compileLess(less);
-      await fsWriteFile(cssdst, cssret);
+      await fsWriteFile(cssdst, cssret.css);
     }
     if (js.length > 0) {
       const jsdst = js[0].replace(/\.js$/, ".min.js");
@@ -70136,37 +70176,49 @@ var ssi_default = class {
   cwd;
   pathname;
   async html() {
-    return await this.parseHtml(path4.join(this.cwd, this.pathname), this.cwd);
+    return await this.parseHtml(util_default.resolveIn(this.cwd, this.pathname), this.cwd);
   }
   // SSI 语法: <!--# include file="foo/bar.html" --> 嵌套层级上限 6
-  async parseHtml(mainfile, cwd2) {
-    const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.-]{3,50})"\s{1,5}-->/g;
-    const filedir = path4.dirname(mainfile);
-    let html = (await readFile3(mainfile)).toString();
-    const filesMap = {};
-    const fillContents = async (fileList) => {
-      const res = await Promise.all(
-        fileList.map((item) => readFile3(path4.join(path4.isAbsolute(item) ? cwd2 : filedir, item)))
-      );
-      res.forEach((item, i) => {
-        filesMap[fileList[i]] = item.toString();
-      });
+  async parseHtml(mainfile, root) {
+    const contents = /* @__PURE__ */ new Map();
+    const read = async (file) => {
+      if (!contents.has(file)) {
+        contents.set(file, (await readFile3(file)).toString());
+      }
+      return contents.get(file);
     };
-    for (let depth = 0; depth < 6; depth++) {
+    const render = async (file, depth) => {
+      if (depth > 6) {
+        throw new Error("include \u5D4C\u5957\u5C42\u7EA7\u8D85\u8FC7 6 \u5C42");
+      }
+      let html = await read(file);
+      const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.-]{3,50})"\s{1,5}-->/g;
       const matches = {};
       let res;
       while (res = includefile.exec(html)) {
         matches[res[0]] = res[1];
       }
-      if (Object.keys(matches).length === 0) {
-        return html;
+      for (const holder of Object.keys(matches)) {
+        const target = await this.resolveInclude(root, path4.dirname(file), matches[holder]);
+        html = html.split(holder).join(await render(target, depth + 1));
       }
-      await fillContents(Array.from(new Set(Object.values(matches))).filter((file) => !filesMap[file]));
-      Object.keys(matches).forEach((holder) => {
-        html = html.split(holder).join(filesMap[matches[holder]]);
-      });
+      return html;
+    };
+    return await render(mainfile, 0);
+  }
+  // 相对路径优先按所在文件目录找, 找不到再回退到站点根, 兼容原先根相对写法
+  async resolveInclude(root, dir, target) {
+    if (/^[/\\]/.test(target)) {
+      return util_default.resolveIn(root, target);
     }
-    throw new Error("include \u5D4C\u5957\u5C42\u7EA7\u8D85\u8FC7 6 \u5C42");
+    const direct = path4.resolve(dir, target);
+    const local = direct === root || direct.startsWith(root + path4.sep) ? direct : util_default.resolveIn(root, target);
+    try {
+      await fsAccess(local, fs5.constants.R_OK);
+      return local;
+    } catch (_e) {
+      return util_default.resolveIn(root, target);
+    }
   }
 };
 
@@ -70182,7 +70234,10 @@ function parseProxy(list = []) {
     if (i <= 0) {
       throw new Error("\u4EE3\u7406\u53C2\u6570\u683C\u5F0F\u9519\u8BEF: " + item + " , \u5E94\u4E3A /\u524D\u7F00=http(s)://\u76EE\u6807\u5730\u5740\u6216\u672C\u5730\u76EE\u5F55");
     }
-    const prefix = item.slice(0, i).startsWith("/") ? item.slice(0, i) : "/" + item.slice(0, i);
+    const prefix = (item.slice(0, i).startsWith("/") ? item.slice(0, i) : "/" + item.slice(0, i)).replace(
+      /\/+$/,
+      ""
+    ) || "/";
     const target = item.slice(i + 1);
     if (!target) {
       throw new Error("\u4EE3\u7406\u76EE\u6807\u5730\u5740\u65E0\u6548: " + item);
@@ -70260,10 +70315,16 @@ function proxyUpgrade(rules, req, socket, head) {
   upstream.on("error", destroy);
   socket.on("error", destroy);
   upstream.on("connect", () => {
-    const lines = [req.method + " " + req.url + " HTTP/1.1"];
+    const url = req.url || "/";
+    const target = rule.base.length > 1 ? rule.base + url : url;
+    const lines = [req.method + " " + target + " HTTP/1.1"];
     for (let i = 0; i < req.rawHeaders.length; i += 2) {
+      if (req.rawHeaders[i].toLowerCase() == "host") {
+        continue;
+      }
       lines.push(req.rawHeaders[i] + ": " + req.rawHeaders[i + 1]);
     }
+    lines.push("Host: " + rule.host);
     upstream.write(lines.join("\r\n") + "\r\n\r\n");
     if (head.length > 0) {
       upstream.write(head);
@@ -70300,6 +70361,7 @@ var server = class {
       this.watch();
     }).on("error", (err) => {
       console.error("\u670D\u52A1\u542F\u52A8\u5931\u8D25", err.toString());
+      process.exit(1);
     });
     if (this.proxies.length > 0) {
       httpser.on("upgrade", (req, socket, head) => {
@@ -70308,6 +70370,18 @@ var server = class {
     }
   }
   route() {
+    this.app.use(
+      (req, res, next, stop) => {
+        const pathname = req.path || "/";
+        if (/(^|\/)\.\.(\/|$)/.test(pathname) || pathname.includes("\\") || pathname.includes("\0")) {
+          res.send("403 forbidden", "text/plain", 403);
+          return stop();
+        }
+        next();
+      },
+      null,
+      2147483647
+    );
     if (this.cliargs.cors) {
       this.app.use(cors);
     }
@@ -70336,31 +70410,34 @@ var server = class {
     if (this.cliargs.dry) {
       return;
     }
-    this.app.get(
+    this.app.add(
       /^[\w\-/.]+\.css$/,
       async (req, res, pathname, query) => {
         const ret = await new compress_default(this.args.staticCfg, pathname, query).less();
-        res.setHeader("Cache-Control", ret.hit ? 5 : 1);
+        res.setHeader("Cache-Control", ret.hit ? "max-age=5" : "max-age=1");
         res.send(ret.ret.css, "text/css");
-      }
+      },
+      ["GET", "HEAD"]
     );
-    this.app.get(
+    this.app.add(
       /^[\w\-/.]+\.js$/,
       async (req, res, pathname, query) => {
         const ret = await new compress_default(this.args.staticCfg, pathname, query).Js();
-        res.setHeader("Cache-Control", ret.hit ? 5 : 1);
+        res.setHeader("Cache-Control", ret.hit ? "max-age=5" : "max-age=1");
         res.send(ret.ret.js, "text/javascript");
-      }
+      },
+      ["GET", "HEAD"]
     );
     const tpl = async (req, res, pathname, query) => {
       res.send(await new ssi_default(this.cwd, pathname).html());
     };
-    this.app.get(/^[\w\-/.]+\.html$/, tpl);
-    this.app.get(
+    this.app.add(/^[\w\-/.]+\.html$/, tpl, ["GET", "HEAD"]);
+    this.app.add(
       /^\/$/,
       (req, res, pathname, query) => {
         return tpl(req, res, "/index.html", query);
-      }
+      },
+      ["GET", "HEAD"]
     );
   }
   watch() {
@@ -70504,7 +70581,11 @@ var cli_default = class {
     try {
       const [, , ...args] = argv2;
       this.args = getParams(args);
-      this.opts.port = this.args.port || 8088;
+      const rawPort = this.args.port;
+      this.opts.port = Number(rawPort ?? 8088);
+      if (!Number.isInteger(this.opts.port) || this.opts.port < 0 || this.opts.port > 65535) {
+        throw new Error("\u7AEF\u53E3\u65E0\u6548: " + rawPort);
+      }
       if (this.args.dir) {
         process.chdir(this.args.dir);
       }
@@ -70539,9 +70620,11 @@ var cli_default = class {
     new server(this.opts, this.args, this.cwd).serve();
   }
   async fallback(m, args) {
-    if (m == "-v" || args.includes("-v")) {
+    if (m == "-v" || m == "--version" || args.includes("-v")) {
       console.log("air version: air/" + version);
-    } else if (["serve", "-p", "-d", "--dry"].includes(m)) {
+    } else if (m == "-h" || m == "--help") {
+      console.info(config_default);
+    } else if (m == "serve" || m.startsWith("-")) {
       await this.runInit();
     } else {
       console.info(config_default);
