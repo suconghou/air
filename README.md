@@ -68,6 +68,19 @@ air compress -d path/to/static     # 按 static.json 配置批量产出
 
 SSI 语法：`<!--# include file="inc/header.html" -->`，嵌套上限 6 层。
 
+# 反向代理
+
+前端与接口同域，`--proxy /前缀=http(s)://目标地址`，可多次指定挂载不同前缀：
+
+```bash
+air serve --proxy /api=http://localhost:3000 --proxy /wx=https://api.example.com
+```
+
+- 匹配规则：前缀整段匹配（`/api` 命中 `/api/users`，不命中 `/api2`），目标地址可带基础路径
+- 请求路径原样透传（与 vite/webpack 代理默认行为一致），POST body 流式转发
+- Host 改写为目标地址，支持 websocket upgrade 透传
+- 上游不可达时返回 502 与错误说明
+
 # 0.8.0 破坏性变更
 
 - **单文件自包含**：less / terser 已打包进可执行文件，不再依赖 node_modules，`dependencies` 清零
