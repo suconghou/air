@@ -55,12 +55,17 @@ export default class {
 		}
 		// 相对路径按所在文件目录解析; 只要结果仍在站点根内即合法(允许 ../ 引用根下其他目录)
 		const direct = path.resolve(dir, target);
-		const local =
-			direct === root || direct.startsWith(root + path.sep) ? direct : util.resolveIn(root, target);
+		if (direct !== root && !direct.startsWith(root + path.sep)) {
+			throw new Error('403 forbidden');
+		}
 		try {
-			await fsAccess(local, fs.constants.R_OK);
-			return local;
+			await fsAccess(direct, fs.constants.R_OK);
+			return direct;
 		} catch (_e) {
+			// 含 .. 的目标不做根回退: 相对根再解析会越根, 把"文件不存在"误报成 403
+			if (/(^|[/\\])\.\.($|[/\\])/.test(target)) {
+				return direct;
+			}
 			// 所在目录下不存在时回退站点根, 兼容根相对写法
 			return util.resolveIn(root, target);
 		}
