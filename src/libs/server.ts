@@ -2,10 +2,11 @@ import * as net from 'net';
 import * as querystring from 'querystring';
 import * as fs from 'fs';
 import nodeserve, { cors } from '../nodeserve/index';
+import file from '../nodeserve/lib/file';
 import compress from './compress';
 import ssi from './ssi';
 import util from './util';
-import { parseProxy, matchProxy, forward, proxyUpgrade, proxyRule } from './proxy';
+import { parseProxy, matchProxy, forward, proxyUpgrade, localPath, proxyRule } from './proxy';
 import { serverArgs, cliArgs } from '../types';
 import { requestctx, responsectx } from '../nodeserve/types';
 
@@ -29,6 +30,9 @@ export default class server {
 				console.info('服务已启动, 监听端口 %d', this.args.port);
 				this.proxies.forEach((rule) => {
 					console.info('反向代理 %s -> %s', rule.prefix, rule.href);
+					if (rule.kind == 'file' && !fs.existsSync(rule.root)) {
+						console.warn('警告: 本地代理目录不存在', rule.root);
+					}
 				});
 				this.watch();
 			})
@@ -47,7 +51,7 @@ export default class server {
 			this.app.use(cors);
 		}
 		if (this.proxies.length > 0) {
-			// 代理挂在所有路由之前, 避免被 less/js/html 路由截胡
+			// 代理/本地挂载排在所有路由之前, 避免被 less/js/html 路由截胡
 			// 超大 timeout: 代理请求耗时不受中间件 5s 超时限制
 			this.app.use(
 				(req: requestctx, res: responsectx, next: Function, stop: Function) => {
@@ -55,7 +59,17 @@ export default class server {
 					if (!rule) {
 						return next();
 					}
-					forward(req, res, rule);
+					if (rule.kind == 'file') {
+						// 本地目录: 按前缀剥离映射文件, mime/304/range/穿越防护由 nodeserve file 处理
+						// 目录请求补 index.html(path.join 会吞掉尾部斜杠, 需在此显式补)
+						let rel = localPath(rule, req.path || '/');
+						if (rel.endsWith('/')) {
+							rel += 'index.html';
+						}
+						file.serve(req, res, rel, rule.root);
+					} else {
+						forward(req, res, rule);
+					}
 					stop();
 				},
 				null,

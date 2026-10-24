@@ -2,10 +2,12 @@ import * as http from 'http';
 import * as https from 'https';
 import * as net from 'net';
 import * as tls from 'tls';
+import * as path from 'path';
 import { requestctx, responsectx } from '../nodeserve/types';
 
-export interface proxyRule {
+export interface httpRule {
 	prefix: string;
+	kind: 'http';
 	href: string;
 	protocol: string;
 	hostname: string;
@@ -14,31 +16,50 @@ export interface proxyRule {
 	base: string;
 }
 
-// 解析 --proxy /前缀=http(s)://目标地址 参数, 可重复指定
+export interface fileRule {
+	prefix: string;
+	kind: 'file';
+	href: string;
+	root: string;
+}
+
+export type proxyRule = httpRule | fileRule;
+
+// 解析 --proxy /前缀=目标 参数, 可重复指定; 目标为 http(s) 地址则转发, 否则视为本地目录挂载
 export function parseProxy(list: Array<string> = []): Array<proxyRule> {
 	return list.map((item) => {
 		const i = item.indexOf('=');
 		if (i <= 0) {
-			throw new Error('代理参数格式错误: ' + item + ' , 应为 /前缀=http(s)://目标地址');
+			throw new Error('代理参数格式错误: ' + item + ' , 应为 /前缀=http(s)://目标地址或本地目录');
 		}
-		let target: URL;
-		try {
-			target = new URL(item.slice(i + 1));
-		} catch (_e) {
-			throw new Error('代理目标地址无效: ' + item.slice(i + 1));
+		const prefix = item.slice(0, i).startsWith('/') ? item.slice(0, i) : '/' + item.slice(0, i);
+		const target = item.slice(i + 1);
+		if (!target) {
+			throw new Error('代理目标地址无效: ' + item);
 		}
-		if (target.protocol != 'http:' && target.protocol != 'https:') {
-			throw new Error('代理目标地址无效: ' + item.slice(i + 1) + ' , 仅支持 http/https');
+		if (/^https?:\/\//i.test(target)) {
+			let u: URL;
+			try {
+				u = new URL(target);
+			} catch (_e) {
+				throw new Error('代理目标地址无效: ' + target);
+			}
+			if (u.protocol != 'http:' && u.protocol != 'https:') {
+				throw new Error('代理目标地址无效: ' + target + ' , 仅支持 http/https');
+			}
+			return {
+				prefix,
+				kind: 'http',
+				href: u.href,
+				protocol: u.protocol,
+				hostname: u.hostname,
+				port: u.port ? Number(u.port) : u.protocol == 'https:' ? 443 : 80,
+				host: u.host,
+				base: u.pathname.replace(/\/$/, ''),
+			};
 		}
-		return {
-			prefix: item.slice(0, i).startsWith('/') ? item.slice(0, i) : '/' + item.slice(0, i),
-			href: target.href,
-			protocol: target.protocol,
-			hostname: target.hostname,
-			port: target.port ? Number(target.port) : target.protocol == 'https:' ? 443 : 80,
-			host: target.host,
-			base: target.pathname.replace(/\/$/, ''),
-		};
+		// 本地目录: 相对工作目录或绝对路径
+		return { prefix, kind: 'file', href: target, root: path.resolve(target) };
 	});
 }
 
@@ -48,8 +69,13 @@ export function matchProxy(rules: Array<proxyRule>, path: string): proxyRule | u
 	);
 }
 
+// 本地挂载: 剥离前缀后的请求路径
+export function localPath(rule: fileRule, path: string): string {
+	return rule.prefix == '/' ? path : path.slice(rule.prefix.length) || '/';
+}
+
 // 转发 http 请求: 路径原样透传, body 流式转发, Host 指向目标
-export function forward(req: requestctx, res: responsectx, rule: proxyRule) {
+export function forward(req: requestctx, res: responsectx, rule: httpRule) {
 	const headers: http.OutgoingHttpHeaders = { ...req.headers, host: rule.host };
 	// 逐跳首部由本端与上游各自协商, 不透传
 	delete headers.connection;
@@ -86,7 +112,7 @@ export function proxyUpgrade(
 	head: Buffer
 ) {
 	const rule = matchProxy(rules, (req.url || '/').split('?')[0]);
-	if (!rule) {
+	if (!rule || rule.kind != 'http') {
 		socket.destroy();
 		return;
 	}
