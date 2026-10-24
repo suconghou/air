@@ -36,6 +36,25 @@ export default class {
 		return '';
 	}
 
+	// 把相对路径限制在 root 内; 越界(../ 或指向外部的绝对路径)直接拒绝
+	public static resolveIn(root: string, rel: string): string {
+		const base = path.resolve(root);
+		const target = path.resolve(base, rel.replace(/^[/\\]+/, ''));
+		if (target !== base && !target.startsWith(base + path.sep)) {
+			throw new Error('403 forbidden');
+		}
+		return target;
+	}
+
+	// 文件清单的 mtime 是否仍与记录一致; 文件缺失视为已变更
+	public static async sameTime(files: Array<string>, time: number) {
+		try {
+			return (await this.getUpdateTime(files)) === time;
+		} catch (_e) {
+			return false;
+		}
+	}
+
 	// 补齐配置缺省字段, 防止畸形配置(如热更新写入)导致运行期取值崩溃
 	public static normalize(json: any) {
 		json = json && typeof json == 'object' ? json : {};
@@ -47,12 +66,14 @@ export default class {
 	}
 
 	public static async getConfig(cwd: string, name = 'static.json') {
-		if (!/static\/?$/.test(cwd)) {
+		// 已位于 static 目录时直接查找, 否则拼上 static; 用 basename 避免 mystatic 这类目录误判
+		if (path.basename(cwd) != 'static') {
 			cwd = path.join(cwd, 'static');
 		}
 		const paths = this.resolveLookupPaths(cwd, name);
 		let f = '',
-			json: any = {},
+			// 无配置文件时也要返回带缺省字段的配置, 否则调用方取 static.css 会崩
+			json: any = this.normalize({}),
 			fpath = '',
 			dirname = '';
 		f = await this.tryFiles(paths);

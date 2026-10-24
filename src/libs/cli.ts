@@ -71,7 +71,11 @@ export default class {
 		try {
 			const [, , ...args] = argv;
 			this.args = getParams(args);
-			this.opts.port = this.args.port || 8088;
+			const rawPort = this.args.port as unknown;
+			this.opts.port = Number(rawPort ?? 8088);
+			if (!Number.isInteger(this.opts.port) || this.opts.port < 0 || this.opts.port > 65535) {
+				throw new Error('端口无效: ' + rawPort);
+			}
 			if (this.args.dir) {
 				process.chdir(this.args.dir);
 			}
@@ -110,9 +114,12 @@ export default class {
 	}
 
 	private async fallback(m: string, args: Array<string>) {
-		if (m == '-v' || args.includes('-v')) {
+		if (m == '-v' || m == '--version' || args.includes('-v')) {
 			console.log('air version: air/' + version);
-		} else if (['serve', '-p', '-d', '--dry'].includes(m)) {
+		} else if (m == '-h' || m == '--help') {
+			console.info(help);
+		} else if (m == 'serve' || m.startsWith('-')) {
+			// 只带参数(如 --proxy/--cors/-q)时同样启动服务
 			await this.runInit();
 		} else {
 			console.info(help);

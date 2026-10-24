@@ -1,6 +1,7 @@
 import * as path from 'path';
 import * as fs from 'fs';
 import { promisify } from 'util';
+import util, { fsAccess } from './util';
 
 const readFile = promisify(fs.readFile);
 
@@ -11,42 +12,57 @@ export default class {
 	) {}
 
 	async html(): Promise<string> {
-		return await this.parseHtml(path.join(this.cwd, this.pathname), this.cwd);
+		// 页面文件本身也必须落在根目录内
+		return await this.parseHtml(util.resolveIn(this.cwd, this.pathname), this.cwd);
 	}
 
 	// SSI 语法: <!--# include file="foo/bar.html" --> 嵌套层级上限 6
-	private async parseHtml(mainfile: string, cwd: string): Promise<string> {
-		// 全局正则的 lastIndex 会被并发请求互相干扰, 必须每次调用新建
-		const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.-]{3,50})"\s{1,5}-->/g;
-		const filedir = path.dirname(mainfile);
-		let html = (await readFile(mainfile)).toString();
-		const filesMap: Record<string, string> = {};
-
-		const fillContents = async (fileList: Array<string>) => {
-			const res = await Promise.all(
-				fileList.map((item) => readFile(path.join(path.isAbsolute(item) ? cwd : filedir, item)))
-			);
-			res.forEach((item: Buffer, i: number) => {
-				filesMap[fileList[i]] = item.toString();
-			});
+	private async parseHtml(mainfile: string, root: string): Promise<string> {
+		const contents = new Map<string, string>();
+		const read = async (file: string) => {
+			if (!contents.has(file)) {
+				contents.set(file, (await readFile(file)).toString());
+			}
+			return contents.get(file) as string;
 		};
-
-		for (let depth = 0; depth < 6; depth++) {
+		// 递归展开: include 相对所在文件目录解析, 这样多层子目录也能正确引用
+		const render = async (file: string, depth: number): Promise<string> => {
+			if (depth > 6) {
+				throw new Error('include 嵌套层级超过 6 层');
+			}
+			let html = await read(file);
+			// 全局正则的 lastIndex 会被并发请求互相干扰, 必须每次调用新建
+			const includefile = /<!--#\s{1,5}include\s{1,5}file="([\w+/.-]{3,50})"\s{1,5}-->/g;
 			const matches: Record<string, string> = {};
 			let res: RegExpExecArray | null;
 			while ((res = includefile.exec(html))) {
 				matches[res[0]] = res[1];
 			}
-			if (Object.keys(matches).length === 0) {
-				// 无 include 语法,直接返回
-				return html;
+			for (const holder of Object.keys(matches)) {
+				const target = await this.resolveInclude(root, path.dirname(file), matches[holder]);
+				// split/join 替换全部同名 include, 且不受内容中 $& 等替换模式影响
+				html = html.split(holder).join(await render(target, depth + 1));
 			}
-			await fillContents(Array.from(new Set(Object.values(matches))).filter((file) => !filesMap[file]));
-			// split/join 替换全部同名 include, 且不受内容中 $& 等替换模式影响
-			Object.keys(matches).forEach((holder) => {
-				html = html.split(holder).join(filesMap[matches[holder]]);
-			});
+			return html;
+		};
+		return await render(mainfile, 0);
+	}
+
+	// 相对路径优先按所在文件目录找, 找不到再回退到站点根, 兼容原先根相对写法
+	private async resolveInclude(root: string, dir: string, target: string): Promise<string> {
+		if (/^[/\\]/.test(target)) {
+			return util.resolveIn(root, target);
 		}
-		throw new Error('include 嵌套层级超过 6 层');
+		// 相对路径按所在文件目录解析; 只要结果仍在站点根内即合法(允许 ../ 引用根下其他目录)
+		const direct = path.resolve(dir, target);
+		const local =
+			direct === root || direct.startsWith(root + path.sep) ? direct : util.resolveIn(root, target);
+		try {
+			await fsAccess(local, fs.constants.R_OK);
+			return local;
+		} catch (_e) {
+			// 所在目录下不存在时回退站点根, 兼容根相对写法
+			return util.resolveIn(root, target);
+		}
 	}
 }

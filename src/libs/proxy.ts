@@ -32,7 +32,11 @@ export function parseProxy(list: Array<string> = []): Array<proxyRule> {
 		if (i <= 0) {
 			throw new Error('代理参数格式错误: ' + item + ' , 应为 /前缀=http(s)://目标地址或本地目录');
 		}
-		const prefix = item.slice(0, i).startsWith('/') ? item.slice(0, i) : '/' + item.slice(0, i);
+		// 前缀统一成 /a/b 形式: 补前导斜杠, 去掉尾斜杠, 否则 matchProxy 永远匹配不上
+		const prefix = (item.slice(0, i).startsWith('/') ? item.slice(0, i) : '/' + item.slice(0, i)).replace(
+			/\/+$/,
+			''
+		) || '/';
 		const target = item.slice(i + 1);
 		if (!target) {
 			throw new Error('代理目标地址无效: ' + item);
@@ -127,10 +131,17 @@ export function proxyUpgrade(
 	upstream.on('error', destroy);
 	socket.on('error', destroy);
 	upstream.on('connect', () => {
-		const lines = [req.method + ' ' + req.url + ' HTTP/1.1'];
+		// 与 http 转发保持一致: 拼接目标 base 路径, 并把 Host 改写为目标
+		const url = req.url || '/';
+		const target = rule.base.length > 1 ? rule.base + url : url;
+		const lines = [req.method + ' ' + target + ' HTTP/1.1'];
 		for (let i = 0; i < req.rawHeaders.length; i += 2) {
+			if (req.rawHeaders[i].toLowerCase() == 'host') {
+				continue;
+			}
 			lines.push(req.rawHeaders[i] + ': ' + req.rawHeaders[i + 1]);
 		}
+		lines.push('Host: ' + rule.host);
 		upstream.write(lines.join('\r\n') + '\r\n\r\n');
 		if (head.length > 0) {
 			upstream.write(head);

@@ -1,5 +1,4 @@
 import * as net from 'net';
-import * as querystring from 'querystring';
 import * as fs from 'fs';
 import nodeserve, { cors } from '../nodeserve/index';
 import file from '../nodeserve/lib/file';
@@ -38,6 +37,7 @@ export default class server {
 			})
 			.on('error', (err) => {
 				console.error('服务启动失败', err.toString());
+				process.exit(1);
 			});
 		if (this.proxies.length > 0) {
 			httpser.on('upgrade', (req, socket, head) => {
@@ -47,6 +47,20 @@ export default class server {
 	}
 
 	private route() {
+		// 动态编译与 SSI 都按请求路径拼文件名, 必须在最前面拒绝穿越写法
+		// (静态文件层另有校验, 但它排在动态路由之后, 拦不住 css/js/html)
+		this.app.use(
+			(req: requestctx, res: responsectx, next: Function, stop: Function) => {
+				const pathname = req.path || '/';
+				if (/(^|\/)\.\.(\/|$)/.test(pathname) || pathname.includes('\\') || pathname.includes('\0')) {
+					res.send('403 forbidden', 'text/plain', 403);
+					return stop();
+				}
+				next();
+			},
+			null,
+			2147483647
+		);
 		if (this.cliargs.cors) {
 			this.app.use(cors);
 		}
@@ -79,31 +93,34 @@ export default class server {
 		if (this.cliargs.dry) {
 			return;
 		}
-		this.app.get(
+		this.app.add(
 			/^[\w\-/.]+\.css$/,
-			async (req: requestctx, res: responsectx, pathname: string, query: querystring.ParsedUrlQuery) => {
+			async (req: requestctx, res: responsectx, pathname: string, query: URLSearchParams) => {
 				const ret = await new compress(this.args.staticCfg, pathname, query).less();
-				res.setHeader('Cache-Control', ret.hit ? 5 : 1);
+				res.setHeader('Cache-Control', ret.hit ? 'max-age=5' : 'max-age=1');
 				res.send(ret.ret.css, 'text/css');
-			}
+			},
+			['GET', 'HEAD']
 		);
-		this.app.get(
+		this.app.add(
 			/^[\w\-/.]+\.js$/,
-			async (req: requestctx, res: responsectx, pathname: string, query: querystring.ParsedUrlQuery) => {
+			async (req: requestctx, res: responsectx, pathname: string, query: URLSearchParams) => {
 				const ret = await new compress(this.args.staticCfg, pathname, query).Js();
-				res.setHeader('Cache-Control', ret.hit ? 5 : 1);
+				res.setHeader('Cache-Control', ret.hit ? 'max-age=5' : 'max-age=1');
 				res.send(ret.ret.js, 'text/javascript');
-			}
+			},
+			['GET', 'HEAD']
 		);
-		const tpl = async (req: requestctx, res: responsectx, pathname: string, query: querystring.ParsedUrlQuery) => {
+		const tpl = async (req: requestctx, res: responsectx, pathname: string, query: URLSearchParams) => {
 			res.send(await new ssi(this.cwd, pathname).html());
 		};
-		this.app.get(/^[\w\-/.]+\.html$/, tpl);
-		this.app.get(
+		this.app.add(/^[\w\-/.]+\.html$/, tpl, ['GET', 'HEAD']);
+		this.app.add(
 			/^\/$/,
-			(req: requestctx, res: responsectx, pathname: string, query: querystring.ParsedUrlQuery) => {
+			(req: requestctx, res: responsectx, pathname: string, query: URLSearchParams) => {
 				return tpl(req, res, '/index.html', query);
-			}
+			},
+			['GET', 'HEAD']
 		);
 	}
 
