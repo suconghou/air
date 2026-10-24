@@ -12,6 +12,7 @@ export default `
     -d              工作目录
     -q              less 渲染 urlArgs 参数
     -m              less 渲染 modifyVars 参数, 如: env=beta
+    --proxy         反向代理 /前缀=http(s)://目标地址, 可多次指定
     --debug         compress 调试模式(仅合并不压缩)
     --clean         compress 清理模式(移除 console/debugger)
     --dry           纯静态服务, 不编译 less/js

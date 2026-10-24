@@ -35,6 +35,19 @@ air compress style.less a.js b.js            # 相对当前目录
 air compress --clean --debug                 # clean 移除 console/debugger
 ```
 
+## 反向代理
+
+前端与接口同域,`--proxy /前缀=http(s)://目标地址`,可多次指定挂载不同前缀:
+
+```bash
+air serve --proxy /api=http://localhost:3000 --proxy /wx=https://api.example.com
+```
+
+- 匹配规则: 前缀整段匹配(`/api` 命中 `/api/users`,不命中 `/api2`),目标地址可带基础路径
+- 请求路径原样透传(与 vite/webpack 代理默认行为一致),POST body 流式转发
+- Host 改写为目标地址,支持 websocket upgrade 透传
+- 上游不可达时返回 502 与错误说明
+
 ## static.json
 
 查找规则: 从工作目录的 `static/` 起逐级向上找 `static.json`,也可手动放于 `static/` 下。

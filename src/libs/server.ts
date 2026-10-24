@@ -1,14 +1,17 @@
+import * as net from 'net';
 import * as querystring from 'querystring';
 import * as fs from 'fs';
 import nodeserve, { cors } from '../nodeserve/index';
 import compress from './compress';
 import ssi from './ssi';
 import util from './util';
+import { parseProxy, matchProxy, forward, proxyUpgrade, proxyRule } from './proxy';
 import { serverArgs, cliArgs } from '../types';
 import { requestctx, responsectx } from '../nodeserve/types';
 
 export default class server {
 	private app: nodeserve;
+	private proxies: Array<proxyRule>;
 
 	constructor(
 		private args: serverArgs,
@@ -16,23 +19,48 @@ export default class server {
 		private cwd: string
 	) {
 		this.app = new nodeserve();
+		this.proxies = parseProxy(cliargs.proxy);
 	}
 
 	serve() {
 		this.route();
-		this.app
+		const httpser = this.app
 			.listen(this.args.port, this.args.host, () => {
 				console.info('服务已启动, 监听端口 %d', this.args.port);
+				this.proxies.forEach((rule) => {
+					console.info('反向代理 %s -> %s', rule.prefix, rule.href);
+				});
 				this.watch();
 			})
 			.on('error', (err) => {
 				console.error('服务启动失败', err.toString());
 			});
+		if (this.proxies.length > 0) {
+			httpser.on('upgrade', (req, socket, head) => {
+				proxyUpgrade(this.proxies, req, socket as net.Socket, head);
+			});
+		}
 	}
 
 	private route() {
 		if (this.cliargs.cors) {
 			this.app.use(cors);
+		}
+		if (this.proxies.length > 0) {
+			// 代理挂在所有路由之前, 避免被 less/js/html 路由截胡
+			// 超大 timeout: 代理请求耗时不受中间件 5s 超时限制
+			this.app.use(
+				(req: requestctx, res: responsectx, next: Function, stop: Function) => {
+					const rule = matchProxy(this.proxies, req.path || '/');
+					if (!rule) {
+						return next();
+					}
+					forward(req, res, rule);
+					stop();
+				},
+				null,
+				2147483647
+			);
 		}
 		if (this.cliargs.dry) {
 			return;

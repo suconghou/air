@@ -40,6 +40,7 @@ export interface cliArgs {
 	dir?: string;
 	query?: string;
 	modifyVars?: string;
+	proxy?: Array<string>;
 	debug?: boolean;
 	clean?: boolean;
 	dry?: boolean;
