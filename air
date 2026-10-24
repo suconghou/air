@@ -70510,7 +70510,7 @@ var config_default = `
     --dry           \u7EAF\u9759\u6001\u670D\u52A1, \u4E0D\u7F16\u8BD1 less/js
     --cors          \u54CD\u5E94\u643A\u5E26 Access-Control-Allow-Origin
 `;
-var version = "0.8.0";
+var version = "0.8.1";
 
 // src/libs/cli.ts
 function getParams(args) {
