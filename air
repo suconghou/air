@@ -70381,14 +70381,15 @@ var server = class {
 };
 
 // src/libs/command.ts
+function emptyCfg() {
+  return { dirname: "", fpath: "", opts: util_default.normalize({}) };
+}
 var command_default = class {
   /**
-   * air compress --clean
-   * air compress --debug
-   * air compress style.less other.less some.js --clean
-   * air compress -m env=beta
+   * air compress a.less b.js --clean   按文件压缩
+   * air compress -d path/to/static     按 static.json 批量产出
    */
-  static async compress(args, opts, staticCfg) {
+  static async compress(args, cwd2, opts) {
     const fakequery = { urlArgs: opts.query, modifyVars: opts.modifyVars };
     const less = [];
     const js = [];
@@ -70403,61 +70404,14 @@ var command_default = class {
       }
     });
     if (less.length > 0 || js.length > 0) {
-      return await new compress_default(staticCfg, "", fakequery).compressLessOrJs(opts, less, js);
+      return await new compress_default(emptyCfg(), "", fakequery).compressLessOrJs(opts, less, js);
     }
-    if (!staticCfg.fpath) {
-      console.log("no config found");
+    const { json, fpath, dirname: dirname3 } = await util_default.getConfig(cwd2);
+    if (!fpath) {
+      console.log("\u672A\u627E\u5230\u914D\u7F6E\u6587\u4EF6 static.json");
       return;
     }
-    await new compress_default(staticCfg, "", fakequery).compress(opts);
-  }
-};
-
-// src/libs/utiljs.ts
-var utiljs_default = {
-  isFunction(value) {
-    return typeof value === "function";
-  },
-  getParams(args) {
-    const kMap = {
-      "-v": "version",
-      "-p": "port",
-      "-d": "dir",
-      "-q": "query",
-      "-m": "modifyVars",
-      "--proxy": "proxy",
-      "--debug": "debug",
-      "--clean": "clean",
-      "--dry": "dry",
-      "--cors": "cors",
-      "--help": "help"
-    };
-    const multi = { proxy: true };
-    const ret = {};
-    const keys = Object.keys(kMap);
-    let key;
-    args.forEach((item) => {
-      if (keys.includes(item)) {
-        if (item.charAt(0) == "-" && item.charAt(1) == "-" && !multi[kMap[item]]) {
-          ret[kMap[item]] = true;
-        } else {
-          key = kMap[item];
-        }
-      } else if (key && item.charAt(0) != "-") {
-        if (multi[key]) {
-          if (!Array.isArray(ret[key])) {
-            ret[key] = [];
-          }
-          ret[key].push(item);
-        } else {
-          ret[key] = item;
-        }
-        key = null;
-      } else {
-        key = null;
-      }
-    });
-    return ret;
+    await new compress_default({ dirname: dirname3, fpath, opts: json }, "", fakequery).compress(opts);
   }
 };
 
@@ -70485,6 +70439,46 @@ var config_default = `
 var version = "0.8.0";
 
 // src/libs/cli.ts
+function getParams(args) {
+  const kMap = {
+    "-p": "port",
+    "-d": "dir",
+    "-q": "query",
+    "-m": "modifyVars",
+    "--proxy": "proxy",
+    "--debug": "debug",
+    "--clean": "clean",
+    "--dry": "dry",
+    "--cors": "cors",
+    "--help": "help"
+  };
+  const multi = { proxy: true };
+  const ret = {};
+  const keys = Object.keys(kMap);
+  let key;
+  args.forEach((item) => {
+    if (keys.includes(item)) {
+      if (item.charAt(0) == "-" && item.charAt(1) == "-" && !multi[kMap[item]]) {
+        ret[kMap[item]] = true;
+      } else {
+        key = kMap[item];
+      }
+    } else if (key && item.charAt(0) != "-") {
+      if (multi[key]) {
+        if (!Array.isArray(ret[key])) {
+          ret[key] = [];
+        }
+        ret[key].push(item);
+      } else {
+        ret[key] = item;
+      }
+      key = null;
+    } else {
+      key = null;
+    }
+  });
+  return ret;
+}
 var cli_default = class {
   constructor(cwd2) {
     this.cwd = cwd2;
@@ -70509,23 +70503,23 @@ var cli_default = class {
   async run(argv2) {
     try {
       const [, , ...args] = argv2;
-      this.args = utiljs_default.getParams(args);
+      this.args = getParams(args);
       this.opts.port = this.args.port || 8088;
       if (this.args.dir) {
         process.chdir(this.args.dir);
       }
       this.cwd = process.cwd();
-      await this.loadConfig();
       if (args.length > 0) {
         await this.runArgs(args);
       } else {
-        this.runInit();
+        await this.runInit();
       }
     } catch (e) {
       console.error("\u6267\u884C\u51FA\u9519:", e.stack || e.message || e);
       process.exit(1);
     }
   }
+  // 配置按需加载: 仅 serve 与按配置批量压缩需要, -v/-h/指定文件压缩不受坏配置影响
   async loadConfig() {
     const { json, fpath, dirname: dirname3 } = await util_default.getConfig(this.cwd);
     this.opts.staticCfg.opts = json;
@@ -70535,28 +70529,23 @@ var cli_default = class {
   async runArgs(args) {
     const [m, ...rest] = args;
     const f = command_default[m];
-    if (utiljs_default.isFunction(f)) {
-      return await f.call(command_default, rest, this.args, this.opts.staticCfg);
+    if (typeof f === "function") {
+      return await f.call(command_default, rest, this.cwd, this.args);
     }
     return await this.fallback(m, rest);
   }
-  runInit() {
-    return new server(this.opts, this.args, this.cwd).serve();
+  async runInit() {
+    await this.loadConfig();
+    new server(this.opts, this.args, this.cwd).serve();
   }
   async fallback(m, args) {
-    if (["-v"].includes(m) || args.includes("-v")) {
-      this.version();
+    if (m == "-v" || args.includes("-v")) {
+      console.log("air version: air/" + version);
     } else if (["serve", "-p", "-d", "--dry"].includes(m)) {
-      this.runInit();
+      await this.runInit();
     } else {
-      this.help();
+      console.info(config_default);
     }
-  }
-  version() {
-    console.log("air version: air/" + version);
-  }
-  help() {
-    console.info(config_default);
   }
 };
 
