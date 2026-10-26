@@ -69592,10 +69592,15 @@ var file_default = class {
     res.writeHead(code, meta);
     if (code == 304 || code == 416) {
       return res.end();
-    } else if (code == 206) {
-      return fs3.createReadStream(file, { start, end }).pipe(res);
     }
-    return fs3.createReadStream(file).pipe(res);
+    const stream = code == 206 ? fs3.createReadStream(file, { start, end }) : fs3.createReadStream(file);
+    stream.on("error", () => {
+      if (!res.headersSent) {
+        res.writeHead(500, { "Content-Type": "text/plain" });
+      }
+      res.end("500 internal error");
+    });
+    return stream.pipe(res);
   }
 };
 
@@ -70328,6 +70333,17 @@ function proxyUpgrade(rules, req, socket, head) {
 }
 
 // src/libs/server.ts
+async function notFound404(res, fn) {
+  try {
+    return await fn();
+  } catch (e) {
+    if (e && (e.code == "ENOENT" || /\bENOENT\b/.test(String(e && e.message)))) {
+      res.send("404 page not found", "text/plain", 404);
+      return void 0;
+    }
+    throw e;
+  }
+}
 var server = class {
   constructor(args, cliargs, cwd2) {
     this.args = args;
@@ -70412,23 +70428,36 @@ var server = class {
     this.app.add(
       /^[\w\-/.]+\.css$/,
       async (req, res, pathname, query) => {
-        const ret = await new compress_default(this.args.staticCfg, pathname, render(query)).less();
-        res.setHeader("Cache-Control", ret.hit ? "max-age=5" : "max-age=1");
-        res.send(ret.ret.css, "text/css");
+        const ret = await notFound404(
+          res,
+          () => new compress_default(this.args.staticCfg, pathname, render(query)).less()
+        );
+        if (ret) {
+          res.setHeader("Cache-Control", ret.hit ? "max-age=5" : "max-age=1");
+          res.send(ret.ret.css, "text/css");
+        }
       },
       ["GET", "HEAD"]
     );
     this.app.add(
       /^[\w\-/.]+\.js$/,
       async (req, res, pathname, query) => {
-        const ret = await new compress_default(this.args.staticCfg, pathname, render(query)).Js();
-        res.setHeader("Cache-Control", ret.hit ? "max-age=5" : "max-age=1");
-        res.send(ret.ret.js, "text/javascript");
+        const ret = await notFound404(
+          res,
+          () => new compress_default(this.args.staticCfg, pathname, render(query)).Js()
+        );
+        if (ret) {
+          res.setHeader("Cache-Control", ret.hit ? "max-age=5" : "max-age=1");
+          res.send(ret.ret.js, "text/javascript");
+        }
       },
       ["GET", "HEAD"]
     );
     const tpl = async (res, pathname) => {
-      res.send(await new ssi_default(this.cwd, pathname).html());
+      const html = await notFound404(res, () => new ssi_default(this.cwd, pathname).html());
+      if (html) {
+        res.send(html);
+      }
     };
     this.app.add(
       /^[\w\-/.]+\.html$/,
@@ -70510,7 +70539,7 @@ var config_default = `
     --dry           \u7EAF\u9759\u6001\u670D\u52A1, \u4E0D\u7F16\u8BD1 less/js
     --cors          \u54CD\u5E94\u643A\u5E26 Access-Control-Allow-Origin
 `;
-var version = "0.8.1";
+var version = "0.8.2";
 
 // src/libs/cli.ts
 function getParams(args) {
